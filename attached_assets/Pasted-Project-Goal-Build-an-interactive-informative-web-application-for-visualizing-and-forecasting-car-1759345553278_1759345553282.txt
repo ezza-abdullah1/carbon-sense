@@ -1,0 +1,59 @@
+Project Goal:
+Build an interactive, informative web application for visualizing and forecasting carbon emissions across different urban areas of Lahore, Pakistan. The app uses machine learning forecasts on area-wise, sectoral data (transport, industry, energy, waste, buildings), serving planners, policymakers, and the public.
+
+Required Features:
+
+Interactive Emission Map
+
+Lahore city map divided by administrative areas.
+
+Color-coded overlays and dynamic “hot spots” based on emission levels (selectable by sector and total).
+
+User can select any area on the map or use filters to focus on specific sectors (transport, energy, etc.).
+
+Timeframe and View Controls
+
+User can select time interval: monthly, yearly, or a custom range within available data.
+
+Toggle between historical emissions and machine learning-based forecasts.
+
+Leaderboards & Area Comparison
+
+A dynamic leaderboard ranking areas from highest to lowest emissions (with view by sector and by total).
+
+Clicking a leaderboard entry zooms/toggles to that area on the map, showing detailed stats/trends.
+
+Visualization Dashboard
+
+Line/bar charts for emission trends by area, sector, or time.
+
+Pie/stacked charts for sectoral shares in selected areas.
+
+Clearly display both historic data and forecasts.
+
+User Experience
+
+Modern, attractive, and responsive layout (desktop/mobile).
+
+Integrated tooltips/help for map, rankings, and controls.
+
+Lahore branding/theme where appropriate.
+
+/Tech Requirements:
+
+Map visualization using Mapbox, Leaflet, or similar.
+
+Charting via Chart.js, D3, Plotly, or similar.
+
+Connects to backend API for data and forecasting results.
+
+Fast filter/search/selection tools for users to explore data by area, time, or sector.
+
+Sample User Flows:
+
+User selects "Gulberg" and “Transportation,” sees current and future monthly emissions, with Gulberg highlighted on the map.
+
+User sorts leaderboard to find “cleanest” versus “most polluting” area this year, clicks to zoom and compare.
+
+Deliverable:
+A full frontend solution enabling map-based hot spot visualization, emission trend forecasts (monthly/yearly views), sector filtering, and leaderboard comparisons for all urban areas of Lahore.
