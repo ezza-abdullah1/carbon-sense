@@ -1,3 +1,4 @@
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { X, TrendingUp, TrendingDown } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface AreaDetailPanelProps {
+  areaId: string;
   areaName: string;
   totalEmissions: number;
   trend: "up" | "down";
@@ -17,19 +19,23 @@ interface AreaDetailPanelProps {
     buildings: number;
   };
   onClose: () => void;
-  onViewAnalysis?: () => void;
 }
 
 export function AreaDetailPanel({
+  areaId,
   areaName,
   totalEmissions,
   trend,
   trendPercentage,
   sectorBreakdown,
   onClose,
-  onViewAnalysis,
 }: AreaDetailPanelProps) {
+  const [, setLocation] = useLocation();
   const maxSector = Math.max(...Object.values(sectorBreakdown));
+
+  const handleViewAnalysis = () => {
+    setLocation(`/area/${areaId}`);
+  };
 
   const sectors = [
     { key: "transport", label: "Transport", color: "hsl(217, 91%, 60%)" },
@@ -109,9 +115,9 @@ export function AreaDetailPanel({
           </div>
         </div>
 
-        <Button 
-          className="w-full" 
-          onClick={onViewAnalysis}
+        <Button
+          className="w-full"
+          onClick={handleViewAnalysis}
           data-testid="button-view-analysis"
         >
           View Full Analysis

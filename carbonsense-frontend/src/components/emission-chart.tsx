@@ -11,10 +11,11 @@ interface EmissionChartProps {
     labels: string[];
     datasets: {
       label: string;
-      data: number[];
+      data: (number | null)[];
       backgroundColor?: string | string[];
       borderColor?: string | string[];
       borderWidth?: number;
+      borderDash?: number[];
     }[];
   };
 }
@@ -36,6 +37,7 @@ export function EmissionChart({ title, type, data }: EmissionChartProps) {
       options: {
         responsive: true,
         maintainAspectRatio: true,
+        spanGaps: true,
         plugins: {
           legend: {
             position: "bottom",

@@ -1,0 +1,3591 @@
+{
+  "sector": "transport",
+  "gas_calculation": "Sum of all gases as CO2 equivalent",
+  "generated_at": "2025-11-17T19:02:54.372913",
+  "locations": [
+    {
+      "source_name": "BALLOKI RLNG",
+      "lat": 31.037,
+      "lon": 73.9267,
+      "total_emissions": 147802597.78,
+      "mean_emissions": 3994664.8,
+      "forecast_method": "SARIMA",
+      "percentage_change": -11.75,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 3999208.12,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 4002732.2,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 4006256.28,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 4009780.36,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 4013304.44,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 4016828.52,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 4020352.6,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 4023876.68,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 4027400.76,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 4030924.84,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 4034448.93,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 4037973.01,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 4022805.85,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 4004114.62,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 3985423.39,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 3966732.16,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 3948040.92,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 3929349.69,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 3910658.46,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 3891967.23,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 3873275.99,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 3854584.76,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 3835893.53,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 3817202.3,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 3779816.37,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 3742430.02,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 3705043.25,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 3667656.04,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 3630268.42,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 3592880.37,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 3555491.89,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 3518102.99,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 3480713.66,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 3443323.91,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 3405933.74,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 3368543.13,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "BHIKKI RLNG",
+      "lat": 31.6037,
+      "lon": 73.9046,
+      "total_emissions": 147802597.78,
+      "mean_emissions": 3994664.8,
+      "forecast_method": "SARIMA",
+      "percentage_change": -11.75,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 3999208.12,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 4002732.2,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 4006256.28,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 4009780.36,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 4013304.44,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 4016828.52,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 4020352.6,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 4023876.68,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 4027400.76,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 4030924.84,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 4034448.93,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 4037973.01,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 4041497.09,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 4022805.85,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 4004114.62,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 3985423.39,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 3966732.16,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 3948040.92,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 3929349.69,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 3910658.46,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 3891967.23,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 3873275.99,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 3854584.76,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 3835893.53,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 3817202.3,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 3779816.37,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 3742430.02,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 3705043.25,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 3667656.04,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 3630268.42,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 3592880.37,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 3555491.89,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 3518102.99,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 3480713.66,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 3443323.91,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 3405933.74,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 3368543.13,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "Atlas Power Limited power station",
+      "lat": 31.6784,
+      "lon": 74.0838,
+      "total_emissions": 38236724.64,
+      "mean_emissions": 1033424.99,
+      "forecast_method": "SARIMA",
+      "percentage_change": -13.76,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 992838.65,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 998144.29,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 1003449.92,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 1008755.55,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 1014061.18,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 1019366.82,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 1024672.45,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 1029978.08,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 1035283.71,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 1040589.35,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 1045894.98,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 1051200.61,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 1056506.24,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 1050863.08,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 1045219.91,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 1039576.74,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 1033933.57,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 1028290.41,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 1022647.24,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 1017004.07,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 1011360.91,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 1005717.74,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 1000074.57,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 994431.4,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 988788.24,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 977484.54,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 966173.19,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 954855.87,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 943533.19,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 932205.39,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 920872.52,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 909534.52,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 898191.13,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 886841.71,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 875484.51,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 864114.95,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 852742.06,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "Nishat Chunian power station",
+      "lat": 31.1239,
+      "lon": 73.9021,
+      "total_emissions": 33062291.63,
+      "mean_emissions": 893575.45,
+      "forecast_method": "SARIMA",
+      "percentage_change": -13.68,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 858458.54,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 863047.46,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 867636.37,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 872225.29,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 876814.2,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 881403.11,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 885992.03,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 890580.94,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 895169.86,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 899758.77,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 904347.68,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 908936.6,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 913525.51,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 908650.93,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 903776.36,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 898901.78,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 894027.2,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 889152.63,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 884278.05,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 879403.47,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 874528.89,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 869654.32,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 864779.74,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 859905.16,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 855030.59,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 845281.92,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 835533.39,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 825785.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 816036.76,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 806288.66,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 796540.71,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 786792.89,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 777045.22,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 767297.7,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 757550.31,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 747803.07,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 738055.97,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "Nishat Power Limited power plant",
+      "lat": 31.1225,
+      "lon": 73.901,
+      "total_emissions": 33056062.24,
+      "mean_emissions": 893407.09,
+      "forecast_method": "SARIMA",
+      "percentage_change": -13.71,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 858367.13,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 862949.8,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 867532.48,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 872115.16,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 876697.84,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 881280.51,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 885863.19,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 890445.87,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 895028.55,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 899611.23,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 904193.9,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 908776.58,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 913359.26,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 908477.45,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 903595.63,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 898713.82,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 893832.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 888950.19,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 884068.38,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 879186.56,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 874304.75,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 869422.93,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 864541.12,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 859659.31,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 854777.49,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 845006.8,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 835236.87,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 825468.01,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 815700.33,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 805933.85,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 796168.6,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 786404.56,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 776641.69,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 766879.88,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 757118.82,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 747357.73,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 737599.36,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "ORIENT POWER",
+      "lat": 31.1884,
+      "lon": 73.8899,
+      "total_emissions": 29138718.65,
+      "mean_emissions": 787532.94,
+      "forecast_method": "SARIMA",
+      "percentage_change": -10.35,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 790789.42,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 791231.34,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 791673.25,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 792115.16,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 792557.07,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 792998.98,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 793440.89,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 793882.8,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 794324.72,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 794766.63,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 795208.54,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 795650.45,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 796092.36,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 792474.03,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 788855.7,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 785237.38,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 781619.05,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 778000.72,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 774382.39,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 770764.06,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 767145.73,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 763527.4,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 759909.08,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 756290.75,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 752672.42,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 745617.71,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 738680.55,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 731854.8,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 725134.76,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 718516.32,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 711995.19,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 705567.82,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 699230.63,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 692981.2,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 686818.08,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 680744.76,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 674789.35,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "SAPPHIRE ELECTRIC",
+      "lat": 31.761,
+      "lon": 74.0355,
+      "total_emissions": 28984025.18,
+      "mean_emissions": 783352.03,
+      "forecast_method": "SARIMA",
+      "percentage_change": 4.07,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 783433.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 784205.51,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 784978.03,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 785750.54,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 786523.06,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 787295.57,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 788068.08,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 788840.6,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 789613.11,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 790385.63,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 791158.14,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 791930.66,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 792703.17,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 789039.89,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 785376.61,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 781713.32,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 778050.04,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 774386.76,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 770723.48,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 767060.19,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 763396.91,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 759733.63,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 756070.34,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 752407.06,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 748743.78,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 751285.08,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 753826.41,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 756367.78,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 758909.18,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 761450.6,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 763992.06,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 766533.55,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 769075.07,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 771616.62,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 774158.21,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 776699.82,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 779241.46,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "HALMORE POWER",
+      "lat": 31.6335,
+      "lon": 73.8704,
+      "total_emissions": 28563499.65,
+      "mean_emissions": 771986.48,
+      "forecast_method": "SARIMA",
+      "percentage_change": -11.42,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 775795.68,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 776163.98,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 776532.29,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 776900.6,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 777268.91,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 777637.22,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 778005.52,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 778373.83,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 778742.14,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 779110.45,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 779478.76,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 779847.06,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 780215.37,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 776680.23,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 773145.09,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 769609.95,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 766074.8,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 762539.66,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 759004.52,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 755469.38,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 751934.23,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 748399.09,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 744863.95,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 741328.81,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 737793.66,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 730775.69,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 723757.33,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 716738.59,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 709719.45,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 702699.93,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 695680.02,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 688659.73,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 681639.05,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 674617.98,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 667596.52,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 660574.68,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 653552.45,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "KOHINOOR",
+      "lat": 31.2633,
+      "lon": 74.1877,
+      "total_emissions": 22092318.31,
+      "mean_emissions": 597089.68,
+      "forecast_method": "SARIMA",
+      "percentage_change": -13.66,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 573679.98,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 576740.75,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 579801.52,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 582862.29,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 585923.06,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 588983.83,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 592044.6,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 595105.37,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 598166.14,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 601226.91,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 604287.69,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 607348.46,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 610409.23,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 607151.75,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 603894.28,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 600636.81,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 597379.33,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 594121.86,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 590864.38,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 587606.91,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 584349.44,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 581091.96,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 577834.49,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 574577.01,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 571319.54,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 564803.22,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 558289.42,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 551778.2,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 545269.58,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 538763.56,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 532260.15,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 525759.34,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 519261.12,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 512765.46,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 506272.3,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 499781.5,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 493295.23,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "Saba Power power plant",
+      "lat": 31.7328,
+      "lon": 73.8751,
+      "total_emissions": 20907408.65,
+      "mean_emissions": 565065.1,
+      "forecast_method": "SARIMA",
+      "percentage_change": -13.7,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 542890.85,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 545790.67,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 548690.5,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 551590.33,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 554490.15,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 557389.98,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 560289.8,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 563189.63,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 566089.46,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 568989.28,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 571889.11,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 574788.93,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 577688.76,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 574600.44,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 571512.12,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 568423.8,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 565335.48,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 562247.16,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 559158.83,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 556070.51,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 552982.19,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 549893.87,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 546805.55,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 543717.23,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 540628.91,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 534451.21,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 528274.64,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 522099.18,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 515924.83,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 509751.57,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 503579.41,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 497408.34,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 491238.37,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 485069.52,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 478901.79,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 472735.24,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 466570.46,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "Reshma power station",
+      "lat": 31.2463,
+      "lon": 74.1778,
+      "total_emissions": 2554394.07,
+      "mean_emissions": 69037.68,
+      "forecast_method": "SARIMA",
+      "percentage_change": "Infinity",
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 392983.7,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 360235.06,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 327486.42,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 294737.78,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 261989.14,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 229240.49,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 196491.85,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 163743.21,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 130994.57,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 98245.93,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 65497.28,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 32748.64,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 12283.21,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 24566.39,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 36849.55,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 49132.68,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 61415.79,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 73698.87,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 85981.93,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 98264.96,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 110547.97,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 122830.95,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 135113.91,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 147396.84,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "Bulleh Shah Paper Mill power station",
+      "lat": 31.1303,
+      "lon": 74.3585,
+      "total_emissions": 763695.98,
+      "mean_emissions": 20640.43,
+      "forecast_method": "SARIMA",
+      "percentage_change": 400.52,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 24331.33,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 23981.29,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 23631.26,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 23281.23,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 22931.19,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 22581.16,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 22231.12,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 21881.09,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 21531.06,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 21181.02,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 20830.99,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 20480.95,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 20130.92,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 20134.49,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 20138.05,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 20141.62,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 20145.19,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 20148.76,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 20152.32,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 20155.89,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 20159.46,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 20163.02,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 20166.59,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 20170.16,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 20173.72,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 20055.23,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 19936.73,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 19818.24,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 19699.74,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 19581.25,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 19462.75,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 19344.26,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 19225.77,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 19107.27,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 18988.78,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 18870.28,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 18751.79,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 25035.67,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 31314.95,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 37589.65,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 43859.75,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 50125.27,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 56386.2,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 62642.55,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 68894.32,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 75141.51,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 81384.13,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 87622.17,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 93855.65,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "Other electricity-generation emissions",
+      "lat": null,
+      "lon": null,
+      "total_emissions": 0.0,
+      "mean_emissions": 0.0,
+      "forecast_method": "SARIMA",
+      "percentage_change": null,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        }
+      ]
+    },
+    {
+      "source_name": "Other other-energy-use emissions",
+      "lat": null,
+      "lon": null,
+      "total_emissions": 0.0,
+      "mean_emissions": 0.0,
+      "forecast_method": "SARIMA",
+      "percentage_change": null,
+      "data": [
+        {
+          "date": "2021-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-02-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-03-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-04-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-05-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-06-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-07-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-08-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-09-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-10-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-11-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2021-12-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-02-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-03-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-04-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-05-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-06-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-07-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-08-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-09-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-10-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-11-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2022-12-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-02-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-03-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-04-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-05-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-06-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-07-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-08-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-09-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-10-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-11-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2023-12-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2024-01-01",
+          "emissions": 0.0,
+          "type": "historical"
+        },
+        {
+          "date": "2024-02-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-03-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-04-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-05-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-06-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-07-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-08-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-09-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-10-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-11-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2024-12-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        },
+        {
+          "date": "2025-01-01",
+          "emissions": 0.0,
+          "type": "forecast"
+        }
+      ]
+    }
+  ]
+}

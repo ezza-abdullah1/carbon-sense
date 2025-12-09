@@ -8,6 +8,7 @@ import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import Dashboard from "@/pages/dashboard";
+import AreaAnalysis from "@/pages/area-analysis";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/area/:areaId" component={AreaAnalysis} />
       <Route component={NotFound} />
     </Switch>
   );
