@@ -36,59 +36,98 @@ export function EmissionChart({ title, type, data }: EmissionChartProps) {
       data,
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
         spanGaps: true,
+        interaction: {
+          intersect: false,
+          mode: 'index',
+        },
         plugins: {
           legend: {
             position: "bottom",
             labels: {
               font: {
-                family: "Inter, sans-serif",
+                family: "Inter, system-ui, sans-serif",
                 size: 12,
+                weight: 500,
               },
-              padding: 12,
+              padding: 20,
               usePointStyle: true,
+              pointStyle: 'circle',
             },
           },
           tooltip: {
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            backgroundColor: "rgba(17, 24, 39, 0.95)",
             titleFont: {
-              family: "Inter, sans-serif",
-              size: 13,
+              family: "Inter, system-ui, sans-serif",
+              size: 14,
+              weight: 600,
             },
             bodyFont: {
-              family: "IBM Plex Mono, monospace",
-              size: 12,
+              family: "Inter, system-ui, sans-serif",
+              size: 13,
             },
-            padding: 12,
-            cornerRadius: 6,
+            padding: 14,
+            cornerRadius: 10,
+            boxPadding: 6,
           },
         },
         scales: type === "line" || type === "bar" ? {
           y: {
             beginAtZero: true,
+            border: {
+              display: false,
+            },
             grid: {
-              color: "rgba(0, 0, 0, 0.05)",
+              color: "rgba(156, 163, 175, 0.15)",
             },
             ticks: {
               font: {
-                family: "IBM Plex Mono, monospace",
+                family: "Inter, system-ui, sans-serif",
                 size: 11,
               },
+              padding: 8,
+              color: "#6b7280",
             },
           },
           x: {
+            border: {
+              display: false,
+            },
             grid: {
               display: false,
             },
             ticks: {
               font: {
-                family: "Inter, sans-serif",
+                family: "Inter, system-ui, sans-serif",
                 size: 11,
               },
+              padding: 8,
+              color: "#6b7280",
+              maxRotation: 45,
+              minRotation: 0,
             },
           },
         } : undefined,
+        elements: {
+          line: {
+            tension: 0.35,
+            borderWidth: 3,
+          },
+          point: {
+            radius: 4,
+            hoverRadius: 7,
+            borderWidth: 2,
+            backgroundColor: '#fff',
+          },
+          bar: {
+            borderRadius: 6,
+          },
+          arc: {
+            borderWidth: 2,
+            borderColor: '#fff',
+          },
+        },
       },
     };
 
@@ -103,12 +142,15 @@ export function EmissionChart({ title, type, data }: EmissionChartProps) {
   }, [type, data]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
+    <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="relative w-full" style={{ height: type === "pie" || type === "doughnut" ? "300px" : "250px" }}>
+      <CardContent className="pt-2">
+        <div
+          className="relative w-full"
+          style={{ height: type === "pie" || type === "doughnut" ? "320px" : "300px" }}
+        >
           <canvas ref={canvasRef} data-testid={`chart-${title.toLowerCase().replace(/\s+/g, "-")}`} />
         </div>
       </CardContent>

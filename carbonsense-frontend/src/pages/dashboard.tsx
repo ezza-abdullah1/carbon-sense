@@ -459,79 +459,132 @@ export default function Dashboard() {
             </div>
           </TabsContent>
 
-          <TabsContent value="analytics" className="flex-1 mt-0 p-6 overflow-auto">
-            <div className="space-y-6">
-              {/* Sector Emission Trends - Each sector in its own chart */}
-              <div>
-                <h2 className="text-lg font-semibold mb-4">Emission Trends by Sector</h2>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Each chart shows historical emissions (solid line) and forecasted emissions (dashed line) for the respective sector.
+          <TabsContent value="analytics" className="flex-1 mt-0 overflow-auto bg-muted/30">
+            <div className="p-8">
+              {/* Page Header */}
+              <div className="mb-8">
+                <h1 className="text-2xl font-bold tracking-tight">Analytics Dashboard</h1>
+                <p className="text-muted-foreground mt-1">
+                  Comprehensive emission analysis across {areas.length} sources
                 </p>
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {selectedSectors.map((sector) => {
-                    const data = sectorChartData[sector];
-                    if (!data || data.datasets.length === 0) return null;
-                    return (
-                      <EmissionChart
-                        key={sector}
-                        title={`${sectorConfig[sector].label} Emissions`}
-                        type="line"
-                        data={data}
-                      />
-                    );
-                  })}
-                </div>
               </div>
 
-              {/* Summary Charts */}
-              <div>
-                <h2 className="text-lg font-semibold mb-4">Summary & Comparison</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Stats Row */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Total Sources</p>
+                        <p className="text-3xl font-bold">{areas.length}</p>
+                      </div>
+                      <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <Leaf className="h-6 w-6 text-blue-500" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Active Sectors</p>
+                        <p className="text-3xl font-bold">{selectedSectors.length}<span className="text-lg text-muted-foreground">/5</span></p>
+                      </div>
+                      <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                        <div className="h-6 w-6 rounded-full bg-emerald-500" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Data Mode</p>
+                        <p className="text-3xl font-bold capitalize">{dataType}</p>
+                      </div>
+                      <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+                        <div className="h-3 w-3 rounded-full bg-amber-500 animate-pulse" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Total Emissions</p>
+                        <p className="text-3xl font-bold">
+                          {leaderboard.length > 0
+                            ? `${(Math.round((leaderboard as LeaderboardEntry[]).reduce((sum: number, e: LeaderboardEntry) => sum + e.emissions, 0) / 1000000 * 10) / 10).toLocaleString()}M`
+                            : '—'}
+                        </p>
+                      </div>
+                      <p className="text-xs text-muted-foreground self-end">tons CO₂e</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Main Charts Grid */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+                <div className="xl:col-span-2">
                   <EmissionChart
-                    title="Sectoral Distribution"
-                    type="doughnut"
-                    data={sectorPieData}
-                  />
-                  <EmissionChart
-                    title="Top 5 Emission Sources"
+                    title="Top Emission Sources"
                     type="bar"
                     data={areaBarData}
                   />
-                  <EmissionChart
-                    title="Monthly Average by Sector"
-                    type="bar"
-                    data={monthlyComparisonData}
-                  />
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Key Insights</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium">Data Source</div>
-                        <p className="text-sm text-muted-foreground">
-                          Showing emissions data from {areas.length} sources across Pakistan.
-                          Data includes both historical measurements and SARIMA-based forecasts.
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium">Chart Legend</div>
-                        <p className="text-sm text-muted-foreground">
-                          Solid lines represent historical data. Dashed lines represent forecasted emissions.
-                          Each sector has its own date range based on available data.
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium">Total Emissions</div>
-                        <p className="text-sm text-muted-foreground">
-                          {leaderboard.length > 0
-                            ? `Total: ${Math.round((leaderboard as LeaderboardEntry[]).reduce((sum: number, e: LeaderboardEntry) => sum + e.emissions, 0) / 1000).toLocaleString()} thousand tons CO₂e`
-                            : 'Loading...'}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
                 </div>
+                <EmissionChart
+                  title="Sector Distribution"
+                  type="doughnut"
+                  data={sectorPieData}
+                />
+              </div>
+
+              {/* Sector Trends Section */}
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-semibold">Sector Trends</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Historical vs Forecasted emissions by sector
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-blue-500" />
+                      <span className="text-sm text-muted-foreground">Historical</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full bg-amber-500" />
+                      <span className="text-sm text-muted-foreground">Forecast</span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedSectors.length === 0 ? (
+                  <Card className="p-12 text-center">
+                    <Leaf className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">Select at least one sector from the Map View to see trends</p>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {selectedSectors.map((sector) => {
+                      const data = sectorChartData[sector];
+                      if (!data || data.datasets.length === 0) return null;
+                      return (
+                        <EmissionChart
+                          key={sector}
+                          title={`${sectorConfig[sector].label} Emissions`}
+                          type="line"
+                          data={data}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>
