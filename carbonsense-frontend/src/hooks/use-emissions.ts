@@ -5,7 +5,8 @@ import {
   fetchLatestEmissionsByArea,
   fetchTimeSeriesData,
   fetchLeaderboard,
-  type EmissionsQueryParams
+  type EmissionsQueryParams,
+  type Sector
 } from '@/lib/api';
 
 // Hook to fetch all areas
@@ -27,10 +28,13 @@ export function useEmissions(params?: EmissionsQueryParams) {
 }
 
 // Hook to fetch latest emissions by area (for map)
-export function useLatestEmissions(dataType: 'historical' | 'forecast' = 'historical') {
+export function useLatestEmissions(
+  dataType: 'historical' | 'forecast' = 'historical',
+  sectors?: Sector[]
+) {
   return useQuery({
-    queryKey: ['latest-emissions', dataType],
-    queryFn: () => fetchLatestEmissionsByArea(dataType),
+    queryKey: ['latest-emissions', dataType, sectors],
+    queryFn: () => fetchLatestEmissionsByArea(dataType, sectors),
     staleTime: 1 * 60 * 1000,
   });
 }
@@ -45,10 +49,13 @@ export function useTimeSeriesData(areaId?: string, dataType: 'historical' | 'for
 }
 
 // Hook to fetch leaderboard
-export function useLeaderboard(dataType: 'historical' | 'forecast' = 'historical') {
+export function useLeaderboard(
+  dataType: 'historical' | 'forecast' = 'historical',
+  sectors?: Sector[]
+) {
   return useQuery({
-    queryKey: ['leaderboard', dataType],
-    queryFn: () => fetchLeaderboard(dataType),
+    queryKey: ['leaderboard', dataType, sectors],
+    queryFn: () => fetchLeaderboard(dataType, sectors),
     staleTime: 1 * 60 * 1000,
   });
 }

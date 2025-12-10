@@ -114,20 +114,30 @@ export default function AreaAnalysis() {
     };
   }, [combinedData]);
 
-  // Monthly comparison bar chart
+  // Monthly comparison bar chart - shows AVERAGE per month for fair comparison
   const monthlyComparisonData = useMemo(() => {
     if (!combinedData) return { labels: [], datasets: [] };
 
     const { historical, forecast } = combinedData;
 
+    // Calculate average per month (sum / count) for fair comparison
     const aggregateByMonth = (data: typeof historical) => {
-      const monthMap = new Map<string, number>();
+      const monthMap = new Map<string, { sum: number; count: number }>();
       data.forEach(item => {
         const date = new Date(item.date);
         const label = date.toLocaleDateString('en-US', { month: 'short' });
-        monthMap.set(label, (monthMap.get(label) || 0) + item.total);
+        const existing = monthMap.get(label) || { sum: 0, count: 0 };
+        monthMap.set(label, {
+          sum: existing.sum + item.total,
+          count: existing.count + 1
+        });
       });
-      return monthMap;
+      // Convert to averages
+      const avgMap = new Map<string, number>();
+      monthMap.forEach((value, key) => {
+        avgMap.set(key, value.sum / value.count);
+      });
+      return avgMap;
     };
 
     const historicalMap = aggregateByMonth(historical);
@@ -140,7 +150,7 @@ export default function AreaAnalysis() {
       labels: availableMonths,
       datasets: [
         {
-          label: 'Historical',
+          label: 'Historical (Avg)',
           data: availableMonths.map(m => {
             const val = historicalMap.get(m);
             return val ? Math.round(val / 1000) : 0;
@@ -148,7 +158,7 @@ export default function AreaAnalysis() {
           backgroundColor: "hsl(217, 91%, 60%)",
         },
         {
-          label: 'Forecast',
+          label: 'Forecast (Avg)',
           data: availableMonths.map(m => {
             const val = forecastMap.get(m);
             return val ? Math.round(val / 1000) : 0;
@@ -348,7 +358,7 @@ export default function AreaAnalysis() {
           {/* Secondary Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <EmissionChart
-              title="Monthly Comparison"
+              title="Monthly Average Comparison"
               type="bar"
               data={monthlyComparisonData}
             />

@@ -28,15 +28,15 @@ interface LeaderboardEntry {
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<string>("map");
-  const [selectedSectors, setSelectedSectors] = useState<Sector[]>(["energy"]); // Start with energy since we have power data
+  const [selectedSectors, setSelectedSectors] = useState<Sector[]>(["transport", "industry", "energy", "waste", "buildings"]); // Start with all sectors
   const [timeInterval, setTimeInterval] = useState<TimeInterval>("monthly");
   const [dataType, setDataType] = useState<DataType>("historical");
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
 
-  // Fetch real data using hooks
+  // Fetch real data using hooks (pass selectedSectors for filtering)
   const { data: areas = [], isLoading: areasLoading } = useAreas();
-  const { data: emissionData = {}, isLoading: emissionsLoading } = useLatestEmissions(dataType);
-  const { data: leaderboard = [], isLoading: leaderboardLoading } = useLeaderboard(dataType);
+  const { data: emissionData = {}, isLoading: emissionsLoading } = useLatestEmissions(dataType, selectedSectors);
+  const { data: leaderboard = [], isLoading: leaderboardLoading } = useLeaderboard(dataType, selectedSectors);
   const { data: timeSeriesData = [] } = useTimeSeriesData(selectedAreaId || undefined, dataType);
   const { data: combinedData } = useCombinedTimeSeriesData(selectedAreaId || undefined);
 
@@ -53,10 +53,15 @@ export default function Dashboard() {
     );
   };
 
-  // Calculate max emission for map scaling
+  // Calculate max emission for map scaling (use 75th percentile to avoid outlier skew)
   const maxEmission = useMemo(() => {
-    const values = Object.values(emissionData) as number[];
-    return values.length > 0 ? Math.max(...values) : 1000000;
+    const values = (Object.values(emissionData) as number[]).filter(v => v > 0).sort((a, b) => a - b);
+    if (values.length === 0) return 1000000;
+    // Use 75th percentile as reference to spread colors better
+    const p75Index = Math.floor(values.length * 0.75);
+    const p75Value = values[p75Index] || values[values.length - 1];
+    // Return 1.5x the 75th percentile to allow some headroom
+    return p75Value * 1.5;
   }, [emissionData]);
 
   // Format time series data for charts

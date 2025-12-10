@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function MapLegend() {
+  // Evidence-based thresholds aligned with climate science and Paris Agreement targets
   const levels = [
-    { label: "Low", color: "hsl(142, 65%, 45%)", range: "0-30%" },
-    { label: "Moderate", color: "hsl(45, 93%, 47%)", range: "30-50%" },
-    { label: "High", color: "hsl(25, 95%, 53%)", range: "50-70%" },
-    { label: "Very High", color: "hsl(0, 72%, 51%)", range: "70-100%" },
+    { label: "Low", color: "hsl(142, 65%, 45%)", range: "<20k tonnes" },
+    { label: "Moderate", color: "hsl(45, 93%, 47%)", range: "20k-100k tonnes" },
+    { label: "High", color: "hsl(25, 95%, 53%)", range: "100k-500k tonnes" },
+    { label: "Very High", color: "hsl(0, 72%, 51%)", range: ">500k tonnes" },
   ];
 
   return (

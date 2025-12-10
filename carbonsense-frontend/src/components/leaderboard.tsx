@@ -13,12 +13,12 @@ interface LeaderboardProps {
 
 export function Leaderboard({ entries, selectedAreaId, onAreaSelect }: LeaderboardProps) {
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-lg">Emission Rankings</CardTitle>
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader className="pb-4 flex-shrink-0">
+        <CardTitle className="text-lg">Emission Rankings ({entries.length})</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 p-0">
-        <ScrollArea className="h-full">
+      <CardContent className="flex-1 p-0 overflow-hidden">
+        <ScrollArea className="h-full max-h-[calc(100vh-250px)]">
           <div className="space-y-1 px-6 pb-6">
             {entries.map((entry) => (
               <div

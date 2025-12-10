@@ -58,18 +58,43 @@ export async function fetchEmissions(params?: EmissionsQueryParams): Promise<Emi
   return response.json();
 }
 
+// Sector type
+export type Sector = 'transport' | 'industry' | 'energy' | 'waste' | 'buildings';
+
+// Calculate sector sum for an emission data point
+function calculateSectorSum(emission: EmissionDataPoint, sectors: Sector[]): number {
+  let sum = 0;
+  if (sectors.includes('transport')) sum += emission.transport;
+  if (sectors.includes('industry')) sum += emission.industry;
+  if (sectors.includes('energy')) sum += emission.energy;
+  if (sectors.includes('waste')) sum += emission.waste;
+  if (sectors.includes('buildings')) sum += emission.buildings;
+  return sum;
+}
+
 // Get latest emissions for each area (for map visualization)
-export async function fetchLatestEmissionsByArea(dataType: 'historical' | 'forecast' = 'historical'): Promise<Record<string, number>> {
+export async function fetchLatestEmissionsByArea(
+  dataType: 'historical' | 'forecast' = 'historical',
+  sectors?: Sector[]
+): Promise<Record<string, number>> {
   const emissions = await fetchEmissions({ data_type: dataType });
 
   // Group by area and get latest date
   const areaEmissions: Record<string, { date: string; total: number }> = {};
 
   emissions.forEach(emission => {
+    // Calculate value based on selected sectors or use total
+    const value = sectors && sectors.length > 0
+      ? calculateSectorSum(emission, sectors)
+      : emission.total;
+
+    // Skip if value is 0 when filtering by sectors
+    if (sectors && sectors.length > 0 && value === 0) return;
+
     if (!areaEmissions[emission.area_id] || emission.date > areaEmissions[emission.area_id].date) {
       areaEmissions[emission.area_id] = {
         date: emission.date,
-        total: emission.total
+        total: value
       };
     }
   });
@@ -96,8 +121,11 @@ export async function fetchTimeSeriesData(
 }
 
 // Calculate leaderboard from emissions data
-export async function fetchLeaderboard(dataType: 'historical' | 'forecast' = 'historical') {
-  const latestEmissions = await fetchLatestEmissionsByArea(dataType);
+export async function fetchLeaderboard(
+  dataType: 'historical' | 'forecast' = 'historical',
+  sectors?: Sector[]
+) {
+  const latestEmissions = await fetchLatestEmissionsByArea(dataType, sectors);
   const areas = await fetchAreas();
 
   // Calculate trend (mock for now - would need historical comparison)

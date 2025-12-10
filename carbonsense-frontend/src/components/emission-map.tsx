@@ -55,10 +55,13 @@ export function EmissionMap({ areas, selectedAreaId, onAreaSelect, emissionData,
 
     areas.forEach(area => {
       const emission = emissionData[area.id] || 0;
+
+      // Use absolute emission value for color (evidence-based thresholds)
+      const color = getEmissionColor(emission);
+
+      // Scale radius based on relative intensity for visual distinction
       const intensity = maxEmission > 0 ? emission / maxEmission : 0;
-      
-      const color = getEmissionColor(intensity);
-      const radius = 800 + (intensity * 1200);
+      const radius = 800 + (Math.min(intensity, 1) * 1200);
 
       const circle = L.circle(area.coordinates, {
         color: color,
@@ -105,9 +108,17 @@ export function EmissionMap({ areas, selectedAreaId, onAreaSelect, emissionData,
   );
 }
 
-function getEmissionColor(intensity: number): string {
-  if (intensity < 0.3) return "hsl(142, 65%, 45%)";
-  if (intensity < 0.5) return "hsl(45, 93%, 47%)";
-  if (intensity < 0.7) return "hsl(25, 95%, 53%)";
-  return "hsl(0, 72%, 51%)";
+/**
+ * Get emission color based on absolute thresholds (tonnes CO₂e)
+ * Based on climate science and Paris Agreement targets:
+ * - Low: <20,000 tonnes (below EIB materiality threshold)
+ * - Moderate: 20,000-100,000 tonnes (significant but manageable)
+ * - High: 100,000-500,000 tonnes (major emitters requiring reduction plans)
+ * - Very High: >500,000 tonnes (critical - immediate action required)
+ */
+function getEmissionColor(emissionTonnes: number): string {
+  if (emissionTonnes < 20000) return "hsl(142, 65%, 45%)";   // Green - Low
+  if (emissionTonnes < 100000) return "hsl(45, 93%, 47%)";   // Yellow - Moderate
+  if (emissionTonnes < 500000) return "hsl(25, 95%, 53%)";   // Orange - High
+  return "hsl(0, 72%, 51%)";                                  // Red - Very High
 }

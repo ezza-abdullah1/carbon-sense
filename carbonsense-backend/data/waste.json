@@ -1,0 +1,2245 @@
+{
+  "metadata": {
+    "generated_at": "2025-12-10T16:52:11.496093",
+    "data_source": "Climate Trace",
+    "sector": "waste",
+    "region": "Lahore Division, Punjab, Pakistan",
+    "historical_period": "2021-01 to 2025-08",
+    "forecast_horizon_months": 12,
+    "models_used": [
+      "Holt-Winters",
+      "SARIMA"
+    ],
+    "selection_method": "Best R² and RMSE on validation set",
+    "confidence_intervals": "95%"
+  },
+  "locations": [
+    {
+      "source_name": "Mehmood Booti",
+      "lat": 31.60997221,
+      "lon": 74.38688278,
+      "source_type": "Dumpsite",
+      "capacity_mw": 255063.0492930837,
+      "status": "success",
+      "model_info": {
+        "selected_model": "SARIMA",
+        "confidence": "high",
+        "selection_reason": "Excellent fit (R²=0.9965)",
+        "all_models_tested": {
+          "Holt-Winters": {
+            "mae": 0.41297355536325614,
+            "rmse": 0.4379409907641879,
+            "r2": 0.961705951725188,
+            "mape": 0.6134457246622542
+          },
+          "SARIMA": {
+            "mae": 0.13142157214093922,
+            "rmse": 0.13316374165789482,
+            "r2": 0.9964594391206091,
+            "mape": 0.19850426785965897
+          }
+        }
+      },
+      "summary": {
+        "current_emissions_tonnes": 64.71,
+        "current_date": "September 2025",
+        "forecast_12month_tonnes": 66.06,
+        "forecast_average_tonnes": 67.58,
+        "change_percent": 2.08,
+        "change_tonnes": 1.34,
+        "trend": "increasing",
+        "total_historical_emissions": 3572.74
+      },
+      "chart_data": {
+        "historical": [
+          {
+            "date": "2021-01-01",
+            "month": "January 2021",
+            "value": 61.17,
+            "type": "historical"
+          },
+          {
+            "date": "2021-02-01",
+            "month": "February 2021",
+            "value": 49.93,
+            "type": "historical"
+          },
+          {
+            "date": "2021-03-01",
+            "month": "March 2021",
+            "value": 61.45,
+            "type": "historical"
+          },
+          {
+            "date": "2021-04-01",
+            "month": "April 2021",
+            "value": 57.65,
+            "type": "historical"
+          },
+          {
+            "date": "2021-05-01",
+            "month": "May 2021",
+            "value": 61.74,
+            "type": "historical"
+          },
+          {
+            "date": "2021-06-01",
+            "month": "June 2021",
+            "value": 57.92,
+            "type": "historical"
+          },
+          {
+            "date": "2021-07-01",
+            "month": "July 2021",
+            "value": 62.01,
+            "type": "historical"
+          },
+          {
+            "date": "2021-08-01",
+            "month": "August 2021",
+            "value": 62.15,
+            "type": "historical"
+          },
+          {
+            "date": "2021-09-01",
+            "month": "September 2021",
+            "value": 58.29,
+            "type": "historical"
+          },
+          {
+            "date": "2021-10-01",
+            "month": "October 2021",
+            "value": 62.41,
+            "type": "historical"
+          },
+          {
+            "date": "2021-11-01",
+            "month": "November 2021",
+            "value": 58.53,
+            "type": "historical"
+          },
+          {
+            "date": "2021-12-01",
+            "month": "December 2021",
+            "value": 62.66,
+            "type": "historical"
+          },
+          {
+            "date": "2022-01-01",
+            "month": "January 2022",
+            "value": 62.82,
+            "type": "historical"
+          },
+          {
+            "date": "2022-02-01",
+            "month": "February 2022",
+            "value": 51.28,
+            "type": "historical"
+          },
+          {
+            "date": "2022-03-01",
+            "month": "March 2022",
+            "value": 63.11,
+            "type": "historical"
+          },
+          {
+            "date": "2022-04-01",
+            "month": "April 2022",
+            "value": 59.21,
+            "type": "historical"
+          },
+          {
+            "date": "2022-05-01",
+            "month": "May 2022",
+            "value": 63.41,
+            "type": "historical"
+          },
+          {
+            "date": "2022-06-01",
+            "month": "June 2022",
+            "value": 59.48,
+            "type": "historical"
+          },
+          {
+            "date": "2022-07-01",
+            "month": "July 2022",
+            "value": 63.69,
+            "type": "historical"
+          },
+          {
+            "date": "2022-08-01",
+            "month": "August 2022",
+            "value": 63.83,
+            "type": "historical"
+          },
+          {
+            "date": "2022-09-01",
+            "month": "September 2022",
+            "value": 59.87,
+            "type": "historical"
+          },
+          {
+            "date": "2022-10-01",
+            "month": "October 2022",
+            "value": 64.09,
+            "type": "historical"
+          },
+          {
+            "date": "2022-11-01",
+            "month": "November 2022",
+            "value": 60.11,
+            "type": "historical"
+          },
+          {
+            "date": "2022-12-01",
+            "month": "December 2022",
+            "value": 64.35,
+            "type": "historical"
+          },
+          {
+            "date": "2023-01-01",
+            "month": "January 2023",
+            "value": 64.51,
+            "type": "historical"
+          },
+          {
+            "date": "2023-02-01",
+            "month": "February 2023",
+            "value": 52.66,
+            "type": "historical"
+          },
+          {
+            "date": "2023-03-01",
+            "month": "March 2023",
+            "value": 64.81,
+            "type": "historical"
+          },
+          {
+            "date": "2023-04-01",
+            "month": "April 2023",
+            "value": 60.81,
+            "type": "historical"
+          },
+          {
+            "date": "2023-05-01",
+            "month": "May 2023",
+            "value": 65.11,
+            "type": "historical"
+          },
+          {
+            "date": "2023-06-01",
+            "month": "June 2023",
+            "value": 61.08,
+            "type": "historical"
+          },
+          {
+            "date": "2023-07-01",
+            "month": "July 2023",
+            "value": 65.4,
+            "type": "historical"
+          },
+          {
+            "date": "2023-08-01",
+            "month": "August 2023",
+            "value": 65.55,
+            "type": "historical"
+          },
+          {
+            "date": "2023-09-01",
+            "month": "September 2023",
+            "value": 61.48,
+            "type": "historical"
+          },
+          {
+            "date": "2023-10-01",
+            "month": "October 2023",
+            "value": 65.82,
+            "type": "historical"
+          },
+          {
+            "date": "2023-11-01",
+            "month": "November 2023",
+            "value": 61.73,
+            "type": "historical"
+          },
+          {
+            "date": "2023-12-01",
+            "month": "December 2023",
+            "value": 66.09,
+            "type": "historical"
+          },
+          {
+            "date": "2024-01-01",
+            "month": "January 2024",
+            "value": 65.89,
+            "type": "historical"
+          },
+          {
+            "date": "2024-02-01",
+            "month": "February 2024",
+            "value": 57.73,
+            "type": "historical"
+          },
+          {
+            "date": "2024-03-01",
+            "month": "March 2024",
+            "value": 66.2,
+            "type": "historical"
+          },
+          {
+            "date": "2024-04-01",
+            "month": "April 2024",
+            "value": 62.1,
+            "type": "historical"
+          },
+          {
+            "date": "2024-05-01",
+            "month": "May 2024",
+            "value": 66.5,
+            "type": "historical"
+          },
+          {
+            "date": "2024-06-01",
+            "month": "June 2024",
+            "value": 62.38,
+            "type": "historical"
+          },
+          {
+            "date": "2024-07-01",
+            "month": "July 2024",
+            "value": 66.8,
+            "type": "historical"
+          },
+          {
+            "date": "2024-08-01",
+            "month": "August 2024",
+            "value": 66.94,
+            "type": "historical"
+          },
+          {
+            "date": "2024-09-01",
+            "month": "September 2024",
+            "value": 62.79,
+            "type": "historical"
+          },
+          {
+            "date": "2024-10-01",
+            "month": "October 2024",
+            "value": 67.22,
+            "type": "historical"
+          },
+          {
+            "date": "2024-11-01",
+            "month": "November 2024",
+            "value": 63.04,
+            "type": "historical"
+          },
+          {
+            "date": "2024-12-01",
+            "month": "December 2024",
+            "value": 67.49,
+            "type": "historical"
+          },
+          {
+            "date": "2025-01-01",
+            "month": "January 2025",
+            "value": 68.02,
+            "type": "historical"
+          },
+          {
+            "date": "2025-02-01",
+            "month": "February 2025",
+            "value": 55.51,
+            "type": "historical"
+          },
+          {
+            "date": "2025-03-01",
+            "month": "March 2025",
+            "value": 68.31,
+            "type": "historical"
+          },
+          {
+            "date": "2025-04-01",
+            "month": "April 2025",
+            "value": 64.07,
+            "type": "historical"
+          },
+          {
+            "date": "2025-05-01",
+            "month": "May 2025",
+            "value": 68.6,
+            "type": "historical"
+          },
+          {
+            "date": "2025-06-01",
+            "month": "June 2025",
+            "value": 64.33,
+            "type": "historical"
+          },
+          {
+            "date": "2025-07-01",
+            "month": "July 2025",
+            "value": 68.87,
+            "type": "historical"
+          },
+          {
+            "date": "2025-08-01",
+            "month": "August 2025",
+            "value": 69.01,
+            "type": "historical"
+          },
+          {
+            "date": "2025-09-01",
+            "month": "September 2025",
+            "value": 64.71,
+            "type": "historical"
+          }
+        ],
+        "forecast": [
+          {
+            "date": "2025-11-01",
+            "month": "November 2025",
+            "value": 69.19,
+            "lower_bound": 8.22,
+            "upper_bound": 40556252.71,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2025-12-01",
+            "month": "December 2025",
+            "value": 65.1,
+            "lower_bound": 8.22,
+            "upper_bound": 40885981.18,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-01-01",
+            "month": "January 2026",
+            "value": 69.44,
+            "lower_bound": 8.22,
+            "upper_bound": 42109591.45,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-02-01",
+            "month": "February 2026",
+            "value": 69.12,
+            "lower_bound": 8.22,
+            "upper_bound": 43145993.66,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-03-01",
+            "month": "March 2026",
+            "value": 61.65,
+            "lower_bound": 8.22,
+            "upper_bound": 44178122.01,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-04-01",
+            "month": "April 2026",
+            "value": 69.44,
+            "lower_bound": 8.22,
+            "upper_bound": 45183972.15,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-05-01",
+            "month": "May 2026",
+            "value": 65.37,
+            "lower_bound": 8.22,
+            "upper_bound": 46168270.42,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-06-01",
+            "month": "June 2026",
+            "value": 69.75,
+            "lower_bound": 8.22,
+            "upper_bound": 47131975.5,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-07-01",
+            "month": "July 2026",
+            "value": 65.65,
+            "lower_bound": 8.22,
+            "upper_bound": 48076365.15,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-08-01",
+            "month": "August 2026",
+            "value": 70.04,
+            "lower_bound": 8.22,
+            "upper_bound": 49002565.05,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-09-01",
+            "month": "September 2026",
+            "value": 70.19,
+            "lower_bound": 8.22,
+            "upper_bound": 49911576.61,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-10-01",
+            "month": "October 2026",
+            "value": 66.06,
+            "lower_bound": 8.22,
+            "upper_bound": 50804322.05,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          }
+        ],
+        "combined": [
+          {
+            "date": "2021-01-01",
+            "month": "January 2021",
+            "value": 61.17,
+            "type": "historical"
+          },
+          {
+            "date": "2021-02-01",
+            "month": "February 2021",
+            "value": 49.93,
+            "type": "historical"
+          },
+          {
+            "date": "2021-03-01",
+            "month": "March 2021",
+            "value": 61.45,
+            "type": "historical"
+          },
+          {
+            "date": "2021-04-01",
+            "month": "April 2021",
+            "value": 57.65,
+            "type": "historical"
+          },
+          {
+            "date": "2021-05-01",
+            "month": "May 2021",
+            "value": 61.74,
+            "type": "historical"
+          },
+          {
+            "date": "2021-06-01",
+            "month": "June 2021",
+            "value": 57.92,
+            "type": "historical"
+          },
+          {
+            "date": "2021-07-01",
+            "month": "July 2021",
+            "value": 62.01,
+            "type": "historical"
+          },
+          {
+            "date": "2021-08-01",
+            "month": "August 2021",
+            "value": 62.15,
+            "type": "historical"
+          },
+          {
+            "date": "2021-09-01",
+            "month": "September 2021",
+            "value": 58.29,
+            "type": "historical"
+          },
+          {
+            "date": "2021-10-01",
+            "month": "October 2021",
+            "value": 62.41,
+            "type": "historical"
+          },
+          {
+            "date": "2021-11-01",
+            "month": "November 2021",
+            "value": 58.53,
+            "type": "historical"
+          },
+          {
+            "date": "2021-12-01",
+            "month": "December 2021",
+            "value": 62.66,
+            "type": "historical"
+          },
+          {
+            "date": "2022-01-01",
+            "month": "January 2022",
+            "value": 62.82,
+            "type": "historical"
+          },
+          {
+            "date": "2022-02-01",
+            "month": "February 2022",
+            "value": 51.28,
+            "type": "historical"
+          },
+          {
+            "date": "2022-03-01",
+            "month": "March 2022",
+            "value": 63.11,
+            "type": "historical"
+          },
+          {
+            "date": "2022-04-01",
+            "month": "April 2022",
+            "value": 59.21,
+            "type": "historical"
+          },
+          {
+            "date": "2022-05-01",
+            "month": "May 2022",
+            "value": 63.41,
+            "type": "historical"
+          },
+          {
+            "date": "2022-06-01",
+            "month": "June 2022",
+            "value": 59.48,
+            "type": "historical"
+          },
+          {
+            "date": "2022-07-01",
+            "month": "July 2022",
+            "value": 63.69,
+            "type": "historical"
+          },
+          {
+            "date": "2022-08-01",
+            "month": "August 2022",
+            "value": 63.83,
+            "type": "historical"
+          },
+          {
+            "date": "2022-09-01",
+            "month": "September 2022",
+            "value": 59.87,
+            "type": "historical"
+          },
+          {
+            "date": "2022-10-01",
+            "month": "October 2022",
+            "value": 64.09,
+            "type": "historical"
+          },
+          {
+            "date": "2022-11-01",
+            "month": "November 2022",
+            "value": 60.11,
+            "type": "historical"
+          },
+          {
+            "date": "2022-12-01",
+            "month": "December 2022",
+            "value": 64.35,
+            "type": "historical"
+          },
+          {
+            "date": "2023-01-01",
+            "month": "January 2023",
+            "value": 64.51,
+            "type": "historical"
+          },
+          {
+            "date": "2023-02-01",
+            "month": "February 2023",
+            "value": 52.66,
+            "type": "historical"
+          },
+          {
+            "date": "2023-03-01",
+            "month": "March 2023",
+            "value": 64.81,
+            "type": "historical"
+          },
+          {
+            "date": "2023-04-01",
+            "month": "April 2023",
+            "value": 60.81,
+            "type": "historical"
+          },
+          {
+            "date": "2023-05-01",
+            "month": "May 2023",
+            "value": 65.11,
+            "type": "historical"
+          },
+          {
+            "date": "2023-06-01",
+            "month": "June 2023",
+            "value": 61.08,
+            "type": "historical"
+          },
+          {
+            "date": "2023-07-01",
+            "month": "July 2023",
+            "value": 65.4,
+            "type": "historical"
+          },
+          {
+            "date": "2023-08-01",
+            "month": "August 2023",
+            "value": 65.55,
+            "type": "historical"
+          },
+          {
+            "date": "2023-09-01",
+            "month": "September 2023",
+            "value": 61.48,
+            "type": "historical"
+          },
+          {
+            "date": "2023-10-01",
+            "month": "October 2023",
+            "value": 65.82,
+            "type": "historical"
+          },
+          {
+            "date": "2023-11-01",
+            "month": "November 2023",
+            "value": 61.73,
+            "type": "historical"
+          },
+          {
+            "date": "2023-12-01",
+            "month": "December 2023",
+            "value": 66.09,
+            "type": "historical"
+          },
+          {
+            "date": "2024-01-01",
+            "month": "January 2024",
+            "value": 65.89,
+            "type": "historical"
+          },
+          {
+            "date": "2024-02-01",
+            "month": "February 2024",
+            "value": 57.73,
+            "type": "historical"
+          },
+          {
+            "date": "2024-03-01",
+            "month": "March 2024",
+            "value": 66.2,
+            "type": "historical"
+          },
+          {
+            "date": "2024-04-01",
+            "month": "April 2024",
+            "value": 62.1,
+            "type": "historical"
+          },
+          {
+            "date": "2024-05-01",
+            "month": "May 2024",
+            "value": 66.5,
+            "type": "historical"
+          },
+          {
+            "date": "2024-06-01",
+            "month": "June 2024",
+            "value": 62.38,
+            "type": "historical"
+          },
+          {
+            "date": "2024-07-01",
+            "month": "July 2024",
+            "value": 66.8,
+            "type": "historical"
+          },
+          {
+            "date": "2024-08-01",
+            "month": "August 2024",
+            "value": 66.94,
+            "type": "historical"
+          },
+          {
+            "date": "2024-09-01",
+            "month": "September 2024",
+            "value": 62.79,
+            "type": "historical"
+          },
+          {
+            "date": "2024-10-01",
+            "month": "October 2024",
+            "value": 67.22,
+            "type": "historical"
+          },
+          {
+            "date": "2024-11-01",
+            "month": "November 2024",
+            "value": 63.04,
+            "type": "historical"
+          },
+          {
+            "date": "2024-12-01",
+            "month": "December 2024",
+            "value": 67.49,
+            "type": "historical"
+          },
+          {
+            "date": "2025-01-01",
+            "month": "January 2025",
+            "value": 68.02,
+            "type": "historical"
+          },
+          {
+            "date": "2025-02-01",
+            "month": "February 2025",
+            "value": 55.51,
+            "type": "historical"
+          },
+          {
+            "date": "2025-03-01",
+            "month": "March 2025",
+            "value": 68.31,
+            "type": "historical"
+          },
+          {
+            "date": "2025-04-01",
+            "month": "April 2025",
+            "value": 64.07,
+            "type": "historical"
+          },
+          {
+            "date": "2025-05-01",
+            "month": "May 2025",
+            "value": 68.6,
+            "type": "historical"
+          },
+          {
+            "date": "2025-06-01",
+            "month": "June 2025",
+            "value": 64.33,
+            "type": "historical"
+          },
+          {
+            "date": "2025-07-01",
+            "month": "July 2025",
+            "value": 68.87,
+            "type": "historical"
+          },
+          {
+            "date": "2025-08-01",
+            "month": "August 2025",
+            "value": 69.01,
+            "type": "historical"
+          },
+          {
+            "date": "2025-09-01",
+            "month": "September 2025",
+            "value": 64.71,
+            "type": "historical"
+          },
+          {
+            "date": "2025-11-01",
+            "month": "November 2025",
+            "value": 69.19,
+            "lower_bound": 8.22,
+            "upper_bound": 40556252.71,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2025-12-01",
+            "month": "December 2025",
+            "value": 65.1,
+            "lower_bound": 8.22,
+            "upper_bound": 40885981.18,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-01-01",
+            "month": "January 2026",
+            "value": 69.44,
+            "lower_bound": 8.22,
+            "upper_bound": 42109591.45,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-02-01",
+            "month": "February 2026",
+            "value": 69.12,
+            "lower_bound": 8.22,
+            "upper_bound": 43145993.66,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-03-01",
+            "month": "March 2026",
+            "value": 61.65,
+            "lower_bound": 8.22,
+            "upper_bound": 44178122.01,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-04-01",
+            "month": "April 2026",
+            "value": 69.44,
+            "lower_bound": 8.22,
+            "upper_bound": 45183972.15,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-05-01",
+            "month": "May 2026",
+            "value": 65.37,
+            "lower_bound": 8.22,
+            "upper_bound": 46168270.42,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-06-01",
+            "month": "June 2026",
+            "value": 69.75,
+            "lower_bound": 8.22,
+            "upper_bound": 47131975.5,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-07-01",
+            "month": "July 2026",
+            "value": 65.65,
+            "lower_bound": 8.22,
+            "upper_bound": 48076365.15,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-08-01",
+            "month": "August 2026",
+            "value": 70.04,
+            "lower_bound": 8.22,
+            "upper_bound": 49002565.05,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-09-01",
+            "month": "September 2026",
+            "value": 70.19,
+            "lower_bound": 8.22,
+            "upper_bound": 49911576.61,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-10-01",
+            "month": "October 2026",
+            "value": 66.06,
+            "lower_bound": 8.22,
+            "upper_bound": 50804322.05,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          }
+        ]
+      },
+      "table_data": [
+        {
+          "date": "2025-11-01",
+          "month": "November 2025",
+          "value": 69.19,
+          "lower_bound": 8.22,
+          "upper_bound": 40556252.71,
+          "type": "forecast",
+          "confidence": "high",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2025-12-01",
+          "month": "December 2025",
+          "value": 65.1,
+          "lower_bound": 8.22,
+          "upper_bound": 40885981.18,
+          "type": "forecast",
+          "confidence": "high",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-01-01",
+          "month": "January 2026",
+          "value": 69.44,
+          "lower_bound": 8.22,
+          "upper_bound": 42109591.45,
+          "type": "forecast",
+          "confidence": "high",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-02-01",
+          "month": "February 2026",
+          "value": 69.12,
+          "lower_bound": 8.22,
+          "upper_bound": 43145993.66,
+          "type": "forecast",
+          "confidence": "medium",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-03-01",
+          "month": "March 2026",
+          "value": 61.65,
+          "lower_bound": 8.22,
+          "upper_bound": 44178122.01,
+          "type": "forecast",
+          "confidence": "medium",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-04-01",
+          "month": "April 2026",
+          "value": 69.44,
+          "lower_bound": 8.22,
+          "upper_bound": 45183972.15,
+          "type": "forecast",
+          "confidence": "medium",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-05-01",
+          "month": "May 2026",
+          "value": 65.37,
+          "lower_bound": 8.22,
+          "upper_bound": 46168270.42,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-06-01",
+          "month": "June 2026",
+          "value": 69.75,
+          "lower_bound": 8.22,
+          "upper_bound": 47131975.5,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-07-01",
+          "month": "July 2026",
+          "value": 65.65,
+          "lower_bound": 8.22,
+          "upper_bound": 48076365.15,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-08-01",
+          "month": "August 2026",
+          "value": 70.04,
+          "lower_bound": 8.22,
+          "upper_bound": 49002565.05,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-09-01",
+          "month": "September 2026",
+          "value": 70.19,
+          "lower_bound": 8.22,
+          "upper_bound": 49911576.61,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-10-01",
+          "month": "October 2026",
+          "value": 66.06,
+          "lower_bound": 8.22,
+          "upper_bound": 50804322.05,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        }
+      ]
+    },
+    {
+      "source_name": "Unknown name",
+      "lat": 31.435,
+      "lon": 74.293,
+      "source_type": "centralized WWTP with secondary treatment",
+      "capacity_mw": 1873523.89472355,
+      "status": "success",
+      "model_info": {
+        "selected_model": "SARIMA",
+        "confidence": "high",
+        "selection_reason": "Excellent fit (R²=0.9985)",
+        "all_models_tested": {
+          "Holt-Winters": {
+            "mae": 0.07189506341014489,
+            "rmse": 0.08808944504692383,
+            "r2": 0.9956585626726108,
+            "mape": 0.17401598139990807
+          },
+          "SARIMA": {
+            "mae": 0.043078379766161135,
+            "rmse": 0.05106677225775268,
+            "r2": 0.9985409754311917,
+            "mape": 0.10888967822220118
+          }
+        }
+      },
+      "summary": {
+        "current_emissions_tonnes": 39.23,
+        "current_date": "September 2025",
+        "forecast_12month_tonnes": 39.87,
+        "forecast_average_tonnes": 40.92,
+        "change_percent": 1.64,
+        "change_tonnes": 0.64,
+        "trend": "increasing",
+        "total_historical_emissions": 2218.9
+      },
+      "chart_data": {
+        "historical": [
+          {
+            "date": "2021-01-01",
+            "month": "January 2021",
+            "value": 38.83,
+            "type": "historical"
+          },
+          {
+            "date": "2021-02-01",
+            "month": "February 2021",
+            "value": 31.73,
+            "type": "historical"
+          },
+          {
+            "date": "2021-03-01",
+            "month": "March 2021",
+            "value": 38.95,
+            "type": "historical"
+          },
+          {
+            "date": "2021-04-01",
+            "month": "April 2021",
+            "value": 36.54,
+            "type": "historical"
+          },
+          {
+            "date": "2021-05-01",
+            "month": "May 2021",
+            "value": 39.07,
+            "type": "historical"
+          },
+          {
+            "date": "2021-06-01",
+            "month": "June 2021",
+            "value": 36.65,
+            "type": "historical"
+          },
+          {
+            "date": "2021-07-01",
+            "month": "July 2021",
+            "value": 39.2,
+            "type": "historical"
+          },
+          {
+            "date": "2021-08-01",
+            "month": "August 2021",
+            "value": 39.26,
+            "type": "historical"
+          },
+          {
+            "date": "2021-09-01",
+            "month": "September 2021",
+            "value": 36.82,
+            "type": "historical"
+          },
+          {
+            "date": "2021-10-01",
+            "month": "October 2021",
+            "value": 39.38,
+            "type": "historical"
+          },
+          {
+            "date": "2021-11-01",
+            "month": "November 2021",
+            "value": 36.93,
+            "type": "historical"
+          },
+          {
+            "date": "2021-12-01",
+            "month": "December 2021",
+            "value": 39.49,
+            "type": "historical"
+          },
+          {
+            "date": "2022-01-01",
+            "month": "January 2022",
+            "value": 39.55,
+            "type": "historical"
+          },
+          {
+            "date": "2022-02-01",
+            "month": "February 2022",
+            "value": 32.31,
+            "type": "historical"
+          },
+          {
+            "date": "2022-03-01",
+            "month": "March 2022",
+            "value": 39.66,
+            "type": "historical"
+          },
+          {
+            "date": "2022-04-01",
+            "month": "April 2022",
+            "value": 37.2,
+            "type": "historical"
+          },
+          {
+            "date": "2022-05-01",
+            "month": "May 2022",
+            "value": 39.77,
+            "type": "historical"
+          },
+          {
+            "date": "2022-06-01",
+            "month": "June 2022",
+            "value": 37.3,
+            "type": "historical"
+          },
+          {
+            "date": "2022-07-01",
+            "month": "July 2022",
+            "value": 39.88,
+            "type": "historical"
+          },
+          {
+            "date": "2022-08-01",
+            "month": "August 2022",
+            "value": 39.94,
+            "type": "historical"
+          },
+          {
+            "date": "2022-09-01",
+            "month": "September 2022",
+            "value": 37.45,
+            "type": "historical"
+          },
+          {
+            "date": "2022-10-01",
+            "month": "October 2022",
+            "value": 40.04,
+            "type": "historical"
+          },
+          {
+            "date": "2022-11-01",
+            "month": "November 2022",
+            "value": 37.55,
+            "type": "historical"
+          },
+          {
+            "date": "2022-12-01",
+            "month": "December 2022",
+            "value": 40.15,
+            "type": "historical"
+          },
+          {
+            "date": "2023-01-01",
+            "month": "January 2023",
+            "value": 40.2,
+            "type": "historical"
+          },
+          {
+            "date": "2023-02-01",
+            "month": "February 2023",
+            "value": 32.84,
+            "type": "historical"
+          },
+          {
+            "date": "2023-03-01",
+            "month": "March 2023",
+            "value": 40.3,
+            "type": "historical"
+          },
+          {
+            "date": "2023-04-01",
+            "month": "April 2023",
+            "value": 37.79,
+            "type": "historical"
+          },
+          {
+            "date": "2023-05-01",
+            "month": "May 2023",
+            "value": 40.4,
+            "type": "historical"
+          },
+          {
+            "date": "2023-06-01",
+            "month": "June 2023",
+            "value": 37.88,
+            "type": "historical"
+          },
+          {
+            "date": "2023-07-01",
+            "month": "July 2023",
+            "value": 40.5,
+            "type": "historical"
+          },
+          {
+            "date": "2023-08-01",
+            "month": "August 2023",
+            "value": 40.56,
+            "type": "historical"
+          },
+          {
+            "date": "2023-09-01",
+            "month": "September 2023",
+            "value": 38.03,
+            "type": "historical"
+          },
+          {
+            "date": "2023-10-01",
+            "month": "October 2023",
+            "value": 40.66,
+            "type": "historical"
+          },
+          {
+            "date": "2023-11-01",
+            "month": "November 2023",
+            "value": 38.13,
+            "type": "historical"
+          },
+          {
+            "date": "2023-12-01",
+            "month": "December 2023",
+            "value": 40.76,
+            "type": "historical"
+          },
+          {
+            "date": "2024-01-01",
+            "month": "January 2024",
+            "value": 40.81,
+            "type": "historical"
+          },
+          {
+            "date": "2024-02-01",
+            "month": "February 2024",
+            "value": 35.76,
+            "type": "historical"
+          },
+          {
+            "date": "2024-03-01",
+            "month": "March 2024",
+            "value": 40.92,
+            "type": "historical"
+          },
+          {
+            "date": "2024-04-01",
+            "month": "April 2024",
+            "value": 38.37,
+            "type": "historical"
+          },
+          {
+            "date": "2024-05-01",
+            "month": "May 2024",
+            "value": 41.03,
+            "type": "historical"
+          },
+          {
+            "date": "2024-06-01",
+            "month": "June 2024",
+            "value": 38.47,
+            "type": "historical"
+          },
+          {
+            "date": "2024-07-01",
+            "month": "July 2024",
+            "value": 41.13,
+            "type": "historical"
+          },
+          {
+            "date": "2024-08-01",
+            "month": "August 2024",
+            "value": 41.19,
+            "type": "historical"
+          },
+          {
+            "date": "2024-09-01",
+            "month": "September 2024",
+            "value": 38.63,
+            "type": "historical"
+          },
+          {
+            "date": "2024-10-01",
+            "month": "October 2024",
+            "value": 41.3,
+            "type": "historical"
+          },
+          {
+            "date": "2024-11-01",
+            "month": "November 2024",
+            "value": 38.73,
+            "type": "historical"
+          },
+          {
+            "date": "2024-12-01",
+            "month": "December 2024",
+            "value": 41.4,
+            "type": "historical"
+          },
+          {
+            "date": "2025-01-01",
+            "month": "January 2025",
+            "value": 41.46,
+            "type": "historical"
+          },
+          {
+            "date": "2025-02-01",
+            "month": "February 2025",
+            "value": 33.86,
+            "type": "historical"
+          },
+          {
+            "date": "2025-03-01",
+            "month": "March 2025",
+            "value": 41.56,
+            "type": "historical"
+          },
+          {
+            "date": "2025-04-01",
+            "month": "April 2025",
+            "value": 38.97,
+            "type": "historical"
+          },
+          {
+            "date": "2025-05-01",
+            "month": "May 2025",
+            "value": 41.67,
+            "type": "historical"
+          },
+          {
+            "date": "2025-06-01",
+            "month": "June 2025",
+            "value": 39.07,
+            "type": "historical"
+          },
+          {
+            "date": "2025-07-01",
+            "month": "July 2025",
+            "value": 41.78,
+            "type": "historical"
+          },
+          {
+            "date": "2025-08-01",
+            "month": "August 2025",
+            "value": 41.83,
+            "type": "historical"
+          },
+          {
+            "date": "2025-09-01",
+            "month": "September 2025",
+            "value": 39.23,
+            "type": "historical"
+          }
+        ],
+        "forecast": [
+          {
+            "date": "2025-11-01",
+            "month": "November 2025",
+            "value": 41.9,
+            "lower_bound": 5.01,
+            "upper_bound": 8989080.98,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2025-12-01",
+            "month": "December 2025",
+            "value": 39.37,
+            "lower_bound": 5.01,
+            "upper_bound": 9258893.72,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-01-01",
+            "month": "January 2026",
+            "value": 42.0,
+            "lower_bound": 5.01,
+            "upper_bound": 9524959.66,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-02-01",
+            "month": "February 2026",
+            "value": 42.05,
+            "lower_bound": 5.01,
+            "upper_bound": 9783780.91,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-03-01",
+            "month": "March 2026",
+            "value": 37.29,
+            "lower_bound": 5.01,
+            "upper_bound": 10035924.7,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-04-01",
+            "month": "April 2026",
+            "value": 42.16,
+            "lower_bound": 5.01,
+            "upper_bound": 10281896.37,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-05-01",
+            "month": "May 2026",
+            "value": 39.61,
+            "lower_bound": 5.01,
+            "upper_bound": 10522112.42,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-06-01",
+            "month": "June 2026",
+            "value": 42.27,
+            "lower_bound": 5.01,
+            "upper_bound": 10756970.55,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-07-01",
+            "month": "July 2026",
+            "value": 39.72,
+            "lower_bound": 5.01,
+            "upper_bound": 10986804.31,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-08-01",
+            "month": "August 2026",
+            "value": 42.37,
+            "lower_bound": 5.01,
+            "upper_bound": 11211932.77,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-09-01",
+            "month": "September 2026",
+            "value": 42.43,
+            "lower_bound": 5.01,
+            "upper_bound": 11432626.4,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-10-01",
+            "month": "October 2026",
+            "value": 39.87,
+            "lower_bound": 5.01,
+            "upper_bound": 11649137.1,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          }
+        ],
+        "combined": [
+          {
+            "date": "2021-01-01",
+            "month": "January 2021",
+            "value": 38.83,
+            "type": "historical"
+          },
+          {
+            "date": "2021-02-01",
+            "month": "February 2021",
+            "value": 31.73,
+            "type": "historical"
+          },
+          {
+            "date": "2021-03-01",
+            "month": "March 2021",
+            "value": 38.95,
+            "type": "historical"
+          },
+          {
+            "date": "2021-04-01",
+            "month": "April 2021",
+            "value": 36.54,
+            "type": "historical"
+          },
+          {
+            "date": "2021-05-01",
+            "month": "May 2021",
+            "value": 39.07,
+            "type": "historical"
+          },
+          {
+            "date": "2021-06-01",
+            "month": "June 2021",
+            "value": 36.65,
+            "type": "historical"
+          },
+          {
+            "date": "2021-07-01",
+            "month": "July 2021",
+            "value": 39.2,
+            "type": "historical"
+          },
+          {
+            "date": "2021-08-01",
+            "month": "August 2021",
+            "value": 39.26,
+            "type": "historical"
+          },
+          {
+            "date": "2021-09-01",
+            "month": "September 2021",
+            "value": 36.82,
+            "type": "historical"
+          },
+          {
+            "date": "2021-10-01",
+            "month": "October 2021",
+            "value": 39.38,
+            "type": "historical"
+          },
+          {
+            "date": "2021-11-01",
+            "month": "November 2021",
+            "value": 36.93,
+            "type": "historical"
+          },
+          {
+            "date": "2021-12-01",
+            "month": "December 2021",
+            "value": 39.49,
+            "type": "historical"
+          },
+          {
+            "date": "2022-01-01",
+            "month": "January 2022",
+            "value": 39.55,
+            "type": "historical"
+          },
+          {
+            "date": "2022-02-01",
+            "month": "February 2022",
+            "value": 32.31,
+            "type": "historical"
+          },
+          {
+            "date": "2022-03-01",
+            "month": "March 2022",
+            "value": 39.66,
+            "type": "historical"
+          },
+          {
+            "date": "2022-04-01",
+            "month": "April 2022",
+            "value": 37.2,
+            "type": "historical"
+          },
+          {
+            "date": "2022-05-01",
+            "month": "May 2022",
+            "value": 39.77,
+            "type": "historical"
+          },
+          {
+            "date": "2022-06-01",
+            "month": "June 2022",
+            "value": 37.3,
+            "type": "historical"
+          },
+          {
+            "date": "2022-07-01",
+            "month": "July 2022",
+            "value": 39.88,
+            "type": "historical"
+          },
+          {
+            "date": "2022-08-01",
+            "month": "August 2022",
+            "value": 39.94,
+            "type": "historical"
+          },
+          {
+            "date": "2022-09-01",
+            "month": "September 2022",
+            "value": 37.45,
+            "type": "historical"
+          },
+          {
+            "date": "2022-10-01",
+            "month": "October 2022",
+            "value": 40.04,
+            "type": "historical"
+          },
+          {
+            "date": "2022-11-01",
+            "month": "November 2022",
+            "value": 37.55,
+            "type": "historical"
+          },
+          {
+            "date": "2022-12-01",
+            "month": "December 2022",
+            "value": 40.15,
+            "type": "historical"
+          },
+          {
+            "date": "2023-01-01",
+            "month": "January 2023",
+            "value": 40.2,
+            "type": "historical"
+          },
+          {
+            "date": "2023-02-01",
+            "month": "February 2023",
+            "value": 32.84,
+            "type": "historical"
+          },
+          {
+            "date": "2023-03-01",
+            "month": "March 2023",
+            "value": 40.3,
+            "type": "historical"
+          },
+          {
+            "date": "2023-04-01",
+            "month": "April 2023",
+            "value": 37.79,
+            "type": "historical"
+          },
+          {
+            "date": "2023-05-01",
+            "month": "May 2023",
+            "value": 40.4,
+            "type": "historical"
+          },
+          {
+            "date": "2023-06-01",
+            "month": "June 2023",
+            "value": 37.88,
+            "type": "historical"
+          },
+          {
+            "date": "2023-07-01",
+            "month": "July 2023",
+            "value": 40.5,
+            "type": "historical"
+          },
+          {
+            "date": "2023-08-01",
+            "month": "August 2023",
+            "value": 40.56,
+            "type": "historical"
+          },
+          {
+            "date": "2023-09-01",
+            "month": "September 2023",
+            "value": 38.03,
+            "type": "historical"
+          },
+          {
+            "date": "2023-10-01",
+            "month": "October 2023",
+            "value": 40.66,
+            "type": "historical"
+          },
+          {
+            "date": "2023-11-01",
+            "month": "November 2023",
+            "value": 38.13,
+            "type": "historical"
+          },
+          {
+            "date": "2023-12-01",
+            "month": "December 2023",
+            "value": 40.76,
+            "type": "historical"
+          },
+          {
+            "date": "2024-01-01",
+            "month": "January 2024",
+            "value": 40.81,
+            "type": "historical"
+          },
+          {
+            "date": "2024-02-01",
+            "month": "February 2024",
+            "value": 35.76,
+            "type": "historical"
+          },
+          {
+            "date": "2024-03-01",
+            "month": "March 2024",
+            "value": 40.92,
+            "type": "historical"
+          },
+          {
+            "date": "2024-04-01",
+            "month": "April 2024",
+            "value": 38.37,
+            "type": "historical"
+          },
+          {
+            "date": "2024-05-01",
+            "month": "May 2024",
+            "value": 41.03,
+            "type": "historical"
+          },
+          {
+            "date": "2024-06-01",
+            "month": "June 2024",
+            "value": 38.47,
+            "type": "historical"
+          },
+          {
+            "date": "2024-07-01",
+            "month": "July 2024",
+            "value": 41.13,
+            "type": "historical"
+          },
+          {
+            "date": "2024-08-01",
+            "month": "August 2024",
+            "value": 41.19,
+            "type": "historical"
+          },
+          {
+            "date": "2024-09-01",
+            "month": "September 2024",
+            "value": 38.63,
+            "type": "historical"
+          },
+          {
+            "date": "2024-10-01",
+            "month": "October 2024",
+            "value": 41.3,
+            "type": "historical"
+          },
+          {
+            "date": "2024-11-01",
+            "month": "November 2024",
+            "value": 38.73,
+            "type": "historical"
+          },
+          {
+            "date": "2024-12-01",
+            "month": "December 2024",
+            "value": 41.4,
+            "type": "historical"
+          },
+          {
+            "date": "2025-01-01",
+            "month": "January 2025",
+            "value": 41.46,
+            "type": "historical"
+          },
+          {
+            "date": "2025-02-01",
+            "month": "February 2025",
+            "value": 33.86,
+            "type": "historical"
+          },
+          {
+            "date": "2025-03-01",
+            "month": "March 2025",
+            "value": 41.56,
+            "type": "historical"
+          },
+          {
+            "date": "2025-04-01",
+            "month": "April 2025",
+            "value": 38.97,
+            "type": "historical"
+          },
+          {
+            "date": "2025-05-01",
+            "month": "May 2025",
+            "value": 41.67,
+            "type": "historical"
+          },
+          {
+            "date": "2025-06-01",
+            "month": "June 2025",
+            "value": 39.07,
+            "type": "historical"
+          },
+          {
+            "date": "2025-07-01",
+            "month": "July 2025",
+            "value": 41.78,
+            "type": "historical"
+          },
+          {
+            "date": "2025-08-01",
+            "month": "August 2025",
+            "value": 41.83,
+            "type": "historical"
+          },
+          {
+            "date": "2025-09-01",
+            "month": "September 2025",
+            "value": 39.23,
+            "type": "historical"
+          },
+          {
+            "date": "2025-11-01",
+            "month": "November 2025",
+            "value": 41.9,
+            "lower_bound": 5.01,
+            "upper_bound": 8989080.98,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2025-12-01",
+            "month": "December 2025",
+            "value": 39.37,
+            "lower_bound": 5.01,
+            "upper_bound": 9258893.72,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-01-01",
+            "month": "January 2026",
+            "value": 42.0,
+            "lower_bound": 5.01,
+            "upper_bound": 9524959.66,
+            "type": "forecast",
+            "confidence": "high",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-02-01",
+            "month": "February 2026",
+            "value": 42.05,
+            "lower_bound": 5.01,
+            "upper_bound": 9783780.91,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-03-01",
+            "month": "March 2026",
+            "value": 37.29,
+            "lower_bound": 5.01,
+            "upper_bound": 10035924.7,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-04-01",
+            "month": "April 2026",
+            "value": 42.16,
+            "lower_bound": 5.01,
+            "upper_bound": 10281896.37,
+            "type": "forecast",
+            "confidence": "medium",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-05-01",
+            "month": "May 2026",
+            "value": 39.61,
+            "lower_bound": 5.01,
+            "upper_bound": 10522112.42,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-06-01",
+            "month": "June 2026",
+            "value": 42.27,
+            "lower_bound": 5.01,
+            "upper_bound": 10756970.55,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-07-01",
+            "month": "July 2026",
+            "value": 39.72,
+            "lower_bound": 5.01,
+            "upper_bound": 10986804.31,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-08-01",
+            "month": "August 2026",
+            "value": 42.37,
+            "lower_bound": 5.01,
+            "upper_bound": 11211932.77,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-09-01",
+            "month": "September 2026",
+            "value": 42.43,
+            "lower_bound": 5.01,
+            "upper_bound": 11432626.4,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          },
+          {
+            "date": "2026-10-01",
+            "month": "October 2026",
+            "value": 39.87,
+            "lower_bound": 5.01,
+            "upper_bound": 11649137.1,
+            "type": "forecast",
+            "confidence": "low",
+            "confidence_interval": "95%"
+          }
+        ]
+      },
+      "table_data": [
+        {
+          "date": "2025-11-01",
+          "month": "November 2025",
+          "value": 41.9,
+          "lower_bound": 5.01,
+          "upper_bound": 8989080.98,
+          "type": "forecast",
+          "confidence": "high",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2025-12-01",
+          "month": "December 2025",
+          "value": 39.37,
+          "lower_bound": 5.01,
+          "upper_bound": 9258893.72,
+          "type": "forecast",
+          "confidence": "high",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-01-01",
+          "month": "January 2026",
+          "value": 42.0,
+          "lower_bound": 5.01,
+          "upper_bound": 9524959.66,
+          "type": "forecast",
+          "confidence": "high",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-02-01",
+          "month": "February 2026",
+          "value": 42.05,
+          "lower_bound": 5.01,
+          "upper_bound": 9783780.91,
+          "type": "forecast",
+          "confidence": "medium",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-03-01",
+          "month": "March 2026",
+          "value": 37.29,
+          "lower_bound": 5.01,
+          "upper_bound": 10035924.7,
+          "type": "forecast",
+          "confidence": "medium",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-04-01",
+          "month": "April 2026",
+          "value": 42.16,
+          "lower_bound": 5.01,
+          "upper_bound": 10281896.37,
+          "type": "forecast",
+          "confidence": "medium",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-05-01",
+          "month": "May 2026",
+          "value": 39.61,
+          "lower_bound": 5.01,
+          "upper_bound": 10522112.42,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-06-01",
+          "month": "June 2026",
+          "value": 42.27,
+          "lower_bound": 5.01,
+          "upper_bound": 10756970.55,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-07-01",
+          "month": "July 2026",
+          "value": 39.72,
+          "lower_bound": 5.01,
+          "upper_bound": 10986804.31,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-08-01",
+          "month": "August 2026",
+          "value": 42.37,
+          "lower_bound": 5.01,
+          "upper_bound": 11211932.77,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-09-01",
+          "month": "September 2026",
+          "value": 42.43,
+          "lower_bound": 5.01,
+          "upper_bound": 11432626.4,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        },
+        {
+          "date": "2026-10-01",
+          "month": "October 2026",
+          "value": 39.87,
+          "lower_bound": 5.01,
+          "upper_bound": 11649137.1,
+          "type": "forecast",
+          "confidence": "low",
+          "confidence_interval": "95%"
+        }
+      ]
+    },
+    {
+      "source_name": "Other biological-treatment-of-solid-waste-and-biogenic emissions",
+      "lat": "NaN",
+      "lon": "NaN",
+      "source_type": "nan",
+      "capacity_mw": 0.0,
+      "status": "zero_emissions",
+      "error_message": "Emissions too low for forecasting"
+    },
+    {
+      "source_name": "Other domestic-wastewater-treatment-and-discharge emissions",
+      "lat": "NaN",
+      "lon": "NaN",
+      "source_type": "nan",
+      "capacity_mw": 37600590.06772268,
+      "status": "zero_emissions",
+      "error_message": "Emissions too low for forecasting"
+    },
+    {
+      "source_name": "Other incineration-and-open-burning-of-waste emissions",
+      "lat": "NaN",
+      "lon": "NaN",
+      "source_type": "nan",
+      "capacity_mw": 0.0,
+      "status": "zero_emissions",
+      "error_message": "Emissions too low for forecasting"
+    },
+    {
+      "source_name": "Other industrial-wastewater-treatment-and-discharge emissions",
+      "lat": "NaN",
+      "lon": "NaN",
+      "source_type": "nan",
+      "capacity_mw": 2129581.228037729,
+      "status": "zero_emissions",
+      "error_message": "Emissions too low for forecasting"
+    },
+    {
+      "source_name": "Other solid-waste-disposal emissions",
+      "lat": "NaN",
+      "lon": "NaN",
+      "source_type": "nan",
+      "capacity_mw": 5436543.753896341,
+      "status": "zero_emissions",
+      "error_message": "Emissions too low for forecasting"
+    }
+  ]
+}
