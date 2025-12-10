@@ -338,60 +338,83 @@ export default function Dashboard() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <header className="border-b border-border bg-card px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground">
-              <Leaf className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold" data-testid="text-app-title">
-                CarbonSense
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Carbon emissions monitoring and forecasting platform
-              </p>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+        {/* Combined Header with Tabs */}
+        <header className="bg-card border-b border-border">
+          <div className="px-6 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-primary-foreground">
+                  <Leaf className="h-4 w-4" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold leading-tight" data-testid="text-app-title">
+                    CarbonSense
+                  </h1>
+                  <p className="text-xs text-muted-foreground">
+                    Emissions monitoring & forecasting
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-muted-foreground mr-2 hidden sm:block">
+                  {areas.length} Sources | {dataType === 'forecast' ? 'Forecast' : 'Historical'}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setLocation("/")}
+                  data-testid="button-home"
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleLogout}
+                  data-testid="button-logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+                <ThemeToggle />
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="text-sm text-muted-foreground mr-4">
-              {areas.length} Sources | {dataType === 'forecast' ? 'Forecast' : 'Historical'} Data
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setLocation("/")}
-              data-testid="button-home"
-            >
-              <Home className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              data-testid="button-logout"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
 
-      <div className="flex-1 overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <div className="border-b border-border px-6">
-            <TabsList className="h-12">
-              <TabsTrigger value="map" data-testid="tab-map">Map View</TabsTrigger>
-              <TabsTrigger value="analytics" data-testid="tab-analytics">Analytics</TabsTrigger>
-              <TabsTrigger value="data" data-testid="tab-data" className="gap-1.5">
+          {/* Tab Navigation */}
+          <div className="px-6">
+            <TabsList className="h-10 w-full justify-start bg-transparent p-0 border-b-0">
+              <TabsTrigger
+                value="map"
+                data-testid="tab-map"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-medium text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              >
+                Map View
+              </TabsTrigger>
+              <TabsTrigger
+                value="analytics"
+                data-testid="tab-analytics"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-medium text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              >
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger
+                value="data"
+                data-testid="tab-data"
+                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-medium text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none gap-1.5"
+              >
                 <Database className="h-4 w-4" />
                 Data Explorer
               </TabsTrigger>
             </TabsList>
           </div>
+        </header>
 
-          <TabsContent value="map" className="flex-1 mt-0 p-0">
+        {/* Tab Content */}
+        <div className="flex-1 overflow-hidden">
+          <TabsContent value="map" className="h-full mt-0 p-0">
             <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_380px]">
               <div className="relative h-full">
                 <EmissionMap
@@ -465,7 +488,7 @@ export default function Dashboard() {
             </div>
           </TabsContent>
 
-          <TabsContent value="analytics" className="flex-1 mt-0 overflow-auto bg-muted/30">
+          <TabsContent value="analytics" className="h-full mt-0 overflow-auto bg-muted/30">
             <div className="p-8">
               {/* Page Header */}
               <div className="mb-8">
@@ -595,11 +618,11 @@ export default function Dashboard() {
             </div>
           </TabsContent>
 
-          <TabsContent value="data" className="flex-1 mt-0 p-0 overflow-auto">
+          <TabsContent value="data" className="h-full mt-0 p-0 overflow-auto">
             <DataExplorer />
           </TabsContent>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
     </div>
   );
 }
