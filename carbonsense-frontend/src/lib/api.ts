@@ -72,12 +72,40 @@ function calculateSectorSum(emission: EmissionDataPoint, sectors: Sector[]): num
   return sum;
 }
 
+// Time interval type
+export type TimeInterval = 'monthly' | 'yearly';
+
+// Filter emissions by time interval (last N months or years)
+function filterByTimeInterval(emissions: EmissionDataPoint[], interval: TimeInterval): EmissionDataPoint[] {
+  if (emissions.length === 0) return emissions;
+
+  // Find the latest date in the data
+  const latestDate = emissions.reduce((max, e) => e.date > max ? e.date : max, emissions[0].date);
+  const latest = new Date(latestDate);
+
+  let cutoffDate: Date;
+  if (interval === 'monthly') {
+    // Last 12 months
+    cutoffDate = new Date(latest);
+    cutoffDate.setMonth(cutoffDate.getMonth() - 12);
+  } else {
+    // Last 3 years
+    cutoffDate = new Date(latest);
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - 3);
+  }
+
+  const cutoffStr = cutoffDate.toISOString().split('T')[0];
+  return emissions.filter(e => e.date >= cutoffStr);
+}
+
 // Get latest emissions for each area (for map visualization)
 export async function fetchLatestEmissionsByArea(
   dataType: 'historical' | 'forecast' = 'historical',
-  sectors?: Sector[]
+  sectors?: Sector[],
+  interval: TimeInterval = 'monthly'
 ): Promise<Record<string, number>> {
-  const emissions = await fetchEmissions({ data_type: dataType });
+  const allEmissions = await fetchEmissions({ data_type: dataType });
+  const emissions = filterByTimeInterval(allEmissions, interval);
 
   // Group by area and get latest date
   const areaEmissions: Record<string, { date: string; total: number }> = {};
@@ -123,9 +151,10 @@ export async function fetchTimeSeriesData(
 // Calculate leaderboard from emissions data
 export async function fetchLeaderboard(
   dataType: 'historical' | 'forecast' = 'historical',
-  sectors?: Sector[]
+  sectors?: Sector[],
+  interval: TimeInterval = 'monthly'
 ) {
-  const latestEmissions = await fetchLatestEmissionsByArea(dataType, sectors);
+  const latestEmissions = await fetchLatestEmissionsByArea(dataType, sectors, interval);
   const areas = await fetchAreas();
 
   // Calculate trend (mock for now - would need historical comparison)

@@ -1,16 +1,14 @@
 import { Button } from "@/components/ui/button";
-import { Calendar } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import type { TimeInterval, DataType } from "@shared/schema";
+import type { DataType } from "@shared/schema";
+import type { TimeInterval } from "@/lib/api";
 
 interface TimeControlsProps {
   interval: TimeInterval;
   onIntervalChange: (interval: TimeInterval) => void;
   dataType: DataType;
   onDataTypeChange: (type: DataType) => void;
-  startDate?: string;
-  endDate?: string;
 }
 
 export function TimeControls({
@@ -19,16 +17,15 @@ export function TimeControls({
   dataType,
   onDataTypeChange,
 }: TimeControlsProps) {
-  const intervals: { value: TimeInterval; label: string }[] = [
-    { value: "monthly", label: "Monthly" },
-    { value: "yearly", label: "Yearly" },
-    { value: "custom", label: "Custom" },
+  const intervals: { value: TimeInterval; label: string; description: string }[] = [
+    { value: "monthly", label: "Monthly", description: "Last 12 months" },
+    { value: "yearly", label: "Yearly", description: "Last 3 years" },
   ];
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Time Interval</Label>
+        <Label className="text-sm font-medium">Time Range</Label>
         <div className="flex gap-2">
           {intervals.map((item) => (
             <Button
@@ -37,11 +34,15 @@ export function TimeControls({
               size="sm"
               onClick={() => onIntervalChange(item.value)}
               data-testid={`button-interval-${item.value}`}
+              title={item.description}
             >
               {item.label}
             </Button>
           ))}
         </div>
+        <p className="text-xs text-muted-foreground">
+          {interval === "monthly" ? "Showing last 12 months" : "Showing last 3 years"}
+        </p>
       </div>
 
       <div className="flex items-center space-x-2">
@@ -55,13 +56,6 @@ export function TimeControls({
           Show Forecast Data
         </Label>
       </div>
-
-      {interval === "custom" && (
-        <Button variant="outline" size="sm" className="w-full" data-testid="button-date-picker">
-          <Calendar className="h-4 w-4 mr-2" />
-          Select Date Range
-        </Button>
-      )}
     </div>
   );
 }

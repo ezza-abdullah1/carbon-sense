@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Leaf, Home, LogOut, Loader2 } from "lucide-react";
-import type { Sector, TimeInterval, DataType } from "@shared/schema";
+import type { Sector, DataType } from "@shared/schema";
+import type { TimeInterval } from "@/lib/api";
 import { useAreas, useLatestEmissions, useLeaderboard, useTimeSeriesData, useCombinedTimeSeriesData } from "@/hooks/use-emissions";
 import type { EmissionDataPoint, AreaInfo } from "@/lib/api";
 
@@ -33,10 +34,10 @@ export default function Dashboard() {
   const [dataType, setDataType] = useState<DataType>("historical");
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
 
-  // Fetch real data using hooks (pass selectedSectors for filtering)
+  // Fetch real data using hooks (pass selectedSectors and timeInterval for filtering)
   const { data: areas = [], isLoading: areasLoading } = useAreas();
-  const { data: emissionData = {}, isLoading: emissionsLoading } = useLatestEmissions(dataType, selectedSectors);
-  const { data: leaderboard = [], isLoading: leaderboardLoading } = useLeaderboard(dataType, selectedSectors);
+  const { data: emissionData = {}, isLoading: emissionsLoading } = useLatestEmissions(dataType, selectedSectors, timeInterval);
+  const { data: leaderboard = [], isLoading: leaderboardLoading } = useLeaderboard(dataType, selectedSectors, timeInterval);
   const { data: timeSeriesData = [] } = useTimeSeriesData(selectedAreaId || undefined, dataType);
   const { data: combinedData } = useCombinedTimeSeriesData(selectedAreaId || undefined);
 
