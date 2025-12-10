@@ -53,6 +53,14 @@ export default function Dashboard() {
     );
   };
 
+  const handleSelectAllSectors = () => {
+    setSelectedSectors(["transport", "industry", "energy", "waste", "buildings"]);
+  };
+
+  const handleClearAllSectors = () => {
+    setSelectedSectors([]);
+  };
+
   // Calculate max emission for map scaling (use 75th percentile to avoid outlier skew)
   const maxEmission = useMemo(() => {
     const values = (Object.values(emissionData) as number[]).filter(v => v > 0).sort((a, b) => a - b);
@@ -113,8 +121,8 @@ export default function Dashboard() {
     };
   }, [timeSeriesData, selectedSectors, dataType]);
 
-  // Sector breakdown pie chart
-  const sectorPieData = useMemo(() => {
+  // Calculate sector totals across all time series data
+  const sectorTotals = useMemo(() => {
     const totals = {
       transport: 0,
       industry: 0,
@@ -131,7 +139,12 @@ export default function Dashboard() {
       totals.buildings += item.buildings;
     });
 
-    const values = Object.values(totals);
+    return totals;
+  }, [timeSeriesData]);
+
+  // Sector breakdown pie chart
+  const sectorPieData = useMemo(() => {
+    const values = Object.values(sectorTotals);
     const hasData = values.some(v => v > 0);
 
     if (!hasData) {
@@ -150,7 +163,7 @@ export default function Dashboard() {
       datasets: [
         {
           label: "Emissions by Sector",
-          data: Object.values(totals).map(v => Math.round(v / 1000)), // Convert to thousands
+          data: Object.values(sectorTotals).map(v => Math.round(v / 1000)), // Convert to thousands
           backgroundColor: [
             "hsl(217, 91%, 60%)",
             "hsl(280, 67%, 55%)",
@@ -161,7 +174,7 @@ export default function Dashboard() {
         },
       ],
     };
-  }, [timeSeriesData]);
+  }, [sectorTotals]);
 
   // Top areas bar chart
   const areaBarData = useMemo(() => {
@@ -186,7 +199,7 @@ export default function Dashboard() {
 
     const { historical, forecast } = combinedData;
 
-    // Helper to aggregate data by month
+    // Helper to aggregate data by month (sum for trend chart)
     const aggregateByMonth = (data: EmissionDataPoint[]) => {
       const monthMap = new Map<string, number>();
       data.forEach((item: EmissionDataPoint) => {
@@ -239,6 +252,69 @@ export default function Dashboard() {
           borderColor: "hsl(45, 93%, 47%)",
           borderWidth: 2,
           borderDash: [5, 5],
+        },
+      ],
+    };
+  }, [combinedData, selectedSectors]);
+
+  // Monthly comparison bar chart - shows AVERAGE per month for fair comparison
+  const monthlyComparisonData = useMemo(() => {
+    if (!combinedData) return { labels: [], datasets: [] };
+
+    const { historical, forecast } = combinedData;
+
+    // Calculate average per month (sum / count) for fair comparison
+    const aggregateByMonthAvg = (data: EmissionDataPoint[]) => {
+      const monthMap = new Map<string, { sum: number; count: number }>();
+      data.forEach((item: EmissionDataPoint) => {
+        const date = new Date(item.date);
+        const label = date.toLocaleDateString('en-US', { month: 'short' });
+
+        let value = 0;
+        if (selectedSectors.includes('transport')) value += item.transport;
+        if (selectedSectors.includes('industry')) value += item.industry;
+        if (selectedSectors.includes('energy')) value += item.energy;
+        if (selectedSectors.includes('waste')) value += item.waste;
+        if (selectedSectors.includes('buildings')) value += item.buildings;
+
+        const existing = monthMap.get(label) || { sum: 0, count: 0 };
+        monthMap.set(label, {
+          sum: existing.sum + value,
+          count: existing.count + 1
+        });
+      });
+      // Convert to averages
+      const avgMap = new Map<string, number>();
+      monthMap.forEach((value, key) => {
+        avgMap.set(key, value.sum / value.count);
+      });
+      return avgMap;
+    };
+
+    const historicalMap = aggregateByMonthAvg(historical);
+    const forecastMap = aggregateByMonthAvg(forecast);
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const availableMonths = months.filter(m => historicalMap.has(m) || forecastMap.has(m));
+
+    return {
+      labels: availableMonths,
+      datasets: [
+        {
+          label: 'Historical (Avg)',
+          data: availableMonths.map(m => {
+            const val = historicalMap.get(m);
+            return val ? Math.round(val / 1000) : 0;
+          }),
+          backgroundColor: "hsl(217, 91%, 60%)",
+        },
+        {
+          label: 'Forecast (Avg)',
+          data: availableMonths.map(m => {
+            const val = forecastMap.get(m);
+            return val ? Math.round(val / 1000) : 0;
+          }),
+          backgroundColor: "hsl(45, 93%, 47%)",
         },
       ],
     };
@@ -369,6 +445,8 @@ export default function Dashboard() {
                         <SectorFilter
                           selectedSectors={selectedSectors}
                           onToggleSector={handleToggleSector}
+                          onSelectAll={handleSelectAllSectors}
+                          onClearAll={handleClearAllSectors}
                         />
                       </div>
                       <TimeControls
@@ -409,6 +487,7 @@ export default function Dashboard() {
                           entries={leaderboard}
                           selectedAreaId={selectedAreaId}
                           onAreaSelect={setSelectedAreaId}
+                          sectorTotals={sectorTotals}
                         />
                       )}
                     </>
@@ -441,6 +520,11 @@ export default function Dashboard() {
                 title="Top 5 Emission Sources"
                 type="bar"
                 data={areaBarData}
+              />
+              <EmissionChart
+                title="Monthly Average Comparison"
+                type="bar"
+                data={monthlyComparisonData}
               />
               <Card>
                 <CardHeader>

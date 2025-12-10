@@ -71,12 +71,27 @@ export function EmissionMap({ areas, selectedAreaId, onAreaSelect, emissionData,
         weight: selectedAreaId === area.id ? 3 : 1,
       }).addTo(map);
 
+      // Tooltip on hover (brief info)
+      circle.bindTooltip(`
+        <div class="font-sans text-sm">
+          <strong>${area.name}</strong><br/>
+          ${emission.toLocaleString(undefined, { maximumFractionDigits: 0 })} tons CO₂e
+        </div>
+      `, {
+        permanent: false,
+        direction: 'top',
+        offset: [0, -10],
+        className: 'emission-tooltip'
+      });
+
+      // Popup on click (detailed info)
       circle.bindPopup(`
         <div class="font-sans">
           <h3 class="font-semibold text-base mb-1">${area.name}</h3>
           <p class="text-sm text-muted-foreground">
-            Emissions: <span class="font-mono font-medium">${emission.toFixed(2)}</span> tons CO₂e
+            Emissions: <span class="font-mono font-medium">${emission.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span> tons CO₂e
           </p>
+          <p class="text-xs text-muted-foreground mt-1">Click "View Full Analysis" for details</p>
         </div>
       `);
 
