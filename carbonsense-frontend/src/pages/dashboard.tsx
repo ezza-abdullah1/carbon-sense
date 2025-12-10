@@ -8,10 +8,11 @@ import { EmissionChart } from "@/components/emission-chart";
 import { AreaDetailPanel } from "@/components/area-detail-panel";
 import { MapLegend } from "@/components/map-legend";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { DataExplorer } from "@/components/data-explorer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Leaf, Home, LogOut, Loader2 } from "lucide-react";
+import { Leaf, Home, LogOut, Loader2, Database } from "lucide-react";
 import type { Sector, DataType } from "@shared/schema";
 import type { TimeInterval } from "@/lib/api";
 import { useAreas, useLatestEmissions, useLeaderboard, useTimeSeriesData, useCombinedTimeSeriesData } from "@/hooks/use-emissions";
@@ -383,6 +384,10 @@ export default function Dashboard() {
             <TabsList className="h-12">
               <TabsTrigger value="map" data-testid="tab-map">Map View</TabsTrigger>
               <TabsTrigger value="analytics" data-testid="tab-analytics">Analytics</TabsTrigger>
+              <TabsTrigger value="data" data-testid="tab-data" className="gap-1.5">
+                <Database className="h-4 w-4" />
+                Data Explorer
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -588,6 +593,10 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="data" className="flex-1 mt-0 p-0 overflow-auto">
+            <DataExplorer />
           </TabsContent>
         </Tabs>
       </div>
