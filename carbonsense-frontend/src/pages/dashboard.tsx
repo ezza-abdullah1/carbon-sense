@@ -72,55 +72,6 @@ export default function Dashboard() {
     return p75Value * 1.5;
   }, [emissionData]);
 
-  // Format time series data for charts
-  const lineChartData = useMemo(() => {
-    if (timeSeriesData.length === 0) {
-      return {
-        labels: [],
-        datasets: []
-      };
-    }
-
-    // Group data by date and sum across selected sectors
-    const dateMap = new Map<string, number>();
-    timeSeriesData.forEach((item: EmissionDataPoint) => {
-      const date = new Date(item.date);
-      const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
-      let value = 0;
-      if (selectedSectors.includes('transport')) value += item.transport;
-      if (selectedSectors.includes('industry')) value += item.industry;
-      if (selectedSectors.includes('energy')) value += item.energy;
-      if (selectedSectors.includes('waste')) value += item.waste;
-      if (selectedSectors.includes('buildings')) value += item.buildings;
-
-      dateMap.set(label, (dateMap.get(label) || 0) + value);
-    });
-
-    const sortedEntries = Array.from(dateMap.entries()).sort((a, b) => {
-      const dateA = new Date(a[0]);
-      const dateB = new Date(b[0]);
-      return dateA.getTime() - dateB.getTime();
-    });
-
-    return {
-      labels: sortedEntries.map(([label]) => label),
-      datasets: [
-        {
-          label: `${dataType === 'forecast' ? 'Forecasted' : 'Historical'} Emissions`,
-          data: sortedEntries.map(([, value]) => Math.round(value / 1000)), // Convert to thousands
-          backgroundColor: dataType === 'forecast'
-            ? "rgba(245, 158, 11, 0.2)"
-            : "rgba(96, 165, 250, 0.2)",
-          borderColor: dataType === 'forecast'
-            ? "hsl(45, 93%, 47%)"
-            : "hsl(217, 91%, 60%)",
-          borderWidth: 2,
-        },
-      ],
-    };
-  }, [timeSeriesData, selectedSectors, dataType]);
-
   // Calculate sector totals across all time series data
   const sectorTotals = useMemo(() => {
     const totals = {
@@ -191,97 +142,116 @@ export default function Dashboard() {
     };
   }, [leaderboard]);
 
-  // Combined forecast trend chart (historical + forecast)
-  const forecastTrendData = useMemo(() => {
+  // Sector colors and labels for consistent styling
+  // Historical = blue tones, Forecast = orange/amber tones for clear differentiation
+  const sectorConfig = {
+    transport: { label: "Transport", historical: "hsl(217, 91%, 60%)", forecast: "hsl(25, 95%, 53%)", transparent: "rgba(96, 165, 250, 0.2)" },
+    industry: { label: "Industry", historical: "hsl(280, 67%, 55%)", forecast: "hsl(45, 93%, 47%)", transparent: "rgba(168, 85, 247, 0.2)" },
+    energy: { label: "Energy", historical: "hsl(142, 65%, 45%)", forecast: "hsl(0, 72%, 51%)", transparent: "rgba(34, 197, 94, 0.2)" },
+    waste: { label: "Waste", historical: "hsl(199, 89%, 48%)", forecast: "hsl(338, 78%, 56%)", transparent: "rgba(14, 165, 233, 0.2)" },
+    buildings: { label: "Buildings", historical: "hsl(262, 83%, 58%)", forecast: "hsl(45, 93%, 47%)", transparent: "rgba(139, 92, 246, 0.2)" },
+  };
+
+  // Generate separate chart data for each sector
+  const sectorChartData = useMemo(() => {
     if (!combinedData) {
-      return { labels: [], datasets: [] };
+      return {};
     }
 
     const { historical, forecast } = combinedData;
 
-    // Helper to aggregate data by month (sum for trend chart)
-    const aggregateByMonth = (data: EmissionDataPoint[]) => {
+    // Helper to aggregate data by month for a specific sector
+    const aggregateBySector = (data: EmissionDataPoint[], sectorKey: Sector) => {
       const monthMap = new Map<string, number>();
       data.forEach((item: EmissionDataPoint) => {
         const date = new Date(item.date);
         const label = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-
-        let value = 0;
-        if (selectedSectors.includes('transport')) value += item.transport;
-        if (selectedSectors.includes('industry')) value += item.industry;
-        if (selectedSectors.includes('energy')) value += item.energy;
-        if (selectedSectors.includes('waste')) value += item.waste;
-        if (selectedSectors.includes('buildings')) value += item.buildings;
-
-        monthMap.set(label, (monthMap.get(label) || 0) + value);
+        const value = item[sectorKey] as number;
+        if (value > 0) {
+          monthMap.set(label, (monthMap.get(label) || 0) + value);
+        }
       });
       return monthMap;
     };
 
-    const historicalMap = aggregateByMonth(historical);
-    const forecastMap = aggregateByMonth(forecast);
+    const result: Record<Sector, { labels: string[]; datasets: Array<{ label: string; data: (number | null)[]; backgroundColor: string; borderColor: string; borderWidth: number; borderDash?: number[] }> }> = {} as any;
 
-    // Get all unique labels and sort by date
-    const allLabels = new Set([...historicalMap.keys(), ...forecastMap.keys()]);
-    const sortedLabels = Array.from(allLabels).sort((a, b) => {
-      const dateA = new Date(a);
-      const dateB = new Date(b);
-      return dateA.getTime() - dateB.getTime();
-    });
+    const allSectors: Sector[] = ["transport", "industry", "energy", "waste", "buildings"];
 
-    return {
-      labels: sortedLabels,
-      datasets: [
-        {
-          label: 'Historical Emissions',
+    allSectors.forEach((sector) => {
+      const historicalMap = aggregateBySector(historical, sector);
+      const forecastMap = aggregateBySector(forecast, sector);
+      const config = sectorConfig[sector];
+
+      // Get all dates for this sector and sort
+      const allDates = new Set([...historicalMap.keys(), ...forecastMap.keys()]);
+      const sortedLabels = Array.from(allDates).sort((a, b) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+      const datasets: Array<{ label: string; data: (number | null)[]; backgroundColor: string; borderColor: string; borderWidth: number; borderDash?: number[] }> = [];
+
+      // Historical line (solid blue-ish color)
+      if (historicalMap.size > 0) {
+        datasets.push({
+          label: 'Historical',
           data: sortedLabels.map(label => {
             const val = historicalMap.get(label);
             return val ? Math.round(val / 1000) : null;
           }),
-          backgroundColor: "rgba(96, 165, 250, 0.2)",
-          borderColor: "hsl(217, 91%, 60%)",
+          backgroundColor: "rgba(59, 130, 246, 0.2)",
+          borderColor: "hsl(217, 91%, 60%)", // Blue for historical
           borderWidth: 2,
-        },
-        {
-          label: 'Forecasted Emissions',
+        });
+      }
+
+      // Forecast line (dashed orange color)
+      if (forecastMap.size > 0) {
+        datasets.push({
+          label: 'Forecast',
           data: sortedLabels.map(label => {
             const val = forecastMap.get(label);
             return val ? Math.round(val / 1000) : null;
           }),
           backgroundColor: "rgba(245, 158, 11, 0.2)",
-          borderColor: "hsl(45, 93%, 47%)",
+          borderColor: "hsl(45, 93%, 47%)", // Orange/Amber for forecast
           borderWidth: 2,
           borderDash: [5, 5],
-        },
-      ],
-    };
-  }, [combinedData, selectedSectors]);
+        });
+      }
 
-  // Monthly comparison bar chart - shows AVERAGE per month for fair comparison
+      result[sector] = {
+        labels: sortedLabels,
+        datasets,
+      };
+    });
+
+    return result;
+  }, [combinedData]);
+
+  // Monthly comparison bar chart - shows each sector's average per month
   const monthlyComparisonData = useMemo(() => {
     if (!combinedData) return { labels: [], datasets: [] };
 
-    const { historical, forecast } = combinedData;
+    const { historical } = combinedData;
 
-    // Calculate average per month (sum / count) for fair comparison
-    const aggregateByMonthAvg = (data: EmissionDataPoint[]) => {
+    // Calculate average per month for each sector
+    const aggregateByMonthForSector = (data: EmissionDataPoint[], sectorKey: Sector) => {
       const monthMap = new Map<string, { sum: number; count: number }>();
       data.forEach((item: EmissionDataPoint) => {
         const date = new Date(item.date);
         const label = date.toLocaleDateString('en-US', { month: 'short' });
+        const value = item[sectorKey] as number;
 
-        let value = 0;
-        if (selectedSectors.includes('transport')) value += item.transport;
-        if (selectedSectors.includes('industry')) value += item.industry;
-        if (selectedSectors.includes('energy')) value += item.energy;
-        if (selectedSectors.includes('waste')) value += item.waste;
-        if (selectedSectors.includes('buildings')) value += item.buildings;
-
-        const existing = monthMap.get(label) || { sum: 0, count: 0 };
-        monthMap.set(label, {
-          sum: existing.sum + value,
-          count: existing.count + 1
-        });
+        if (value > 0) {
+          const existing = monthMap.get(label) || { sum: 0, count: 0 };
+          monthMap.set(label, {
+            sum: existing.sum + value,
+            count: existing.count + 1
+          });
+        }
       });
       // Convert to averages
       const avgMap = new Map<string, number>();
@@ -291,32 +261,24 @@ export default function Dashboard() {
       return avgMap;
     };
 
-    const historicalMap = aggregateByMonthAvg(historical);
-    const forecastMap = aggregateByMonthAvg(forecast);
-
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const availableMonths = months.filter(m => historicalMap.has(m) || forecastMap.has(m));
+
+    // Create datasets for each selected sector
+    const datasets = selectedSectors.map((sector) => {
+      const sectorMap = aggregateByMonthForSector(historical, sector);
+      return {
+        label: sectorConfig[sector].label,
+        data: months.map(m => {
+          const val = sectorMap.get(m);
+          return val ? Math.round(val / 1000) : 0;
+        }),
+        backgroundColor: sectorConfig[sector].historical,
+      };
+    });
 
     return {
-      labels: availableMonths,
-      datasets: [
-        {
-          label: 'Historical (Avg)',
-          data: availableMonths.map(m => {
-            const val = historicalMap.get(m);
-            return val ? Math.round(val / 1000) : 0;
-          }),
-          backgroundColor: "hsl(217, 91%, 60%)",
-        },
-        {
-          label: 'Forecast (Avg)',
-          data: availableMonths.map(m => {
-            const val = forecastMap.get(m);
-            return val ? Math.round(val / 1000) : 0;
-          }),
-          backgroundColor: "hsl(45, 93%, 47%)",
-        },
-      ],
+      labels: months,
+      datasets,
     };
   }, [combinedData, selectedSectors]);
 
@@ -498,63 +460,79 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="flex-1 mt-0 p-6 overflow-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="lg:col-span-2">
-                <EmissionChart
-                  title="Emission Forecast Trends (Historical vs Forecast)"
-                  type="line"
-                  data={forecastTrendData}
-                />
+            <div className="space-y-6">
+              {/* Sector Emission Trends - Each sector in its own chart */}
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Emission Trends by Sector</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Each chart shows historical emissions (solid line) and forecasted emissions (dashed line) for the respective sector.
+                </p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {selectedSectors.map((sector) => {
+                    const data = sectorChartData[sector];
+                    if (!data || data.datasets.length === 0) return null;
+                    return (
+                      <EmissionChart
+                        key={sector}
+                        title={`${sectorConfig[sector].label} Emissions`}
+                        type="line"
+                        data={data}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-              <EmissionChart
-                title={`${dataType === 'forecast' ? 'Forecasted' : 'Historical'} Emission Trends`}
-                type="line"
-                data={lineChartData}
-              />
-              <EmissionChart
-                title="Sectoral Distribution"
-                type="doughnut"
-                data={sectorPieData}
-              />
-              <EmissionChart
-                title="Top 5 Emission Sources"
-                type="bar"
-                data={areaBarData}
-              />
-              <EmissionChart
-                title="Monthly Average Comparison"
-                type="bar"
-                data={monthlyComparisonData}
-              />
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Key Insights</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Data Source</div>
-                    <p className="text-sm text-muted-foreground">
-                      Showing emissions data from {areas.length} sources across Pakistan.
-                      Data includes both historical measurements and SARIMA-based forecasts.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Forecast Trend</div>
-                    <p className="text-sm text-muted-foreground">
-                      The top chart shows historical emissions (solid blue line) alongside
-                      forecasted emissions (dashed orange line) for comparison.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Total Emissions</div>
-                    <p className="text-sm text-muted-foreground">
-                      {leaderboard.length > 0
-                        ? `Total: ${Math.round((leaderboard as LeaderboardEntry[]).reduce((sum: number, e: LeaderboardEntry) => sum + e.emissions, 0) / 1000).toLocaleString()} thousand tons CO₂e`
-                        : 'Loading...'}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+
+              {/* Summary Charts */}
+              <div>
+                <h2 className="text-lg font-semibold mb-4">Summary & Comparison</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <EmissionChart
+                    title="Sectoral Distribution"
+                    type="doughnut"
+                    data={sectorPieData}
+                  />
+                  <EmissionChart
+                    title="Top 5 Emission Sources"
+                    type="bar"
+                    data={areaBarData}
+                  />
+                  <EmissionChart
+                    title="Monthly Average by Sector"
+                    type="bar"
+                    data={monthlyComparisonData}
+                  />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Key Insights</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Data Source</div>
+                        <p className="text-sm text-muted-foreground">
+                          Showing emissions data from {areas.length} sources across Pakistan.
+                          Data includes both historical measurements and SARIMA-based forecasts.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Chart Legend</div>
+                        <p className="text-sm text-muted-foreground">
+                          Solid lines represent historical data. Dashed lines represent forecasted emissions.
+                          Each sector has its own date range based on available data.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium">Total Emissions</div>
+                        <p className="text-sm text-muted-foreground">
+                          {leaderboard.length > 0
+                            ? `Total: ${Math.round((leaderboard as LeaderboardEntry[]).reduce((sum: number, e: LeaderboardEntry) => sum + e.emissions, 0) / 1000).toLocaleString()} thousand tons CO₂e`
+                            : 'Loading...'}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
