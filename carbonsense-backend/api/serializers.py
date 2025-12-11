@@ -1,67 +1,10 @@
 from rest_framework import serializers
-from django.contrib.auth import authenticate
 from .models import User, EmissionData, AreaInfo, LeaderboardEntry
 
 
-class SignupSerializer(serializers.ModelSerializer):
-    """Serializer for user signup."""
-
-    password = serializers.CharField(
-        write_only=True,
-        min_length=6,
-        style={'input_type': 'password'}
-    )
-
-    class Meta:
-        model = User
-        fields = ['id', 'email', 'name', 'password']
-        read_only_fields = ['id']
-
-    def validate_email(self, value):
-        """Validate that email is not already in use."""
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email already in use")
-        return value
-
-    def create(self, validated_data):
-        """Create a new user with encrypted password."""
-        return User.objects.create_user(**validated_data)
-
-
-class LoginSerializer(serializers.Serializer):
-    """Serializer for user login."""
-
-    email = serializers.EmailField()
-    password = serializers.CharField(
-        style={'input_type': 'password'},
-        trim_whitespace=False
-    )
-
-    def validate(self, attrs):
-        """Validate and authenticate the user."""
-        email = attrs.get('email')
-        password = attrs.get('password')
-
-        if email and password:
-            user = authenticate(
-                request=self.context.get('request'),
-                username=email,
-                password=password
-            )
-
-            if not user:
-                raise serializers.ValidationError(
-                    "Invalid email or password",
-                    code='authorization'
-                )
-        else:
-            raise serializers.ValidationError(
-                "Must include 'email' and 'password'",
-                code='authorization'
-            )
-
-        attrs['user'] = user
-        return attrs
+# Note: SignupSerializer and LoginSerializer have been removed.
+# Authentication is now handled by Supabase on the frontend.
+# The backend validates Supabase JWT tokens via SupabaseJWTAuthentication.
 
 
 class UserSerializer(serializers.ModelSerializer):

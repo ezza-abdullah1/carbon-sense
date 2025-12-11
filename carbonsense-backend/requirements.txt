@@ -11,6 +11,10 @@ django-cors-headers>=4.3,<4.4
 # Environment variables
 python-dotenv>=1.0,<1.1
 
+# JWT Authentication (for Supabase)
+PyJWT>=2.8.0
+cryptography>=41.0.0
+
 # Development
 django-extensions>=3.2,<3.3  # Useful development utilities
 

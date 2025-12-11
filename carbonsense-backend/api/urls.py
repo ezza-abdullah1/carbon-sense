@@ -1,8 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    signup_view,
-    login_view,
     logout_view,
     current_user_view,
     EmissionDataViewSet,
@@ -18,8 +16,8 @@ router.register(r'leaderboard', LeaderboardViewSet, basename='leaderboard')
 
 urlpatterns = [
     # Authentication endpoints
-    path('auth/signup', signup_view, name='signup'),
-    path('auth/login', login_view, name='login'),
+    # Note: signup and login are now handled by Supabase on the frontend
+    # These endpoints are for compatibility and user info retrieval
     path('auth/logout', logout_view, name='logout'),
     path('auth/me', current_user_view, name='current-user'),
 

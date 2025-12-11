@@ -1,19 +1,41 @@
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginInput } from "@shared/schema";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Leaf } from "lucide-react";
+import { Leaf, CheckCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const { toast } = useToast();
+  const { signIn, user, loading: authLoading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showVerifiedMessage, setShowVerifiedMessage] = useState(false);
+
+  // Check if user was redirected after email verification
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    if (params.get('verified') === 'true') {
+      setShowVerifiedMessage(true);
+      // Clear the query param from URL
+      window.history.replaceState({}, '', '/login');
+    }
+  }, [searchString]);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !authLoading) {
+      setLocation("/dashboard");
+    }
+  }, [user, authLoading, setLocation]);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -23,31 +45,58 @@ export default function Login() {
     },
   });
 
-  const loginMutation = useMutation({
-    mutationFn: async (data: LoginInput) => {
-      const response = await apiRequest("POST", "/api/auth/login", data);
-      return await response.json();
-    },
-    onSuccess: (data: { user: { id: string; email: string; name: string } }) => {
+  const onSubmit = async (data: LoginInput) => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await signIn(data.email, data.password);
+
+      if (error) {
+        // Handle specific error cases
+        if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email not verified",
+            description: "Please check your email and click the verification link before signing in.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes('Invalid login credentials')) {
+          toast({
+            title: "Login failed",
+            description: "Invalid email or password. Please try again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Login failed",
+            description: error.message || "Unable to sign in",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
       toast({
         title: "Login successful",
-        description: `Welcome back, ${data.user.name}!`,
+        description: "Welcome back!",
       });
-      localStorage.setItem("user", JSON.stringify(data.user));
       setLocation("/dashboard");
-    },
-    onError: (error: any) => {
+    } catch (error: any) {
       toast({
         title: "Login failed",
-        description: error.message || "Invalid email or password",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
-    },
-  });
-
-  const onSubmit = (data: LoginInput) => {
-    loginMutation.mutate(data);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Leaf className="h-10 w-10 text-primary animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -62,6 +111,14 @@ export default function Login() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {showVerifiedMessage && (
+            <Alert className="mb-4 border-green-500 bg-green-50 dark:bg-green-950">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-700 dark:text-green-300">
+                Email verified successfully! You can now sign in.
+              </AlertDescription>
+            </Alert>
+          )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -103,10 +160,10 @@ export default function Login() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loginMutation.isPending}
+                disabled={isSubmitting}
                 data-testid="button-login"
               >
-                {loginMutation.isPending ? "Signing in..." : "Sign In"}
+                {isSubmitting ? "Signing in..." : "Sign In"}
               </Button>
             </form>
           </Form>

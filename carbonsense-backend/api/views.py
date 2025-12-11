@@ -1,13 +1,10 @@
-from rest_framework import status, viewsets, generics
+from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from django.contrib.auth import login, logout
-from django.db.models import Q
+from django.contrib.auth import logout
 from .models import User, EmissionData, AreaInfo, LeaderboardEntry
 from .serializers import (
-    SignupSerializer,
-    LoginSerializer,
     UserSerializer,
     EmissionDataSerializer,
     AreaInfoSerializer,
@@ -16,56 +13,9 @@ from .serializers import (
 )
 
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def signup_view(request):
-    """
-    User signup endpoint.
-
-    POST /api/auth/signup
-    Body: { "email": "user@example.com", "name": "User Name", "password": "password123" }
-    """
-    serializer = SignupSerializer(data=request.data)
-
-    if serializer.is_valid():
-        user = serializer.save()
-        login(request, user)
-        user_data = UserSerializer(user).data
-        return Response(
-            {'user': user_data},
-            status=status.HTTP_201_CREATED
-        )
-
-    return Response(
-        {'error': serializer.errors},
-        status=status.HTTP_400_BAD_REQUEST
-    )
-
-
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def login_view(request):
-    """
-    User login endpoint.
-
-    POST /api/auth/login
-    Body: { "email": "user@example.com", "password": "password123" }
-    """
-    serializer = LoginSerializer(data=request.data, context={'request': request})
-
-    if serializer.is_valid():
-        user = serializer.validated_data['user']
-        login(request, user)
-        user_data = UserSerializer(user).data
-        return Response(
-            {'user': user_data},
-            status=status.HTTP_200_OK
-        )
-
-    return Response(
-        {'error': serializer.errors},
-        status=status.HTTP_401_UNAUTHORIZED
-    )
+# Note: signup_view and login_view have been removed.
+# Authentication is now handled by Supabase on the frontend.
+# The backend only validates Supabase JWT tokens via SupabaseJWTAuthentication.
 
 
 @api_view(['POST'])
@@ -75,6 +25,9 @@ def logout_view(request):
     User logout endpoint.
 
     POST /api/auth/logout
+
+    This clears the Django session (if any) for compatibility.
+    The main logout should be handled by Supabase on the frontend.
     """
     logout(request)
     return Response(
@@ -90,6 +43,9 @@ def current_user_view(request):
     Get current authenticated user.
 
     GET /api/auth/me
+
+    Returns the user data from the Django User model.
+    The user is automatically synced from Supabase on first authenticated request.
     """
     serializer = UserSerializer(request.user)
     return Response(serializer.data)
@@ -112,7 +68,7 @@ class EmissionDataViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = EmissionData.objects.all()
     serializer_class = EmissionDataSerializer
-    permission_classes = [AllowAny]  # Changed for easier testing
+    permission_classes = [AllowAny]  # Public read access
 
     def get_queryset(self):
         """Filter queryset based on query parameters."""
@@ -151,7 +107,7 @@ class AreaInfoViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = AreaInfo.objects.all()
     serializer_class = AreaInfoSerializer
-    permission_classes = [AllowAny]  # Changed for easier testing
+    permission_classes = [AllowAny]  # Public read access
 
 
 class LeaderboardViewSet(viewsets.ReadOnlyModelViewSet):
