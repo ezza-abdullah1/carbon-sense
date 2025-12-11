@@ -466,6 +466,8 @@ export default function Dashboard() {
                       trendPercentage={2.1}
                       sectorBreakdown={sectorBreakdown}
                       onClose={() => setSelectedAreaId(null)}
+                      coordinates={selectedArea.coordinates}
+                      selectedSectors={selectedSectors}
                     />
                   ) : (
                     <>

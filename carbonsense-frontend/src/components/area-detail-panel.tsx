@@ -1,9 +1,32 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, TrendingUp, TrendingDown } from "lucide-react";
+import { X, TrendingUp, TrendingDown, Sparkles, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { RecommendationsModal } from "@/components/recommendations-modal";
+import type { Sector } from "@/lib/api";
+
+interface RecommendationsResponse {
+  success: boolean;
+  query: {
+    area_name: string;
+    area_id: string;
+    sector: string;
+    coordinates: { lat: number; lng: number };
+  };
+  recommendations: {
+    summary: string;
+    immediate_actions: string[];
+    long_term_strategies: string[];
+    policy_recommendations: string[];
+    monitoring_metrics: string[];
+    risk_factors: string[];
+  };
+  raw_response: string;
+  generated_at: string;
+}
 
 interface AreaDetailPanelProps {
   areaId: string;
@@ -19,6 +42,8 @@ interface AreaDetailPanelProps {
     buildings: number;
   };
   onClose: () => void;
+  coordinates?: [number, number];
+  selectedSectors?: Sector[];
 }
 
 export function AreaDetailPanel({
@@ -29,12 +54,62 @@ export function AreaDetailPanel({
   trendPercentage,
   sectorBreakdown,
   onClose,
+  coordinates,
+  selectedSectors = ["transport", "industry", "energy", "waste", "buildings"],
 }: AreaDetailPanelProps) {
   const [, setLocation] = useLocation();
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [recommendationsData, setRecommendationsData] = useState<RecommendationsResponse | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const maxSector = Math.max(...Object.values(sectorBreakdown));
 
   const handleViewAnalysis = () => {
     setLocation(`/area/${areaId}`);
+  };
+
+  const handleGenerateRecommendations = async () => {
+    if (!coordinates) return;
+
+    setIsLoadingRecommendations(true);
+
+    try {
+      // Determine the primary sector based on filter or highest emission
+      const sectorValues = Object.entries(sectorBreakdown) as [Sector, number][];
+      const primarySector = selectedSectors.length === 1
+        ? selectedSectors[0]
+        : sectorValues.sort((a, b) => b[1] - a[1])[0][0];
+
+      const response = await fetch("https://carbonsense.app.n8n.cloud/webhook/emission-recommendations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          coordinates: {
+            lat: coordinates[0],
+            lng: coordinates[1],
+          },
+          sector: primarySector,
+          area_name: areaName,
+          area_id: areaId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch recommendations");
+      }
+
+      const data = await response.json();
+
+      // Handle the response - it might be an array
+      const recommendationData = Array.isArray(data) ? data[0] : data;
+      setRecommendationsData(recommendationData);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching recommendations:", error);
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
   };
 
   const sectors = [
@@ -115,14 +190,43 @@ export function AreaDetailPanel({
           </div>
         </div>
 
-        <Button
-          className="w-full"
-          onClick={handleViewAnalysis}
-          data-testid="button-view-analysis"
-        >
-          View Full Analysis
-        </Button>
+        <div className="space-y-3">
+          <Button
+            className="w-full"
+            onClick={handleViewAnalysis}
+            data-testid="button-view-analysis"
+          >
+            View Full Analysis
+          </Button>
+
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={handleGenerateRecommendations}
+            disabled={isLoadingRecommendations || !coordinates}
+            data-testid="button-generate-recommendations"
+          >
+            {isLoadingRecommendations ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating Recommendations...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate Recommendations
+              </>
+            )}
+          </Button>
+        </div>
       </CardContent>
+
+      <RecommendationsModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        data={recommendationsData}
+        areaName={areaName}
+      />
     </Card>
   );
 }
