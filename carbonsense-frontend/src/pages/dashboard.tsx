@@ -211,13 +211,19 @@ export default function Dashboard() {
 
       const datasets: Array<{ label: string; data: (number | null)[]; backgroundColor: string; borderColor: string; borderWidth: number; borderDash?: number[] }> = [];
 
+      // Determine if we need to scale values (only for large values > 1000)
+      const allValues = [...historicalMap.values(), ...forecastMap.values()];
+      const maxValue = allValues.length > 0 ? Math.max(...allValues) : 0;
+      const shouldScale = maxValue > 1000;
+
       // Historical line (solid blue-ish color)
       if (historicalMap.size > 0) {
         datasets.push({
           label: 'Historical',
           data: sortedLabels.map(label => {
             const val = historicalMap.get(label);
-            return val ? Math.round(val / 1000) : null;
+            if (!val) return null;
+            return shouldScale ? Math.round(val / 1000) : Math.round(val * 10) / 10;
           }),
           backgroundColor: "rgba(59, 130, 246, 0.2)",
           borderColor: "hsl(217, 91%, 60%)", // Blue for historical
@@ -231,7 +237,8 @@ export default function Dashboard() {
           label: 'Forecast',
           data: sortedLabels.map(label => {
             const val = forecastMap.get(label);
-            return val ? Math.round(val / 1000) : null;
+            if (!val) return null;
+            return shouldScale ? Math.round(val / 1000) : Math.round(val * 10) / 10;
           }),
           backgroundColor: "rgba(245, 158, 11, 0.2)",
           borderColor: "hsl(45, 93%, 47%)", // Orange/Amber for forecast
@@ -284,11 +291,17 @@ export default function Dashboard() {
     // Create datasets for each selected sector
     const datasets = selectedSectors.map((sector) => {
       const sectorMap = aggregateByMonthForSector(historical, sector);
+      // Determine if we need to scale (only for large values)
+      const allValues = Array.from(sectorMap.values());
+      const maxValue = allValues.length > 0 ? Math.max(...allValues) : 0;
+      const shouldScale = maxValue > 1000;
+
       return {
         label: sectorConfig[sector].label,
         data: months.map(m => {
           const val = sectorMap.get(m);
-          return val ? Math.round(val / 1000) : 0;
+          if (!val) return 0;
+          return shouldScale ? Math.round(val / 1000) : Math.round(val * 10) / 10;
         }),
         backgroundColor: sectorConfig[sector].historical,
       };
