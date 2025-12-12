@@ -153,7 +153,7 @@ export default function Landing() {
           {/* Trust badge */}
           <div className="flex items-center justify-center mb-6">
             <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-4 py-1.5 rounded-full border border-emerald-200 dark:border-emerald-800">
-              🌍 Powering Sustainable Cities with Real-Time Emissions Data
+              🌍 AI-Powered Carbon Emission Monitoring & Forecasting
             </span>
           </div>
 
@@ -169,9 +169,9 @@ export default function Landing() {
 
             {/* Subheading */}
             <p className="text-xl text-muted-foreground mb-8 leading-relaxed max-w-2xl mx-auto">
-              Real-time emissions data across 5 sectors. AI-powered predictions.
-              Actionable insights for policymakers, researchers, and climate
-              advocates.
+              Comprehensive emissions data across 5 sectors. AI-powered
+              predictions. Actionable insights for policymakers, researchers,
+              and climate advocates.
             </p>
 
             {/* Trust indicators */}
@@ -182,7 +182,7 @@ export default function Landing() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-emerald-600" />
-                <span>Updated daily</span>
+                <span>Climate Trace data</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-emerald-600" />
@@ -368,7 +368,7 @@ export default function Landing() {
               <ul className="space-y-2 text-sm">
                 {[
                   "50+ monitored areas",
-                  "Real-time data updates",
+                  "Historical & forecast data",
                   "Sector-wise breakdown",
                   "Click for detailed analysis",
                 ].map((item) => (
@@ -537,7 +537,7 @@ export default function Landing() {
                 step: "01",
                 title: "Collect & Aggregate",
                 description:
-                  "We gather emissions data from sensors, satellite imagery, and verified reports across Lahore.",
+                  "We gather emissions data from Climate Trace, which uses satellite imagery, remote sensing, and AI to independently track greenhouse gas emissions.",
                 icon: Database,
               },
               {
