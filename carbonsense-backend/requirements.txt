@@ -14,6 +14,18 @@ python-dotenv>=1.0,<1.1
 # Development
 django-extensions>=3.2,<3.3  # Useful development utilities
 
+# RAG / AI
+chromadb>=0.4.22,<0.5
+sentence-transformers>=2.2,<3.0
+google-generativeai>=0.5,<1.0
+
+# Document processing
+PyPDF2>=3.0,<4.0
+requests>=2.31,<3.0
+
+# Token counting
+tiktoken>=0.5,<1.0
+
 # Testing (optional)
 pytest>=7.4,<8.0
 pytest-django>=4.7,<4.8
