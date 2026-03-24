@@ -11,11 +11,13 @@ Usage:
 
 import json
 import os
+import re
 import time
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
 import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted
 
 from recommendations.policy_registry import POLICY_REGISTRY
 
@@ -143,10 +145,39 @@ class Command(BaseCommand):
 
             self.stdout.write(f'  [{i}/{len(to_process)}] Generating: {title}')
 
-            try:
-                summary = self._generate_summary(model, entry)
+            # Retry loop with exponential backoff for rate limits
+            summary = None
+            for attempt in range(5):
+                try:
+                    summary = self._generate_summary(model, entry)
+                    break  # Success
+                except ResourceExhausted as e:
+                    # Extract retry delay from error if available
+                    wait_time = self._extract_retry_delay(str(e), default=60 * (attempt + 1))
+                    self.stdout.write(self.style.WARNING(
+                        f'    Rate limited. Waiting {wait_time}s (attempt {attempt + 1}/5)...'
+                    ))
+                    time.sleep(wait_time)
+                except Exception as e:
+                    error_str = str(e)
+                    if '429' in error_str or 'quota' in error_str.lower():
+                        wait_time = self._extract_retry_delay(error_str, default=60 * (attempt + 1))
+                        self.stdout.write(self.style.WARNING(
+                            f'    Rate limited. Waiting {wait_time}s (attempt {attempt + 1}/5)...'
+                        ))
+                        time.sleep(wait_time)
+                    else:
+                        self.stdout.write(self.style.ERROR(f'    Failed: {e}'))
+                        failed += 1
+                        break
 
-                # Save as .txt file
+            if summary is None:
+                if failed == 0 or (failed > 0 and attempt == 4):
+                    failed += 1
+                continue
+
+            # Save as .txt file
+            try:
                 txt_path = os.path.join(docs_dir, f'{doc_id}.txt')
                 with open(txt_path, 'w', encoding='utf-8') as f:
                     f.write(f"# {title}\n\n")
@@ -182,12 +213,12 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f'    Saved: {doc_id}.txt'))
 
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f'    Failed: {e}'))
+                self.stdout.write(self.style.ERROR(f'    Save failed: {e}'))
                 failed += 1
 
-            # Rate limiting — Gemini free tier allows 15 RPM
+            # Rate limiting between successful requests
             if i < len(to_process):
-                time.sleep(4)
+                time.sleep(5)
 
         self.stdout.write(self.style.SUCCESS(
             f'\nGeneration complete: {generated} summaries created, {failed} failed'
@@ -195,6 +226,16 @@ class Command(BaseCommand):
         self.stdout.write(
             'Now run: python manage.py ingest_policies --rebuild'
         )
+
+    def _extract_retry_delay(self, error_text, default=60):
+        """Extract retry delay from Gemini error message."""
+        match = re.search(r'retry in (\d+\.?\d*)', error_text, re.IGNORECASE)
+        if match:
+            return int(float(match.group(1))) + 5  # Add 5s buffer
+        match = re.search(r'seconds: (\d+)', error_text)
+        if match:
+            return int(match.group(1)) + 5
+        return default
 
     def _generate_summary(self, model, entry):
         """Generate a detailed policy summary using Gemini."""

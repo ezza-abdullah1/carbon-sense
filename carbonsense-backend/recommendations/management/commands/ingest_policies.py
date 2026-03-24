@@ -210,14 +210,32 @@ class Command(BaseCommand):
     def _extract_text(self, file_path):
         """Extract text from a PDF or text file."""
         if file_path.endswith('.pdf'):
+            # Validate it's actually a PDF (not an HTML redirect page)
+            with open(file_path, 'rb') as f:
+                header = f.read(10)
+                if not header.startswith(b'%PDF'):
+                    raise ValueError(
+                        'File is not a valid PDF (likely an HTML redirect). '
+                        'Delete it and re-download.'
+                    )
+
             if PdfReader is None:
-                raise ImportError('PyPDF2 is required for PDF processing. pip install PyPDF2')
-            reader = PdfReader(file_path)
+                raise ImportError('PyPDF2 is required. pip install PyPDF2')
+
+            reader = PdfReader(file_path, strict=False)
             pages = []
-            for page in reader.pages:
-                text = page.extract_text()
-                if text:
-                    pages.append(text)
+            for i, page in enumerate(reader.pages):
+                try:
+                    text = page.extract_text()
+                    if text:
+                        pages.append(text)
+                except Exception:
+                    # Skip individual broken pages
+                    continue
+
+            if not pages:
+                raise ValueError('No text could be extracted from PDF')
+
             return '\n\n'.join(pages)
         else:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
