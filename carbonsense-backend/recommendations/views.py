@@ -22,6 +22,9 @@ def generate_recommendations(request):
         "area_name": "Gulberg",
         "area_id": "gulberg_transport"
     }
+
+    Returns the full recommendation response with a `pipeline_trace` key
+    showing each step's timing, data, and status.
     """
     serializer = RecommendationRequestSerializer(data=request.data)
     if not serializer.is_valid():
@@ -40,7 +43,9 @@ def generate_recommendations(request):
     ).first()
 
     if cache_entry:
-        return Response(cache_entry.response_data)
+        cached = cache_entry.response_data
+        cached['from_cache'] = True
+        return Response(cached)
 
     # Generate fresh recommendations
     try:
@@ -49,7 +54,8 @@ def generate_recommendations(request):
             area_id=data['area_id'],
             area_name=data['area_name'],
             sector=data['sector'],
-            coordinates=data['coordinates']
+            coordinates=data['coordinates'],
+            trace=True,
         )
         return Response(result)
     except Exception as e:

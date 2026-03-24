@@ -17,7 +17,6 @@ class GeminiClient:
                 "Set it in your .env file."
             )
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.0-flash')
 
     def generate(self, system_prompt, user_prompt):
         """Generate a response from Gemini.
@@ -29,7 +28,12 @@ class GeminiClient:
         Returns:
             Raw text response string from the model.
         """
-        response = self.model.generate_content(
+        model = genai.GenerativeModel(
+            'gemini-2.0-flash',
+            system_instruction=system_prompt,
+        )
+
+        response = model.generate_content(
             contents=[
                 {"role": "user", "parts": [{"text": user_prompt}]},
             ],
@@ -39,7 +43,6 @@ class GeminiClient:
                 max_output_tokens=4096,
                 response_mime_type="application/json",
             ),
-            system_instruction=system_prompt,
         )
 
         return response.text

@@ -18,8 +18,34 @@ import {
   CheckCircle2,
   Download,
   ShieldCheck,
+  ChevronDown,
+  ChevronRight,
+  Database,
+  Search,
+  Brain,
+  FileText,
+  Sparkles,
+  Loader2,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { useState } from "react";
+
+interface PipelineTraceStep {
+  step: number;
+  name: string;
+  status: string;
+  duration_ms: number;
+  data: Record<string, any>;
+  error?: string;
+}
+
+interface PipelineTrace {
+  total_duration_ms: number;
+  steps: PipelineTraceStep[];
+  step_count: number;
+}
 
 interface RecommendationsResponse {
   success: boolean;
@@ -43,8 +69,330 @@ interface RecommendationsResponse {
     data_completeness: number;
     geographic_relevance: number;
   };
+  pipeline_trace?: PipelineTrace;
+  from_cache?: boolean;
   raw_response: string;
   generated_at: string;
+}
+
+const STEP_ICONS: Record<number, React.ReactNode> = {
+  1: <Search className="h-4 w-4" />,
+  2: <Database className="h-4 w-4" />,
+  3: <FileText className="h-4 w-4" />,
+  4: <Brain className="h-4 w-4" />,
+  5: <Sparkles className="h-4 w-4" />,
+};
+
+const STEP_COLORS: Record<number, string> = {
+  1: 'text-blue-500 bg-blue-500/10 border-blue-500/30',
+  2: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30',
+  3: 'text-amber-500 bg-amber-500/10 border-amber-500/30',
+  4: 'text-purple-500 bg-purple-500/10 border-purple-500/30',
+  5: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/30',
+};
+
+function PipelineTracePanel({ trace, fromCache }: { trace?: PipelineTrace; fromCache?: boolean }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
+
+  if (fromCache) {
+    return (
+      <div className="px-6 py-2 border-b border-border bg-muted/20">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Database className="h-3 w-3" />
+          <span>Served from cache</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!trace) return null;
+
+  const toggleStep = (step: number) => {
+    const next = new Set(expandedSteps);
+    if (next.has(step)) next.delete(step);
+    else next.add(step);
+    setExpandedSteps(next);
+  };
+
+  return (
+    <div className="border-b border-border bg-muted/20">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-6 py-2.5 flex items-center justify-between hover:bg-muted/40 transition-colors"
+      >
+        <div className="flex items-center gap-2 text-sm">
+          <Sparkles className="h-4 w-4 text-purple-500" />
+          <span className="font-medium">Pipeline Trace</span>
+          <Badge variant="secondary" className="text-xs">
+            {trace.step_count} steps
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            {(trace.total_duration_ms / 1000).toFixed(1)}s total
+          </span>
+        </div>
+        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
+
+      {isOpen && (
+        <div className="px-6 pb-4 space-y-2">
+          {/* Timeline bar */}
+          <div className="flex gap-0.5 h-2 rounded-full overflow-hidden mb-3">
+            {trace.steps.map((step) => {
+              const pct = trace.total_duration_ms > 0
+                ? (step.duration_ms / trace.total_duration_ms) * 100
+                : 100 / trace.step_count;
+              const colorClass = step.status === 'error' ? 'bg-red-500' :
+                step.step === 1 ? 'bg-blue-500' :
+                step.step === 2 ? 'bg-emerald-500' :
+                step.step === 3 ? 'bg-amber-500' :
+                step.step === 4 ? 'bg-purple-500' : 'bg-cyan-500';
+              return (
+                <div
+                  key={step.step}
+                  className={`${colorClass} rounded-sm`}
+                  style={{ width: `${Math.max(pct, 3)}%` }}
+                  title={`Step ${step.step}: ${step.duration_ms}ms`}
+                />
+              );
+            })}
+          </div>
+
+          {/* Steps */}
+          {trace.steps.map((step) => {
+            const isExpanded = expandedSteps.has(step.step);
+            const colors = STEP_COLORS[step.step] || 'text-gray-500 bg-gray-500/10 border-gray-500/30';
+
+            return (
+              <div key={step.step} className={`border rounded-lg overflow-hidden ${colors.split(' ').slice(2).join(' ')}`}>
+                <button
+                  onClick={() => toggleStep(step.step)}
+                  className="w-full px-3 py-2 flex items-center gap-3 text-left hover:bg-muted/30 transition-colors"
+                >
+                  <div className={`flex items-center justify-center w-7 h-7 rounded-full ${colors.split(' ').slice(0, 2).join(' ')}`}>
+                    {STEP_ICONS[step.step]}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate">{step.name}</span>
+                      {step.status === 'completed' && <CheckCircle className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />}
+                      {step.status === 'error' && <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
+                      {step.status === 'running' && <Loader2 className="h-3.5 w-3.5 text-amber-500 animate-spin flex-shrink-0" />}
+                    </div>
+                  </div>
+
+                  <span className="text-xs text-muted-foreground font-mono flex-shrink-0">
+                    {step.duration_ms >= 1000
+                      ? `${(step.duration_ms / 1000).toFixed(1)}s`
+                      : `${step.duration_ms}ms`
+                    }
+                  </span>
+
+                  {isExpanded ? <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 flex-shrink-0" />}
+                </button>
+
+                {isExpanded && step.data && Object.keys(step.data).length > 0 && (
+                  <div className="px-3 pb-3 border-t border-border/50">
+                    <div className="mt-2 space-y-2">
+                      {renderStepData(step)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderStepData(step: PipelineTraceStep) {
+  const data = step.data;
+
+  // Step 1: Policy retrieval — show retrieved policies
+  if (step.step === 1 && data.policies_retrieved) {
+    return (
+      <>
+        <div className="text-xs text-muted-foreground">
+          <span className="font-medium">Search query:</span> {data.query}
+        </div>
+        <div className="text-xs font-medium mt-1">
+          Retrieved {data.results_count} policies:
+        </div>
+        <div className="space-y-1 max-h-48 overflow-y-auto">
+          {(data.policies_retrieved as any[]).map((p: any, i: number) => (
+            <div key={i} className="flex items-center gap-2 text-xs bg-background/50 rounded px-2 py-1.5">
+              <span className="font-mono text-muted-foreground w-4">{i + 1}.</span>
+              <span className="flex-1 truncate">{p.title}</span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">{p.country}</Badge>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">{p.year}</Badge>
+              <span className="text-emerald-600 font-mono text-[10px] w-10 text-right">
+                {(p.relevance_score * 100).toFixed(0)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  // Step 2: Emissions analysis — show key metrics
+  if (step.step === 2) {
+    return (
+      <>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">Area</div>
+            <div className="text-xs font-medium">{data.area_name}</div>
+          </div>
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">Dominant Sector</div>
+            <div className="text-xs font-medium capitalize">{data.dominant_sector}</div>
+          </div>
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">Overall Trend</div>
+            <div className="text-xs font-medium">
+              {data.overall_trend} ({data.trend_percent > 0 ? '+' : ''}{Number(data.trend_percent).toFixed(1)}%)
+            </div>
+          </div>
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">Forecast</div>
+            <div className="text-xs font-medium capitalize">{data.forecast_direction}</div>
+          </div>
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">Historical Records</div>
+            <div className="text-xs font-medium">{data.historical_records}</div>
+          </div>
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">Forecast Records</div>
+            <div className="text-xs font-medium">{data.forecast_records}</div>
+          </div>
+        </div>
+        {data.sector_totals && (
+          <div className="mt-1">
+            <div className="text-[10px] text-muted-foreground mb-1">Sector Totals (tonnes CO2e)</div>
+            <div className="flex gap-1 flex-wrap">
+              {Object.entries(data.sector_totals).map(([sector, value]) => (
+                <Badge key={sector} variant="secondary" className="text-[10px]">
+                  {sector}: {Number(value).toLocaleString()}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Step 3: Prompt building
+  if (step.step === 3) {
+    return (
+      <div className="space-y-1.5">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">System Prompt</div>
+            <div className="text-xs font-medium">{data.system_prompt_length?.toLocaleString()} chars</div>
+          </div>
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">User Prompt</div>
+            <div className="text-xs font-medium">{data.user_prompt_length?.toLocaleString()} chars</div>
+          </div>
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">Est. Tokens</div>
+            <div className="text-xs font-medium">~{data.total_tokens_estimate?.toLocaleString()}</div>
+          </div>
+        </div>
+        {data.prompt_preview && (
+          <details className="text-xs">
+            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+              Preview prompt...
+            </summary>
+            <pre className="mt-1 p-2 bg-background/50 rounded text-[10px] max-h-32 overflow-y-auto whitespace-pre-wrap">
+              {data.prompt_preview}
+            </pre>
+          </details>
+        )}
+      </div>
+    );
+  }
+
+  // Step 4: LLM call
+  if (step.step === 4) {
+    return (
+      <div className="space-y-1.5">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">Model</div>
+            <div className="text-xs font-medium">{data.model}</div>
+          </div>
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">Temperature</div>
+            <div className="text-xs font-medium">{data.temperature}</div>
+          </div>
+          <div className="bg-background/50 rounded px-2 py-1.5">
+            <div className="text-[10px] text-muted-foreground">Response</div>
+            <div className="text-xs font-medium">{data.response_length?.toLocaleString()} chars</div>
+          </div>
+        </div>
+        {data.response_preview && (
+          <details className="text-xs">
+            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+              Preview raw response...
+            </summary>
+            <pre className="mt-1 p-2 bg-background/50 rounded text-[10px] max-h-32 overflow-y-auto whitespace-pre-wrap">
+              {data.response_preview}
+            </pre>
+          </details>
+        )}
+      </div>
+    );
+  }
+
+  // Step 5: Formatting & confidence
+  if (step.step === 5) {
+    return (
+      <div className="space-y-1.5">
+        {data.confidence && (
+          <div className="grid grid-cols-4 gap-2">
+            <div className="bg-background/50 rounded px-2 py-1.5">
+              <div className="text-[10px] text-muted-foreground">Overall</div>
+              <div className="text-xs font-medium">{Math.round(data.confidence.overall * 100)}%</div>
+            </div>
+            <div className="bg-background/50 rounded px-2 py-1.5">
+              <div className="text-[10px] text-muted-foreground">Evidence</div>
+              <div className="text-xs font-medium">{Math.round(data.confidence.evidence_strength * 100)}%</div>
+            </div>
+            <div className="bg-background/50 rounded px-2 py-1.5">
+              <div className="text-[10px] text-muted-foreground">Data</div>
+              <div className="text-xs font-medium">{Math.round(data.confidence.data_completeness * 100)}%</div>
+            </div>
+            <div className="bg-background/50 rounded px-2 py-1.5">
+              <div className="text-[10px] text-muted-foreground">Location</div>
+              <div className="text-xs font-medium">{Math.round(data.confidence.geographic_relevance * 100)}%</div>
+            </div>
+          </div>
+        )}
+        {data.sections_generated && (
+          <div className="flex gap-1 flex-wrap">
+            {Object.entries(data.sections_generated).map(([key, val]) => (
+              <Badge key={key} variant="secondary" className="text-[10px]">
+                {key.replace(/_/g, ' ')}: {typeof val === 'boolean' ? (val ? 'Yes' : 'No') : String(val)}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback: render raw JSON
+  return (
+    <pre className="text-[10px] p-2 bg-background/50 rounded max-h-40 overflow-y-auto whitespace-pre-wrap">
+      {JSON.stringify(data, null, 2)}
+    </pre>
+  );
 }
 
 // Helper function to clean text from markdown and LaTeX
@@ -302,6 +650,9 @@ Report generated by CarbonSense
             </div>
           </div>
         )}
+
+        {/* Pipeline Trace */}
+        <PipelineTracePanel trace={data.pipeline_trace} fromCache={data.from_cache} />
 
         <ScrollArea className="h-[calc(90vh-120px)]">
           <div className="p-6 space-y-8">
