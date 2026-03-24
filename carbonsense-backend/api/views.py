@@ -3,11 +3,14 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import login, logout
+from django.core.cache import cache
 from .models import (
     User, ForecastRun, Location, EmissionPoint,
     LocationSummary, AggregateForecastPoint, make_area_id,
 )
 from .serializers import SignupSerializer, LoginSerializer, UserSerializer
+
+CACHE_TTL = 300  # 5 minutes
 
 
 # ============================================================================
@@ -57,7 +60,12 @@ def current_user_view(request):
 # ============================================================================
 
 def _get_active_run():
-    return ForecastRun.objects.filter(is_active=True).first()
+    run = cache.get('active_forecast_run')
+    if run is None:
+        run = ForecastRun.objects.filter(is_active=True).first()
+        if run:
+            cache.set('active_forecast_run', run, CACHE_TTL)
+    return run
 
 
 def _sector_field(run):
@@ -87,6 +95,10 @@ class AreaInfoViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
     def list(self, request):
+        cached = cache.get('areas_list')
+        if cached is not None:
+            return Response(cached)
+
         run = _get_active_run()
         if not run:
             return Response([])
@@ -105,6 +117,7 @@ class AreaInfoViewSet(viewsets.ViewSet):
                     [loc.latitude + 0.1, loc.longitude + 0.1],
                 ],
             })
+        cache.set('areas_list', results, CACHE_TTL)
         return Response(results)
 
     def retrieve(self, request, pk=None):
@@ -136,6 +149,12 @@ class EmissionDataViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
     def list(self, request):
+        # Build cache key from query params
+        cache_key = f"emissions_{request.query_params.urlencode()}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         run = _get_active_run()
         if not run:
             return Response([])
@@ -191,6 +210,7 @@ class EmissionDataViewSet(viewsets.ViewSet):
                 'type': ep.point_type,
             })
 
+        cache.set(cache_key, results, CACHE_TTL)
         return Response(results)
 
     def retrieve(self, request, pk=None):
@@ -232,6 +252,10 @@ class LeaderboardViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
     def list(self, request):
+        cached = cache.get('leaderboard_list')
+        if cached is not None:
+            return Response(cached)
+
         run = _get_active_run()
         if not run:
             return Response([])
@@ -253,4 +277,5 @@ class LeaderboardViewSet(viewsets.ViewSet):
                 'trend_percentage': abs(s.change_pct),
             })
 
+        cache.set('leaderboard_list', results, CACHE_TTL)
         return Response(results)

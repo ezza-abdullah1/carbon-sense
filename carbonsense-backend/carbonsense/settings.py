@@ -76,7 +76,7 @@ DATABASES = {
     'default': dj_database_url.config(
         default='sqlite:///db.sqlite3',
         env='SUPABASE_DB_URL',
-        conn_max_age=600,
+        conn_max_age=0,  # Don't persist connections with Supabase transaction pooler
     )
 }
 DATABASES['default']['OPTIONS'] = DATABASES['default'].get('OPTIONS', {})
@@ -160,3 +160,15 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Redis Cache
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'TIMEOUT': 300,  # 5 minutes default TTL
+    }
+}
