@@ -335,10 +335,7 @@ export default function Dashboard() {
           <Leaf className="h-16 w-16 mx-auto text-muted-foreground" />
           <h2 className="text-2xl font-semibold">No Data Available</h2>
           <p className="text-muted-foreground">
-            Please load emissions data first by running:
-            <code className="block mt-2 p-2 bg-muted rounded text-sm">
-              python manage.py load_emissions_data
-            </code>
+            Unable to load emissions data. Please ensure the backend server is running and the database is accessible.
           </p>
         </div>
       </div>
