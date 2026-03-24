@@ -891,9 +891,9 @@ export default function Dashboard() {
                         <Brain className="h-7 w-7 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-muted-foreground">Model Type</p>
-                        <p className="text-xl font-bold">SARIMA + Holt-Winters</p>
-                        <p className="text-xs text-muted-foreground">Auto-selected best performer</p>
+                        <p className="text-sm font-medium text-muted-foreground">Models Used</p>
+                        <p className="text-xl font-bold">Hybrid XGBoost + Prophet</p>
+                        <p className="text-xs text-muted-foreground">Sector-specific model selection</p>
                       </div>
                     </div>
                   </CardContent>
@@ -1022,7 +1022,7 @@ export default function Dashboard() {
                           </span>
                         </div>
                         <h3 className="font-semibold mb-1">Model Training</h3>
-                        <p className="text-sm text-muted-foreground">SARIMA and Holt-Winters models trained on 6-month validation split, best model auto-selected by R²</p>
+                        <p className="text-sm text-muted-foreground">Hybrid XGBoost + Prophet for power, Prophet for transport and waste — each sector uses the best-fit model</p>
                       </div>
                     </div>
                     <div className="flex gap-4">

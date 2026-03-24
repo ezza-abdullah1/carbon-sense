@@ -55,7 +55,7 @@ export default function Landing() {
       icon: Brain,
       title: "Time-Series Forecasting",
       description:
-        "SARIMA & Holt-Winters models with 94% accuracy for 12-month emission forecasts.",
+        "Hybrid XGBoost + Prophet models with 94% accuracy for 12-month emission forecasts.",
     },
     {
       icon: Download,
@@ -96,7 +96,7 @@ export default function Landing() {
     },
     {
       q: "How accurate are the ML predictions?",
-      a: "We use SARIMA and Holt-Winters Exponential Smoothing models, automatically selecting the best performer based on R² and RMSE validation metrics. Our models achieve approximately 94% accuracy with 95% confidence intervals.",
+      a: "We use sector-specific models — Hybrid XGBoost + Prophet for power, Prophet for transport and waste — selecting the best performer per sector based on R² and RMSE validation metrics. Our models achieve approximately 94% accuracy with 95% confidence intervals.",
     },
     {
       q: "Can I export the data?",
