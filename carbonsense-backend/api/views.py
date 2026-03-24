@@ -1,179 +1,256 @@
-from rest_framework import status, viewsets, generics
+from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth import login, logout
-from django.db.models import Q
-from .models import User, EmissionData, AreaInfo, LeaderboardEntry
-from .serializers import (
-    SignupSerializer,
-    LoginSerializer,
-    UserSerializer,
-    EmissionDataSerializer,
-    AreaInfoSerializer,
-    LeaderboardEntrySerializer,
-    EmissionQuerySerializer
+from .models import (
+    User, ForecastRun, Location, EmissionPoint,
+    LocationSummary, AggregateForecastPoint, make_area_id,
 )
+from .serializers import SignupSerializer, LoginSerializer, UserSerializer
 
+
+# ============================================================================
+# Auth views (unchanged)
+# ============================================================================
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup_view(request):
-    """
-    User signup endpoint.
-
-    POST /api/auth/signup
-    Body: { "email": "user@example.com", "name": "User Name", "password": "password123" }
-    """
     serializer = SignupSerializer(data=request.data)
-
     if serializer.is_valid():
         user = serializer.save()
         login(request, user)
         user_data = UserSerializer(user).data
-        return Response(
-            {'user': user_data},
-            status=status.HTTP_201_CREATED
-        )
-
-    return Response(
-        {'error': serializer.errors},
-        status=status.HTTP_400_BAD_REQUEST
-    )
+        return Response({'user': user_data}, status=status.HTTP_201_CREATED)
+    return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
-    """
-    User login endpoint.
-
-    POST /api/auth/login
-    Body: { "email": "user@example.com", "password": "password123" }
-    """
     serializer = LoginSerializer(data=request.data, context={'request': request})
-
     if serializer.is_valid():
         user = serializer.validated_data['user']
         login(request, user)
         user_data = UserSerializer(user).data
-        return Response(
-            {'user': user_data},
-            status=status.HTTP_200_OK
-        )
-
-    return Response(
-        {'error': serializer.errors},
-        status=status.HTTP_401_UNAUTHORIZED
-    )
+        return Response({'user': user_data}, status=status.HTTP_200_OK)
+    return Response({'error': serializer.errors}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
-    """
-    User logout endpoint.
-
-    POST /api/auth/logout
-    """
     logout(request)
-    return Response(
-        {'message': 'Successfully logged out'},
-        status=status.HTTP_200_OK
-    )
+    return Response({'message': 'Successfully logged out'}, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def current_user_view(request):
-    """
-    Get current authenticated user.
-
-    GET /api/auth/me
-    """
     serializer = UserSerializer(request.user)
     return Response(serializer.data)
 
 
-class EmissionDataViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    ViewSet for viewing emission data.
+# ============================================================================
+# Helper: get the currently active forecast run
+# ============================================================================
 
-    GET /api/emissions/
-    GET /api/emissions/{id}/
+def _get_active_run():
+    return ForecastRun.objects.filter(is_active=True).first()
 
-    Query parameters:
-    - area_id: Filter by area ID
-    - sector: Filter by sector (transport, industry, energy, waste, buildings)
-    - start_date: Filter by start date (YYYY-MM-DD)
-    - end_date: Filter by end date (YYYY-MM-DD)
-    - data_type: Filter by data type (historical, forecast)
-    - interval: Time interval (monthly, yearly, custom)
-    """
-    queryset = EmissionData.objects.all()
-    serializer_class = EmissionDataSerializer
-    permission_classes = [AllowAny]  # Changed for easier testing
 
-    def get_queryset(self):
-        """Filter queryset based on query parameters."""
-        queryset = EmissionData.objects.select_related('area').all()
+def _sector_field(run):
+    """Map forecast_run.sector to the frontend sector column name."""
+    mapping = {
+        'power': 'energy',
+        'electricity-generation': 'energy',
+        'energy': 'energy',
+        'transportation': 'transport',
+        'transport': 'transport',
+        'industrial': 'industry',
+        'industry': 'industry',
+        'manufacturing': 'industry',
+        'waste': 'waste',
+        'buildings': 'buildings',
+        'residential': 'buildings',
+        'commercial': 'buildings',
+    }
+    return mapping.get(run.sector.lower(), 'energy') if run else 'energy'
 
-        # Validate and get query parameters
-        query_serializer = EmissionQuerySerializer(data=self.request.query_params)
-        if not query_serializer.is_valid():
-            return queryset
 
-        params = query_serializer.validated_data
+# ============================================================================
+# Areas endpoint — maps Supabase locations → frontend AreaInfo shape
+# ============================================================================
 
-        # Filter by area
-        if 'area_id' in params:
-            queryset = queryset.filter(area_id=params['area_id'])
+class AreaInfoViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    def list(self, request):
+        run = _get_active_run()
+        if not run:
+            return Response([])
+
+        sector = _sector_field(run)
+        locations = Location.objects.filter(forecast_run=run)
+
+        results = []
+        for loc in locations:
+            results.append({
+                'id': make_area_id(loc.source, sector),
+                'name': loc.source,
+                'coordinates': [loc.latitude, loc.longitude],
+                'bounds': [
+                    [loc.latitude - 0.1, loc.longitude - 0.1],
+                    [loc.latitude + 0.1, loc.longitude + 0.1],
+                ],
+            })
+        return Response(results)
+
+    def retrieve(self, request, pk=None):
+        run = _get_active_run()
+        if not run:
+            return Response({'detail': 'Not found.'}, status=404)
+
+        sector = _sector_field(run)
+        # Reverse the slug to find the location
+        for loc in Location.objects.filter(forecast_run=run):
+            if make_area_id(loc.source, sector) == pk:
+                return Response({
+                    'id': pk,
+                    'name': loc.source,
+                    'coordinates': [loc.latitude, loc.longitude],
+                    'bounds': [
+                        [loc.latitude - 0.1, loc.longitude - 0.1],
+                        [loc.latitude + 0.1, loc.longitude + 0.1],
+                    ],
+                })
+        return Response({'detail': 'Not found.'}, status=404)
+
+
+# ============================================================================
+# Emissions endpoint — maps Supabase emission_points → frontend shape
+# ============================================================================
+
+class EmissionDataViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    def list(self, request):
+        run = _get_active_run()
+        if not run:
+            return Response([])
+
+        sector = _sector_field(run)
+
+        queryset = EmissionPoint.objects.filter(
+            location__forecast_run=run,
+        ).select_related('location')
+
+        # Filter by area_id
+        area_id = request.query_params.get('area_id')
+        if area_id:
+            # Find the matching location
+            matching_loc_ids = [
+                loc.id for loc in Location.objects.filter(forecast_run=run)
+                if make_area_id(loc.source, sector) == area_id
+            ]
+            queryset = queryset.filter(location_id__in=matching_loc_ids)
+
+        # Filter by data_type (maps to point_type)
+        data_type = request.query_params.get('data_type')
+        if data_type:
+            queryset = queryset.filter(point_type=data_type)
 
         # Filter by date range
-        if 'start_date' in params:
-            queryset = queryset.filter(date__gte=params['start_date'])
-        if 'end_date' in params:
-            queryset = queryset.filter(date__lte=params['end_date'])
-
-        # Filter by data type
-        if 'data_type' in params:
-            queryset = queryset.filter(data_type=params['data_type'])
-
-        return queryset
-
-
-class AreaInfoViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    ViewSet for viewing area information.
-
-    GET /api/areas/
-    GET /api/areas/{id}/
-    """
-    queryset = AreaInfo.objects.all()
-    serializer_class = AreaInfoSerializer
-    permission_classes = [AllowAny]  # Changed for easier testing
-
-
-class LeaderboardViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    ViewSet for viewing leaderboard entries.
-
-    GET /api/leaderboard/
-    """
-    queryset = LeaderboardEntry.objects.select_related('area').all()
-    serializer_class = LeaderboardEntrySerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        """Get leaderboard entries, optionally filtered by date range."""
-        queryset = super().get_queryset()
-
-        start_date = self.request.query_params.get('start_date')
-        end_date = self.request.query_params.get('end_date')
-
+        start_date = request.query_params.get('start_date')
         if start_date:
-            queryset = queryset.filter(period_start__gte=start_date)
-        if end_date:
-            queryset = queryset.filter(period_end__lte=end_date)
+            queryset = queryset.filter(date__gte=start_date)
 
-        return queryset.order_by('rank')
+        end_date = request.query_params.get('end_date')
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
+
+        queryset = queryset.order_by('-date')
+
+        results = []
+        for ep in queryset:
+            # Build the per-sector emission row
+            emission_row = {
+                'transport': 0, 'industry': 0, 'energy': 0,
+                'waste': 0, 'buildings': 0,
+            }
+            emission_row[sector] = ep.emissions
+
+            results.append({
+                'id': ep.id,
+                'area_id': make_area_id(ep.location.source, sector),
+                'area_name': ep.location.source,
+                'date': ep.date.isoformat(),
+                **emission_row,
+                'total': ep.emissions,
+                'type': ep.point_type,
+            })
+
+        return Response(results)
+
+    def retrieve(self, request, pk=None):
+        run = _get_active_run()
+        if not run:
+            return Response({'detail': 'Not found.'}, status=404)
+
+        sector = _sector_field(run)
+
+        try:
+            ep = EmissionPoint.objects.select_related('location').get(
+                pk=pk, location__forecast_run=run
+            )
+        except EmissionPoint.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=404)
+
+        emission_row = {
+            'transport': 0, 'industry': 0, 'energy': 0,
+            'waste': 0, 'buildings': 0,
+        }
+        emission_row[sector] = ep.emissions
+
+        return Response({
+            'id': ep.id,
+            'area_id': make_area_id(ep.location.source, sector),
+            'area_name': ep.location.source,
+            'date': ep.date.isoformat(),
+            **emission_row,
+            'total': ep.emissions,
+            'type': ep.point_type,
+        })
+
+
+# ============================================================================
+# Leaderboard endpoint — computed from LocationSummary
+# ============================================================================
+
+class LeaderboardViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    def list(self, request):
+        run = _get_active_run()
+        if not run:
+            return Response([])
+
+        sector = _sector_field(run)
+        summaries = LocationSummary.objects.filter(
+            location__forecast_run=run
+        ).select_related('location').order_by('-forecast_12m_average')
+
+        results = []
+        for rank, s in enumerate(summaries, 1):
+            trend_map = {'increasing': 'up', 'declining': 'down', 'stable': 'stable'}
+            results.append({
+                'rank': rank,
+                'area_id': make_area_id(s.location.source, sector),
+                'area_name': s.location.source,
+                'emissions': s.forecast_12m_average,
+                'trend': trend_map.get(s.trend, 'stable'),
+                'trend_percentage': abs(s.change_pct),
+            })
+
+        return Response(results)

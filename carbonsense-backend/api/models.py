@@ -7,7 +7,6 @@ class UserManager(BaseUserManager):
     """Custom user manager."""
 
     def create_user(self, email, name, password=None, **extra_fields):
-        """Create and save a user with the given email, name, and password."""
         if not email:
             raise ValueError('Users must have an email address')
         if not name:
@@ -20,7 +19,6 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, name, password=None, **extra_fields):
-        """Create and save a superuser with the given email, name, and password."""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 
@@ -55,97 +53,107 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
-class AreaInfo(models.Model):
-    """Area information model."""
+# ============================================================================
+# Unmanaged models — map to existing Supabase tables (read-only from Django)
+# ============================================================================
 
-    id = models.CharField(primary_key=True, max_length=100)
-    name = models.CharField(max_length=255)
+def make_area_id(source_name, sector='energy'):
+    """Generate a consistent area ID slug from a location source name."""
+    return f"{source_name.lower().replace(' ', '_')}_{sector}"
+
+
+class ForecastRun(models.Model):
+    pipeline = models.TextField()
+    generated_at = models.DateTimeField()
+    data_source = models.TextField()
+    sector = models.CharField(max_length=100)
+    region = models.TextField()
+    historical_start = models.DateField()
+    historical_end = models.DateField()
+    forecast_horizon_months = models.IntegerField()
+    forecast_start = models.DateField()
+    forecast_end = models.DateField()
+    model_architecture = models.CharField(max_length=100)
+    is_active = models.BooleanField()
+
+    class Meta:
+        managed = False
+        db_table = 'forecast_runs'
+
+
+class Location(models.Model):
+    forecast_run = models.ForeignKey(ForecastRun, on_delete=models.DO_NOTHING,
+                                     related_name='locations')
+    source = models.TextField()
+    type = models.TextField()
     latitude = models.FloatField()
     longitude = models.FloatField()
-    bounds_lat_min = models.FloatField()
-    bounds_lat_max = models.FloatField()
-    bounds_lng_min = models.FloatField()
-    bounds_lng_max = models.FloatField()
 
     class Meta:
-        db_table = 'area_info'
-        verbose_name = 'Area Information'
-        verbose_name_plural = 'Area Information'
-
-    def __str__(self):
-        return self.name
+        managed = False
+        db_table = 'locations'
 
 
-class EmissionData(models.Model):
-    """Emission data model."""
-
-    DATA_TYPE_CHOICES = [
-        ('historical', 'Historical'),
-        ('forecast', 'Forecast'),
-    ]
-
-    id = models.AutoField(primary_key=True)
-    area = models.ForeignKey(AreaInfo, on_delete=models.CASCADE, related_name='emissions')
+class EmissionPoint(models.Model):
+    location = models.ForeignKey(Location, on_delete=models.DO_NOTHING,
+                                  related_name='emission_points')
     date = models.DateField()
-    transport = models.FloatField(default=0)
-    industry = models.FloatField(default=0)
-    energy = models.FloatField(default=0)
-    waste = models.FloatField(default=0)
-    buildings = models.FloatField(default=0)
-    total = models.FloatField(default=0)
-    data_type = models.CharField(max_length=20, choices=DATA_TYPE_CHOICES, default='historical')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'emission_data'
-        ordering = ['-date']
-        indexes = [
-            models.Index(fields=['area', 'date']),
-            models.Index(fields=['date']),
-            models.Index(fields=['data_type']),
-        ]
-
-    def __str__(self):
-        return f"{self.area.name} - {self.date} ({self.data_type})"
-
-    def save(self, *args, **kwargs):
-        """Calculate total emissions before saving."""
-        self.total = (
-            self.transport +
-            self.industry +
-            self.energy +
-            self.waste +
-            self.buildings
-        )
-        super().save(*args, **kwargs)
-
-
-class LeaderboardEntry(models.Model):
-    """Leaderboard entry model."""
-
-    TREND_CHOICES = [
-        ('up', 'Up'),
-        ('down', 'Down'),
-        ('stable', 'Stable'),
-    ]
-
-    id = models.AutoField(primary_key=True)
-    rank = models.IntegerField()
-    area = models.ForeignKey(AreaInfo, on_delete=models.CASCADE)
+    month_label = models.TextField()
     emissions = models.FloatField()
-    trend = models.CharField(max_length=10, choices=TREND_CHOICES)
-    trend_percentage = models.FloatField()
-    period_start = models.DateField()
-    period_end = models.DateField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    point_type = models.CharField(max_length=20)
+    temperature = models.FloatField(null=True)
+    cdd = models.FloatField(null=True)
+    humidity = models.FloatField(null=True)
+    lower_ci = models.FloatField(null=True)
+    upper_ci = models.FloatField(null=True)
+    confidence = models.CharField(max_length=20, null=True)
 
     class Meta:
-        db_table = 'leaderboard_entries'
-        ordering = ['rank']
-        indexes = [
-            models.Index(fields=['period_start', 'period_end']),
-        ]
+        managed = False
+        db_table = 'emission_points'
 
-    def __str__(self):
-        return f"#{self.rank} - {self.area.name}"
+
+class LocationModelInfo(models.Model):
+    location = models.OneToOneField(Location, on_delete=models.DO_NOTHING,
+                                     primary_key=True)
+    architecture = models.CharField(max_length=100)
+    test_mape = models.FloatField(null=True)
+    test_r2 = models.FloatField(null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'location_model_info'
+
+
+class LocationSummary(models.Model):
+    location = models.OneToOneField(Location, on_delete=models.DO_NOTHING,
+                                     primary_key=True)
+    last_historical_date = models.CharField(max_length=50)
+    last_historical_emissions = models.FloatField()
+    forecast_12m_last = models.FloatField()
+    forecast_12m_average = models.FloatField()
+    forecast_12m_total = models.FloatField()
+    change_pct = models.FloatField()
+    change_tonnes = models.FloatField()
+    trend = models.CharField(max_length=20)
+    total_historical_tonnes = models.FloatField()
+
+    class Meta:
+        managed = False
+        db_table = 'location_summaries'
+
+
+class AggregateForecastPoint(models.Model):
+    forecast_run = models.ForeignKey(ForecastRun, on_delete=models.DO_NOTHING,
+                                      related_name='aggregate_points')
+    date = models.DateField()
+    value = models.FloatField()
+    lower_bound = models.FloatField()
+    upper_bound = models.FloatField()
+    temperature = models.FloatField(null=True)
+    cdd = models.FloatField(null=True)
+    humidity = models.FloatField(null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'aggregate_forecast_points'

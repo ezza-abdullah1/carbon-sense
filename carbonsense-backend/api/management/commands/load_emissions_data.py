@@ -67,7 +67,7 @@ class Command(BaseCommand):
             total_emissions += emissions
 
         self.stdout.write(self.style.SUCCESS(
-            f'\n✓ Successfully loaded all data: {total_locations} locations, {total_emissions} emission records'
+            f'\nSuccessfully loaded all data: {total_locations} locations, {total_emissions} emission records'
         ))
 
     def load_file(self, json_path, default_sector):
