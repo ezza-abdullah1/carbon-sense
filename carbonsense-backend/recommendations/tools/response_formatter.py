@@ -146,6 +146,45 @@ SECTOR_TEMPLATES = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Real Pakistan policy frameworks per sector
+# Used ALWAYS — never show RAG news articles as policy recommendations
+# ---------------------------------------------------------------------------
+
+SECTOR_POLICY_DEFAULTS = {
+    'transport': [
+        '**Pakistan National Electric Vehicle Policy**: Align {area_name}\'s fleet transition with the federal EV policy framework including import duty concessions and charging infrastructure mandates for Lahore',
+        '**Lahore Transport Master Plan**: Implement dedicated BRT corridors and feeder routes planned for the {area_name} zone under LDA\'s transport master plan',
+        '**Punjab Motor Vehicle Emission Standards**: Enforce emission testing under Punjab Environmental Protection Act for commercial vehicles operating in {area_name}',
+        '**National Climate Change Policy (Transport)**: Align {area_name}\'s fuel efficiency and modal shift targets with Pakistan\'s Updated NDC commitments',
+    ],
+    'industry': [
+        '**Punjab Environmental Quality Standards (PEQS)**: Enforce stack emission limits for industrial units in {area_name} per EPA Punjab regulations',
+        '**NEECA Industrial Energy Efficiency**: Register {area_name}\'s major industrial units in the mandatory energy audit program for facilities consuming over 1MW',
+        '**Pakistan Climate Change Act (Industry)**: Align {area_name}\'s industrial emission reduction targets with national NDC commitments',
+        '**UNIDO Cleaner Production Program**: Adopt cleaner production techniques from the UNIDO-Pakistan partnership for pollution prevention in {area_name}',
+    ],
+    'energy': [
+        '**NEPRA Net Metering Regulations**: Leverage distributed generation policy for rooftop solar installations across {area_name} buildings and facilities',
+        '**Alternative and Renewable Energy Policy 2019**: Contribute to Pakistan\'s 30% renewable energy target by 2030 through solar integration in {area_name}',
+        '**NEECA Energy Conservation Act**: Implement mandatory energy efficiency standards for appliances and building systems in {area_name}',
+        '**Punjab Energy Efficiency Action Plan**: Coordinate with provincial government on demand-side management targets for {area_name}',
+    ],
+    'waste': [
+        '**Punjab Local Government Act (Waste)**: Implement municipal solid waste management provisions with source segregation mandates for {area_name}',
+        '**Pakistan Environmental Protection Act**: Enforce disposal standards and anti-open-burning provisions for {area_name} waste streams',
+        '**LWMC Waste Management Strategy**: Coordinate with Lahore Waste Management Company on expanded collection and recycling for {area_name}',
+        '**National Climate Change Policy (Waste)**: Align {area_name}\'s methane capture targets with Pakistan\'s NDC commitments for the waste sector',
+    ],
+    'buildings': [
+        '**Pakistan Building Energy Code (BEEC)**: Adopt minimum energy performance standards for new construction and major renovations in {area_name}',
+        '**NEECA Building Efficiency Standards**: Implement mandatory energy labeling for HVAC and lighting in {area_name} commercial buildings',
+        '**LDA Green Building Guidelines**: Require green building compliance for new commercial developments in {area_name}',
+        '**National Climate Change Policy (Buildings)**: Align {area_name}\'s building efficiency targets with Pakistan\'s NDC and national cooling action plan',
+    ],
+}
+
+
 class ResponseFormatter:
     """Builds recommendations from templates + data, validates, and caches."""
 
@@ -164,6 +203,21 @@ class ResponseFormatter:
         sector_totals = emissions_analysis.get('sector_totals', {})
         sector_value = sector_totals.get(sector, 0)
         sector_pct = (sector_value / total * 100) if total > 0 else 0
+        trend = emissions_analysis.get('trend_direction', 'stable')
+        trend_pct = emissions_analysis.get('trend_percentage', 0)
+        hist_count = emissions_analysis.get('historical_count', 1)
+
+        # Urgency based on actual trend data
+        if trend == 'increasing' and abs(trend_pct) > 20:
+            urgency = 'Critical'
+        elif trend == 'increasing':
+            urgency = 'High'
+        elif trend == 'stable':
+            urgency = 'Moderate'
+        else:
+            urgency = 'Improving'
+
+        priority_medium = 'High' if urgency == 'Critical' else 'Medium'
 
         params = {
             'area_name': area_name,
@@ -171,20 +225,25 @@ class ResponseFormatter:
             'total': f'{total:.0f}',
             'sector_value': f'{sector_value:.0f}',
             'sector_pct': f'{sector_pct:.0f}',
+            'trend': trend,
+            'trend_pct': f'{abs(trend_pct):.1f}',
+            'urgency': urgency,
+            'priority_medium': priority_medium,
+            'monthly_avg': f'{sector_value / max(hist_count, 1):.0f}',
         }
 
         templates = SECTOR_TEMPLATES.get(sector, SECTOR_TEMPLATES['energy'])
 
         summary = self._build_summary(
             area_name, sector, total, sector_value, sector_pct,
-            emissions_analysis, policy_results,
+            emissions_analysis,
         )
 
         recommendations = {
             'summary': summary,
             'immediate_actions': [t.format(**params) for t in templates['immediate_actions']],
             'long_term_strategies': [t.format(**params) for t in templates['long_term_strategies']],
-            'policy_recommendations': self._build_policy_recs(policy_results, area_name, sector),
+            'policy_recommendations': self._build_policy_recs(area_name, sector),
             'monitoring_metrics': [t.format(**params) for t in templates['monitoring_metrics']],
             'risk_factors': [t.format(**params) for t in templates['risk_factors']],
         }
@@ -211,8 +270,8 @@ class ResponseFormatter:
         return result
 
     def _build_summary(self, area_name, sector, total, sector_value, sector_pct,
-                       emissions_analysis, policy_results):
-        """Build a data-driven summary paragraph."""
+                       emissions_analysis):
+        """Build a data-driven summary paragraph. No RAG article titles."""
         trend = emissions_analysis.get('trend_direction', 'stable')
         trend_pct = emissions_analysis.get('trend_percentage', 0)
         forecast = emissions_analysis.get('forecast_direction', 'stable')
@@ -230,53 +289,24 @@ class ResponseFormatter:
             'no_forecast': 'with limited forecast data available',
         }.get(forecast, '')
 
-        policy_mention = ''
-        if policy_results:
-            titles = [
-                r['metadata'].get('document_title', '')
-                for r in policy_results[:3]
-                if r['metadata'].get('document_title')
-            ]
-            if titles:
-                policy_mention = f' Relevant policy frameworks include {", ".join(titles)}.'
-
         return (
             f"{area_name}'s {sector} sector accounts for {sector_pct:.0f}% "
             f"({sector_value:.0f}t CO2e) of total area emissions ({total:.0f}t CO2e). "
             f"Analysis shows {trend_desc}, and emissions are {forecast_desc}. "
-            f"Immediate action is needed to address key emission drivers in this sector."
-            f"{policy_mention} "
-            f"The following recommendations are tailored to {area_name}'s context in "
-            f"Lahore, Pakistan, combining quick-win interventions with long-term changes."
+            f"Immediate action is needed to address key emission drivers in this sector. "
+            f"The following recommendations are grounded in Pakistan's regulatory framework "
+            f"including NEECA, Punjab EPA, and national NDC commitments, tailored to "
+            f"{area_name}'s specific context in Lahore."
         )
 
-    def _build_policy_recs(self, policy_results, area_name, sector):
-        """Build policy recommendations from retrieved documents."""
-        if not policy_results:
-            return [
-                f'**National Climate Policy Alignment**: Align local {sector} measures '
-                f'with Pakistan\'s Updated NDC targets and NCCP framework',
-                f'**Provincial Coordination**: Coordinate with Punjab EPA on {sector} '
-                f'emission standards and enforcement mechanisms',
-                f'**International Best Practices**: Adopt proven {sector} decarbonization '
-                f'strategies from comparable South Asian cities',
-            ]
+    def _build_policy_recs(self, area_name, sector):
+        """Build policy recommendations from real Pakistan regulatory frameworks.
 
-        recs = []
-        for r in policy_results[:3]:
-            title = r['metadata'].get('document_title', 'Policy Framework')
-            snippet = r['text'][:150].strip()
-            last_period = snippet.rfind('.')
-            if last_period > 40:
-                snippet = snippet[:last_period + 1]
-            recs.append(f'**{title}**: {snippet}')
-
-        recs.append(
-            f'**Local Implementation Framework**: Develop {area_name}-specific '
-            f'{sector} emission targets aligned with retrieved policy frameworks'
-        )
-
-        return recs[:4]
+        NEVER uses RAG results — the vector store contains news articles,
+        not actionable emission control policies.
+        """
+        defaults = SECTOR_POLICY_DEFAULTS.get(sector, SECTOR_POLICY_DEFAULTS['energy'])
+        return [d.format(area_name=area_name) for d in defaults]
 
     # ------------------------------------------------------------------ #
     # Legacy LLM-based format (kept for compatibility)

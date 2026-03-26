@@ -11,17 +11,17 @@ Flow:
 The template builder does 95% of the work.  Gemini only polishes the summary
 with minimal tokens so we stay well within free-tier limits (~50 recs/key).
 If Gemini is unavailable, the template response is returned as-is.
+
+NOTE: Web search fallback was REMOVED because DuckDuckGo returns irrelevant
+trending news (cricket scores, pharma CEOs) instead of climate policy.
+Policy recommendations now always come from real Pakistan regulatory frameworks.
 """
 
 from recommendations.tools.policy_retriever import PolicyRetriever
 from recommendations.tools.emissions_analyzer import EmissionsAnalyzer
 from recommendations.tools.response_formatter import ResponseFormatter
-from recommendations.tools.web_search import WebSearchFallback
 from recommendations.llm_client import GeminiClient
 from recommendations.pipeline_tracer import PipelineTracer
-
-# Minimum number of good RAG results before we fall back to web search
-MIN_RAG_RESULTS = 2
 
 
 class RecommendationAgent:
@@ -31,7 +31,6 @@ class RecommendationAgent:
         self.policy_retriever = PolicyRetriever()
         self.emissions_analyzer = EmissionsAnalyzer()
         self.formatter = ResponseFormatter()
-        self.web_search = WebSearchFallback()
         self.llm = GeminiClient()
 
     def generate(self, area_id, area_name, sector, coordinates, trace=True):
@@ -66,17 +65,8 @@ class RecommendationAgent:
                 n_results=5,
             )
 
-            # Web search fallback if RAG results are poor
-            used_web_search = False
-            if len(policy_results) < MIN_RAG_RESULTS:
-                web_results = self.web_search.search(area_name, sector, n_results=5)
-                if web_results:
-                    policy_results = policy_results + web_results
-                    used_web_search = True
-
             t.add_data({
                 'results_count': len(policy_results),
-                'used_web_search_fallback': used_web_search,
                 'policies_retrieved': [
                     {
                         'title': r['metadata'].get('document_title', 'Unknown'),
@@ -151,7 +141,7 @@ class RecommendationAgent:
             if self.llm.available:
                 t.add_data({
                     'action': 'llm_enhance',
-                    'model': 'gemini-1.5-flash',
+                    'model': 'gemini-2.0-flash',
                     'max_tokens': 150,
                     'mode': 'summary_polish_only',
                 })
@@ -183,8 +173,7 @@ class RecommendationAgent:
                 'confidence': result.get('confidence', {}),
                 'ai_enhanced': enhanced is not None,
                 'data_sources': {
-                    'rag_policies': len([r for r in policy_results if r['metadata'].get('source') != 'web_search']),
-                    'web_search': len([r for r in policy_results if r['metadata'].get('source') == 'web_search']),
+                    'rag_policies': len(policy_results),
                     'emissions_records': emissions_analysis.get('historical_count', 0),
                 },
                 'cached': True,
