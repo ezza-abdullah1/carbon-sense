@@ -44,6 +44,10 @@ venv.bak/
 *.swo
 *~
 
+# RAG / Vector DB
+chroma_data/
+policy_documents/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -5,11 +5,10 @@ Django settings for carbonsense project.
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-load_dotenv(BASE_DIR / '.env')
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -33,6 +32,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'api',
+    'recommendations',
 ]
 
 MIDDLEWARE = [
@@ -156,6 +156,13 @@ CORS_ALLOW_CREDENTIALS = True
 AUTH_USER_MODEL = 'api.User'
 
 # Session settings
+# Recommendations / RAG settings
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+CHROMA_PERSIST_DIR = str(BASE_DIR / 'chroma_data')
+EMBEDDING_MODEL = 'all-MiniLM-L6-v2'
+RECOMMENDATION_CACHE_TTL_HOURS = int(os.environ.get('RECOMMENDATION_CACHE_TTL_HOURS', '24'))
+POLICY_DOCUMENTS_DIR = str(BASE_DIR / 'policy_documents')
+
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False

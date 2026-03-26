@@ -24,6 +24,12 @@ interface RecommendationsResponse {
     monitoring_metrics: string[];
     risk_factors: string[];
   };
+  confidence?: {
+    overall: number;
+    evidence_strength: number;
+    data_completeness: number;
+    geographic_relevance: number;
+  };
   raw_response: string;
   generated_at: string;
 }
@@ -79,7 +85,7 @@ export function AreaDetailPanel({
         ? selectedSectors[0]
         : sectorValues.sort((a, b) => b[1] - a[1])[0][0];
 
-      const response = await fetch("https://carbonsense.app.n8n.cloud/webhook/emission-recommendations", {
+      const response = await fetch("/api/recommendations/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
