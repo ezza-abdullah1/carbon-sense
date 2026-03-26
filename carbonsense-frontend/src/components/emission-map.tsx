@@ -54,7 +54,8 @@ export function EmissionMap({ areas, selectedAreaId, onAreaSelect, emissionData,
     const map = mapRef.current;
 
     areas.forEach(area => {
-      const emission = emissionData[area.id] || 0;
+      const emission = emissionData[area.id];
+      if (!emission) return; // skip areas not in selected sectors
 
       // Use absolute emission value for color (evidence-based thresholds)
       const color = getEmissionColor(emission);

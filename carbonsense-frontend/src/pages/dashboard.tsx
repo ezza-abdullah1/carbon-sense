@@ -731,6 +731,7 @@ export default function Dashboard() {
                       onClose={() => setSelectedAreaId(null)}
                       coordinates={selectedArea.coordinates}
                       selectedSectors={selectedSectors}
+                      subSectorData={selectedArea.subSectorData}
                     />
                   ) : (
                     <>

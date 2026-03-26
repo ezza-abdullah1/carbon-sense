@@ -116,9 +116,19 @@ class AreaInfoViewSet(viewsets.ViewSet):
         results = []
         for run in runs:
             sector = _sector_field(run)
-            for loc in Location.objects.filter(forecast_run=run):
+            locs = Location.objects.filter(forecast_run=run)
+            # Pre-fetch summaries for sub_sector_data in one query
+            summary_map = {
+                s.location_id: s
+                for s in LocationSummary.objects.filter(location__in=locs)
+            }
+            for loc in locs:
                 lat = _safe_float(loc.latitude)
                 lng = _safe_float(loc.longitude)
+                summary = summary_map.get(loc.id)
+                sub_sector = None
+                if summary and summary.sub_sector_data:
+                    sub_sector = summary.sub_sector_data
                 results.append({
                     'id': make_area_id(loc.source, sector),
                     'name': loc.source,
@@ -127,6 +137,7 @@ class AreaInfoViewSet(viewsets.ViewSet):
                         [lat - 0.1, lng - 0.1],
                         [lat + 0.1, lng + 0.1],
                     ],
+                    'subSectorData': sub_sector,
                 })
 
         cache.set('areas_list', results, CACHE_TTL)
@@ -140,6 +151,8 @@ class AreaInfoViewSet(viewsets.ViewSet):
                 if make_area_id(loc.source, sector) == pk:
                     lat = _safe_float(loc.latitude)
                     lng = _safe_float(loc.longitude)
+                    summary = LocationSummary.objects.filter(location=loc).first()
+                    sub_sector = summary.sub_sector_data if summary else None
                     return Response({
                         'id': pk,
                         'name': loc.source,
@@ -148,6 +161,7 @@ class AreaInfoViewSet(viewsets.ViewSet):
                             [lat - 0.1, lng - 0.1],
                             [lat + 0.1, lng + 0.1],
                         ],
+                        'subSectorData': sub_sector,
                     })
         return Response({'detail': 'Not found.'}, status=404)
 

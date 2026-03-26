@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { X, TrendingUp, TrendingDown, Sparkles, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { RecommendationsModal } from "@/components/recommendations-modal";
-import type { Sector } from "@/lib/api";
+import type { Sector, TransportSubSectorData } from "@/lib/api";
 
 interface RecommendationsResponse {
   success: boolean;
@@ -50,6 +50,7 @@ interface AreaDetailPanelProps {
   onClose: () => void;
   coordinates?: [number, number];
   selectedSectors?: Sector[];
+  subSectorData?: TransportSubSectorData | null;
 }
 
 export function AreaDetailPanel({
@@ -62,6 +63,7 @@ export function AreaDetailPanel({
   onClose,
   coordinates,
   selectedSectors = ["transport", "industry", "energy", "waste", "buildings"],
+  subSectorData,
 }: AreaDetailPanelProps) {
   const [, setLocation] = useLocation();
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
@@ -195,6 +197,47 @@ export function AreaDetailPanel({
             })}
           </div>
         </div>
+
+        {subSectorData && (
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold">Transport Sub-sectors</h3>
+            <div className="space-y-3">
+              {[
+                { key: "road", label: "Road", color: "hsl(217, 91%, 60%)", value: subSectorData.road },
+                { key: "intl_avi", label: "Intl. Aviation", color: "hsl(280, 67%, 55%)", value: subSectorData.intl_avi },
+                { key: "railways", label: "Railways", color: "hsl(142, 65%, 45%)", value: subSectorData.railways },
+                { key: "dom_avi", label: "Dom. Aviation", color: "hsl(45, 93%, 47%)", value: subSectorData.dom_avi },
+              ].map(({ key, label, color, value }) => {
+                const maxVal = Math.max(subSectorData.road, subSectorData.intl_avi, subSectorData.railways, subSectorData.dom_avi);
+                const pct = maxVal > 0 ? (value / maxVal) * 100 : 0;
+                return (
+                  <div key={key} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">{label}</span>
+                      <span className="font-mono text-muted-foreground">
+                        {(value / 1000).toFixed(1)}kt
+                      </span>
+                    </div>
+                    <Progress
+                      value={pct}
+                      className="h-2"
+                      style={{ "--progress-background": color } as React.CSSProperties}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            {subSectorData.risk_flags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {subSectorData.risk_flags.map((flag) => (
+                  <Badge key={flag} variant="outline" className="text-xs">
+                    {flag.replace(/_/g, " ")}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="space-y-3">
           <Button

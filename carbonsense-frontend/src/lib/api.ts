@@ -15,11 +15,24 @@ export interface EmissionDataPoint {
   type: 'historical' | 'forecast';
 }
 
+export interface TransportSubSectorData {
+  road: number;
+  dom_avi: number;
+  intl_avi: number;
+  railways: number;
+  road_pct: number;
+  intensity_t_per_km2: number;
+  dominant_source: string;
+  risk_flags: string[];
+  rank_in_division?: number;
+}
+
 export interface AreaInfo {
   id: string;
   name: string;
   coordinates: [number, number];
   bounds: [[number, number], [number, number]];
+  subSectorData?: TransportSubSectorData | null;
 }
 
 export interface EmissionsQueryParams {
