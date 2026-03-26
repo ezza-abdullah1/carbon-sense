@@ -12,7 +12,7 @@ class PolicyDocumentAdmin(admin.ModelAdmin):
 
 @admin.register(RecommendationCache)
 class RecommendationCacheAdmin(admin.ModelAdmin):
-    list_display = ['area', 'sector', 'created_at', 'expires_at', 'policy_doc_count']
+    list_display = ['area_id', 'sector', 'created_at', 'expires_at', 'policy_doc_count']
     list_filter = ['sector', 'created_at']
     readonly_fields = ['id', 'created_at']
 

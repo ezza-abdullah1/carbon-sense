@@ -58,9 +58,7 @@ class RecommendationCache(models.Model):
     """Cache generated recommendations to avoid redundant LLM calls."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    area = models.ForeignKey(
-        'api.AreaInfo', on_delete=models.CASCADE, related_name='recommendation_caches'
-    )
+    area_id = models.CharField(max_length=255, default='')
     sector = models.CharField(max_length=50)
     response_data = models.JSONField()
     confidence_scores = models.JSONField(default=dict)
@@ -72,13 +70,13 @@ class RecommendationCache(models.Model):
     class Meta:
         db_table = 'recommendation_cache'
         indexes = [
-            models.Index(fields=['area', 'sector']),
+            models.Index(fields=['area_id', 'sector']),
             models.Index(fields=['expires_at']),
         ]
-        unique_together = [('area', 'sector')]
+        unique_together = [('area_id', 'sector')]
 
     def __str__(self):
-        return f"Cache: {self.area.name} - {self.sector}"
+        return f"Cache: {self.area_id} - {self.sector}"
 
 
 class ScrapedArticle(models.Model):
