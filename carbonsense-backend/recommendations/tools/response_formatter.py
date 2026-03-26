@@ -1,6 +1,9 @@
 """
 ResponseFormatter — builds recommendations from templates + data, validates,
 and computes confidence scores.  No LLM required for the core output.
+
+Templates are parameterized with actual emission values, trends, and area names
+so each area gets unique, data-driven recommendations.
 """
 
 import json
@@ -24,125 +27,172 @@ REQUIRED_FIELDS = [
 
 # ---------------------------------------------------------------------------
 # Sector-specific recommendation templates
-# Placeholders: {area_name}, {sector}, {total}, {sector_value}, {sector_pct}
+#
+# Placeholders filled from actual emissions data:
+#   {area_name}   — e.g. "Gulberg"
+#   {sector}      — e.g. "transport"
+#   {total}       — total emissions in tonnes, e.g. "140498"
+#   {sector_value}— this sector's emissions in tonnes, e.g. "38200"
+#   {sector_pct}  — this sector's share as %, e.g. "27"
+#   {trend}       — "increasing" / "decreasing" / "stable"
+#   {trend_pct}   — absolute trend %, e.g. "73.8"
+#   {urgency}     — "Critical" / "High" / "Moderate" / "Improving"
+#   {monthly_avg} — monthly average emissions for this sector
 # ---------------------------------------------------------------------------
 
 SECTOR_TEMPLATES = {
     'transport': {
         'immediate_actions': [
-            '**Anti-Idling Campaign at Major Intersections** - [Expected Impact]: Reduce roadside CO2 by 8-12% in {area_name} - [Estimated Cost Range]: PKR 5-10 Million for signage and enforcement - [Implementation Priority]: High',
-            '**CNG/Electric Rickshaw Transition Program** - [Expected Impact]: Cut per-trip emissions by 40% for 3-wheelers - [Estimated Cost Range]: PKR 20-30 Million subsidy program - [Implementation Priority]: High',
-            '**Congestion Pricing Pilot Zone** - [Expected Impact]: Reduce peak traffic volume 15-20% in {area_name} - [Estimated Cost Range]: PKR 50-80 Million infrastructure setup - [Implementation Priority]: Medium',
-            '**Public Transit Frequency Boost** - [Expected Impact]: Shift 10-15% of private vehicle trips to transit - [Estimated Cost Range]: PKR 30-50 Million for additional fleet - [Implementation Priority]: High',
+            '**Anti-Idling Enforcement in {area_name}** - [Expected Impact]: Reduce {area_name}\'s {sector_value}t annual transport CO2 by 8-12% at major intersections - [Estimated Cost Range]: PKR 5-10 Million for signage and enforcement - [Implementation Priority]: {urgency}',
+            '**CNG/Electric Rickshaw Transition** - [Expected Impact]: Cut per-trip emissions by 40% for 3-wheelers operating in {area_name} - [Estimated Cost Range]: PKR 20-30 Million subsidy program - [Implementation Priority]: High',
+            '**Congestion Pricing Pilot for {area_name}** - [Expected Impact]: Reduce peak traffic volume 15-20% targeting {sector_value}t annual emissions - [Estimated Cost Range]: PKR 50-80 Million infrastructure setup - [Implementation Priority]: {priority_medium}',
+            '**Public Transit Frequency Boost** - [Expected Impact]: Shift 10-15% of {area_name} private vehicle trips to transit - [Estimated Cost Range]: PKR 30-50 Million for additional fleet - [Implementation Priority]: {urgency}',
         ],
         'long_term_strategies': [
-            '**BRT/Metro Network Expansion** - [Timeline]: 3-5 years - [Expected Reduction]: 20-30% in transport emissions - [Key Milestones]: Year 1: Route planning and environmental assessment. Year 2: Construction begins. Year 3-5: Phased opening of new lines.',
-            '**Electric Bus Fleet Procurement** - [Timeline]: 2-4 years - [Expected Reduction]: 15-25% per route converted - [Key Milestones]: Year 1: Pilot with 20 e-buses. Year 2: Charging infrastructure. Year 3-4: Scale to 200+ buses.',
-            '**Non-Motorized Transport Infrastructure** - [Timeline]: 2-5 years - [Expected Reduction]: 5-10% from mode shift - [Key Milestones]: Year 1: Protected bike lanes on 3 corridors. Year 2: Bike-sharing program. Year 3-5: Connected cycling network.',
+            '**BRT/Metro Extension to {area_name}** - [Timeline]: 3-5 years - [Expected Reduction]: 20-30% of {area_name}\'s {sector_value}t transport emissions - [Key Milestones]: Year 1: Route planning and {area_name} corridor assessment. Year 2: Construction begins. Year 3-5: Phased opening.',
+            '**Electric Bus Fleet for {area_name} Routes** - [Timeline]: 2-4 years - [Expected Reduction]: 15-25% per route converted - [Key Milestones]: Year 1: Pilot 20 e-buses on {area_name} routes. Year 2: Charging infrastructure. Year 3-4: Scale to 200+ buses.',
+            '**Non-Motorized Transport in {area_name}** - [Timeline]: 2-5 years - [Expected Reduction]: 5-10% from mode shift - [Key Milestones]: Year 1: Protected bike lanes in {area_name}. Year 2: Bike-sharing stations. Year 3-5: Connected network.',
         ],
         'monitoring_metrics': [
-            '**Average Traffic Speed**: Track changes in peak-hour vehicle speeds across {area_name} corridors as proxy for congestion reduction',
-            '**Public Transit Ridership**: Monthly passenger counts on BRT and feeder routes serving {area_name}',
-            '**Vehicle Fleet Composition**: Quarterly survey of CNG/electric vs diesel/petrol vehicle ratios in the area',
+            '**{area_name} Traffic Speed Index**: Track peak-hour vehicle speeds across {area_name} corridors — target 15% improvement from current baseline',
+            '**Transit Ridership for {area_name}**: Monthly passenger counts on BRT/feeder routes — current transport emissions {sector_value}t need 20% modal shift',
+            '**Fleet Electrification Rate**: Quarterly CNG/electric vs diesel vehicle ratio surveys in {area_name} — track against {trend} emission trend',
         ],
         'risk_factors': [
-            '**Rapid Motorization**: Pakistan\'s vehicle fleet grows 10-15% annually — modal shift programs must outpace new registrations to achieve net reductions',
-            '**Fuel Subsidy Dependence**: Any increase in fuel prices faces political resistance, making economic incentives for clean vehicles more practical than punitive measures',
-            '**Infrastructure Gaps**: Lahore\'s road network may not support dedicated bus/cycle lanes without impacting existing traffic flow — phased implementation with traffic modeling is essential',
+            '**Rapid Motorization**: With {area_name}\'s transport emissions at {sector_value}t ({trend} {trend_pct}% YoY), modal shift programs must outpace 10-15% annual vehicle fleet growth',
+            '**Fuel Subsidy Dependence**: Political resistance to fuel pricing makes economic incentives for clean vehicles more practical for {area_name}',
+            '**Infrastructure Constraints**: {area_name}\'s road network may not support dedicated bus/cycle lanes — phased implementation with traffic modeling is essential',
         ],
     },
     'industry': {
         'immediate_actions': [
-            '**Energy Audit Program for Major Emitters** - [Expected Impact]: Identify 15-25% energy savings potential in {area_name} industrial units - [Estimated Cost Range]: PKR 2-5 Million for audit team - [Implementation Priority]: High',
-            '**Brick Kiln Zigzag Technology Conversion** - [Expected Impact]: Reduce per-kiln emissions by 40-60% - [Estimated Cost Range]: PKR 8-12 Million per kiln retrofit - [Implementation Priority]: High',
-            '**Industrial Waste Heat Recovery** - [Expected Impact]: Recover 10-20% of thermal energy in manufacturing - [Estimated Cost Range]: PKR 15-30 Million for heat exchangers - [Implementation Priority]: Medium',
-            '**Fuel Switching to Natural Gas** - [Expected Impact]: Reduce CO2 intensity by 30-40% per unit energy - [Estimated Cost Range]: PKR 10-20 Million for pipeline connections - [Implementation Priority]: High',
+            '**Energy Audit for {area_name} Industrial Units** - [Expected Impact]: Identify 15-25% savings from {area_name}\'s {sector_value}t industrial emissions - [Estimated Cost Range]: PKR 2-5 Million for audit team - [Implementation Priority]: {urgency}',
+            '**Brick Kiln Zigzag Technology Conversion** - [Expected Impact]: Reduce per-kiln emissions by 40-60% for kilns near {area_name} - [Estimated Cost Range]: PKR 8-12 Million per kiln retrofit - [Implementation Priority]: High',
+            '**Waste Heat Recovery for {area_name} Factories** - [Expected Impact]: Recover 10-20% of thermal energy from {sector_value}t emission base - [Estimated Cost Range]: PKR 15-30 Million for heat exchangers - [Implementation Priority]: {priority_medium}',
+            '**Fuel Switching to Natural Gas** - [Expected Impact]: Reduce CO2 intensity by 30-40% per unit energy in {area_name} industrial zone - [Estimated Cost Range]: PKR 10-20 Million for pipeline connections - [Implementation Priority]: {urgency}',
         ],
         'long_term_strategies': [
-            '**Industrial Cluster Decarbonization** - [Timeline]: 3-5 years - [Expected Reduction]: 25-35% in industrial emissions - [Key Milestones]: Year 1: Baseline assessment of all units. Year 2: Shared clean energy infrastructure. Year 3-5: Full cluster conversion.',
-            '**Circular Economy Integration** - [Timeline]: 2-5 years - [Expected Reduction]: 15-20% through waste reduction - [Key Milestones]: Year 1: Industrial symbiosis mapping. Year 2: By-product exchange platform. Year 3-5: Zero-waste industrial zones.',
-            '**Clean Technology Adoption Fund** - [Timeline]: 1-4 years - [Expected Reduction]: 20-30% for participating units - [Key Milestones]: Year 1: Fund setup with PKR 500M. Year 2: First grants disbursed. Year 3-4: Scale to 100+ beneficiaries.',
+            '**{area_name} Industrial Cluster Decarbonization** - [Timeline]: 3-5 years - [Expected Reduction]: 25-35% of {sector_value}t industrial emissions - [Key Milestones]: Year 1: Baseline assessment of {area_name} units. Year 2: Shared clean energy infrastructure. Year 3-5: Full cluster conversion.',
+            '**Circular Economy for {area_name}** - [Timeline]: 2-5 years - [Expected Reduction]: 15-20% through waste reduction - [Key Milestones]: Year 1: Industrial symbiosis mapping in {area_name}. Year 2: By-product exchange platform. Year 3-5: Zero-waste zones.',
+            '**Clean Technology Fund** - [Timeline]: 1-4 years - [Expected Reduction]: 20-30% for participating {area_name} units - [Key Milestones]: Year 1: Fund setup with PKR 500M. Year 2: First grants to {area_name} factories. Year 3-4: Scale to 100+ beneficiaries.',
         ],
         'monitoring_metrics': [
-            '**Industrial Energy Intensity**: kWh and fuel consumed per unit of output across {area_name} industrial facilities',
-            '**Stack Emission Levels**: SO2, NOx, and particulate readings from continuous monitoring systems',
-            '**Technology Adoption Rate**: Percentage of units that have adopted clean technology or efficiency upgrades',
+            '**{area_name} Industrial Energy Intensity**: kWh per unit of output — baseline from {sector_value}t total industrial emissions',
+            '**Stack Emission Compliance**: SO2, NOx, and particulate readings for {area_name} industrial units vs PEQS standards',
+            '**Technology Adoption Rate**: Percentage of {area_name} units with clean technology — track against {trend} ({trend_pct}% YoY) trend',
         ],
         'risk_factors': [
-            '**Competitiveness Concerns**: Stricter emission standards may increase production costs — phased implementation with SME support packages can mitigate industry resistance',
-            '**Informal Sector Challenges**: Unregistered industrial activity in {area_name} makes enforcement difficult — incentive-based approaches may work better than regulation alone',
-            '**Energy Supply Reliability**: Clean technology adoption depends on reliable electricity and gas — backup and distributed generation should be part of the transition plan',
+            '**Competitiveness Impact**: With {sector_value}t emissions ({trend} {trend_pct}% YoY), {area_name}\'s industries need phased compliance timelines with SME support packages',
+            '**Informal Sector**: Unregistered industrial activity near {area_name} makes enforcement difficult — incentive-based approaches work better than regulation alone',
+            '**Energy Supply Gaps**: Clean technology adoption in {area_name} depends on reliable electricity/gas — distributed generation should be part of the transition',
         ],
     },
     'energy': {
         'immediate_actions': [
-            '**Rooftop Solar Installation Drive** - [Expected Impact]: Offset 20-30% of grid electricity for participating buildings in {area_name} - [Estimated Cost Range]: PKR 15-25 Million for 1MW community program - [Implementation Priority]: High',
-            '**LED Street Lighting Conversion** - [Expected Impact]: Reduce public lighting energy use by 60-70% - [Estimated Cost Range]: PKR 8-15 Million for {area_name} coverage - [Implementation Priority]: High',
-            '**Net Metering Awareness Campaign** - [Expected Impact]: Increase distributed solar adoption by 30-40% - [Estimated Cost Range]: PKR 2-5 Million for outreach - [Implementation Priority]: Medium',
-            '**Power Factor Correction for Commercial Buildings** - [Expected Impact]: Reduce grid losses by 5-10% - [Estimated Cost Range]: PKR 3-8 Million for capacitor banks - [Implementation Priority]: Medium',
+            '**Rooftop Solar Drive for {area_name}** - [Expected Impact]: Offset 20-30% of grid electricity from {area_name}\'s {sector_value}t energy emissions - [Estimated Cost Range]: PKR 15-25 Million for 1MW program - [Implementation Priority]: {urgency}',
+            '**LED Street Lighting in {area_name}** - [Expected Impact]: Reduce public lighting energy by 60-70% in the area - [Estimated Cost Range]: PKR 8-15 Million for {area_name} coverage - [Implementation Priority]: High',
+            '**Net Metering Awareness for {area_name}** - [Expected Impact]: Increase distributed solar adoption by 30-40% - [Estimated Cost Range]: PKR 2-5 Million for outreach - [Implementation Priority]: {priority_medium}',
+            '**Power Factor Correction** - [Expected Impact]: Reduce grid losses by 5-10% for {area_name} commercial buildings - [Estimated Cost Range]: PKR 3-8 Million for capacitor banks - [Implementation Priority]: {priority_medium}',
         ],
         'long_term_strategies': [
-            '**Community Solar Farm Development** - [Timeline]: 2-4 years - [Expected Reduction]: 25-35% grid dependence for {area_name} - [Key Milestones]: Year 1: Site selection and grid study. Year 2: Install 5MW facility. Year 3-4: Expand to 15MW with storage.',
-            '**Smart Grid and Demand Response** - [Timeline]: 3-5 years - [Expected Reduction]: 15-20% peak demand reduction - [Key Milestones]: Year 1: Smart meter deployment. Year 2: Demand response pilot. Year 3-5: AI-driven load optimization.',
-            '**Building Energy Efficiency Retrofit Program** - [Timeline]: 2-5 years - [Expected Reduction]: 20-30% energy consumption in retrofitted buildings - [Key Milestones]: Year 1: Audit 100 largest consumers. Year 2: Retrofit 25 buildings. Year 3-5: Scale to 200+.',
+            '**{area_name} Community Solar Farm** - [Timeline]: 2-4 years - [Expected Reduction]: 25-35% of {area_name}\'s {sector_value}t energy emissions - [Key Milestones]: Year 1: Site selection near {area_name}. Year 2: Install 5MW facility. Year 3-4: Expand to 15MW with storage.',
+            '**Smart Grid for {area_name}** - [Timeline]: 3-5 years - [Expected Reduction]: 15-20% peak demand reduction - [Key Milestones]: Year 1: Smart meters in {area_name}. Year 2: Demand response pilot. Year 3-5: AI-driven optimization.',
+            '**Building Energy Retrofit in {area_name}** - [Timeline]: 2-5 years - [Expected Reduction]: 20-30% consumption in retrofitted buildings - [Key Milestones]: Year 1: Audit 100 largest {area_name} consumers. Year 2: Retrofit 25 buildings. Year 3-5: Scale to 200+.',
         ],
         'monitoring_metrics': [
-            '**Grid Electricity Consumption**: Monthly kWh consumed from grid vs distributed generation in {area_name}',
-            '**Solar Capacity Installed**: Cumulative MW of rooftop and community solar within the area',
-            '**Peak Demand Reduction**: Percentage decrease in peak electricity demand during summer months',
+            '**{area_name} Grid Consumption**: Monthly kWh from grid vs distributed generation — baseline {sector_value}t annual emissions',
+            '**Solar Capacity in {area_name}**: Cumulative MW installed — track against {sector_value}t baseline to measure displacement',
+            '**Peak Demand Trend**: {area_name} peak electricity demand — current energy trend is {trend} ({trend_pct}% YoY)',
         ],
         'risk_factors': [
-            '**Grid Infrastructure Limitations**: Lahore\'s distribution network may not support high solar penetration without upgrades — grid reinforcement must precede large-scale generation',
-            '**Upfront Cost Barrier**: Solar and efficiency investments require capital that many residents lack — green loans and on-bill financing are critical enablers',
-            '**Policy Uncertainty**: Changes in net metering rates or renewable energy incentives could slow adoption — stable, long-term policy signals are needed',
+            '**Grid Limitations**: With {sector_value}t energy emissions ({trend} {trend_pct}% YoY), {area_name}\'s distribution network needs upgrades before large-scale solar integration',
+            '**Capital Barrier**: Solar investments require upfront capital — green loans and on-bill financing are critical for {area_name} residents and SMEs',
+            '**Policy Uncertainty**: Changes in net metering rates could slow {area_name}\'s renewable adoption — stable long-term incentives are needed',
         ],
     },
     'waste': {
         'immediate_actions': [
-            '**Source Segregation Pilot Program** - [Expected Impact]: Divert 30-40% of organic waste from landfill in {area_name} - [Estimated Cost Range]: PKR 10-20 Million for bins, collection, awareness - [Implementation Priority]: High',
-            '**Composting Facility for Organic Waste** - [Expected Impact]: Reduce methane emissions by converting 50% of organic waste - [Estimated Cost Range]: PKR 25-40 Million for community-scale facility - [Implementation Priority]: High',
-            '**Informal Recycler Integration Program** - [Expected Impact]: Increase recycling rates by 20-30% through formal partnerships - [Estimated Cost Range]: PKR 5-10 Million for cooperative formation - [Implementation Priority]: Medium',
-            '**Anti-Open-Burning Enforcement** - [Expected Impact]: Eliminate 80-90% of open waste burning incidents in {area_name} - [Estimated Cost Range]: PKR 3-5 Million for monitoring - [Implementation Priority]: High',
+            '**Source Segregation Pilot in {area_name}** - [Expected Impact]: Divert 30-40% of organic waste from landfill, reducing {area_name}\'s {sector_value}t waste emissions - [Estimated Cost Range]: PKR 10-20 Million for bins, collection, awareness - [Implementation Priority]: {urgency}',
+            '**{area_name} Composting Facility** - [Expected Impact]: Convert 50% of organic waste, cutting methane from {sector_value}t emission base - [Estimated Cost Range]: PKR 25-40 Million for community-scale facility - [Implementation Priority]: High',
+            '**Informal Recycler Integration** - [Expected Impact]: Increase {area_name} recycling rates by 20-30% through formal partnerships - [Estimated Cost Range]: PKR 5-10 Million for cooperative formation - [Implementation Priority]: {priority_medium}',
+            '**Anti-Open-Burning in {area_name}** - [Expected Impact]: Eliminate 80-90% of open waste burning incidents - [Estimated Cost Range]: PKR 3-5 Million for monitoring - [Implementation Priority]: {urgency}',
         ],
         'long_term_strategies': [
-            '**Waste-to-Energy Facility** - [Timeline]: 3-5 years - [Expected Reduction]: 40-50% of landfill methane eliminated - [Key Milestones]: Year 1: Feasibility study and site selection. Year 2: EIA and financing. Year 3-5: Construction and commissioning.',
-            '**City-Wide Zero Waste Program** - [Timeline]: 3-5 years - [Expected Reduction]: 50-60% waste diversion from landfill - [Key Milestones]: Year 1: Ward-level segregation rollout. Year 2: Materials recovery facility. Year 3-5: Extended producer responsibility.',
-            '**Landfill Gas Capture System** - [Timeline]: 2-4 years - [Expected Reduction]: 60-70% of existing landfill methane - [Key Milestones]: Year 1: Gas well installation. Year 2: Collection operational. Year 3-4: Power generation from captured gas.',
+            '**Waste-to-Energy for {area_name}** - [Timeline]: 3-5 years - [Expected Reduction]: 40-50% of {area_name}\'s {sector_value}t waste-sector methane - [Key Milestones]: Year 1: Feasibility study for {area_name}. Year 2: EIA and financing. Year 3-5: Construction and commissioning.',
+            '**{area_name} Zero Waste Program** - [Timeline]: 3-5 years - [Expected Reduction]: 50-60% waste diversion from landfill - [Key Milestones]: Year 1: Ward-level segregation in {area_name}. Year 2: Materials recovery facility. Year 3-5: Extended producer responsibility.',
+            '**Landfill Gas Capture** - [Timeline]: 2-4 years - [Expected Reduction]: 60-70% of landfill methane serving {area_name} - [Key Milestones]: Year 1: Gas well installation. Year 2: Collection operational. Year 3-4: Power generation.',
         ],
         'monitoring_metrics': [
-            '**Landfill Diversion Rate**: Percentage of total waste diverted through recycling, composting, and reuse in {area_name}',
-            '**Methane Emission Levels**: CH4 concentration measurements at landfill boundaries and dump sites',
-            '**Open Burning Incidents**: Monthly count of reported waste burning events in the area',
+            '**{area_name} Landfill Diversion**: Percentage of waste diverted — baseline from {sector_value}t annual waste emissions',
+            '**Methane Levels near {area_name}**: CH4 measurements at nearby landfill boundaries — track against {trend} ({trend_pct}% YoY) trend',
+            '**Open Burning Incidents**: Monthly count in {area_name} — target 90% reduction from current baseline',
         ],
         'risk_factors': [
-            '**Behavioral Change Resistance**: Source segregation requires sustained community engagement — pilot programs with visible benefits build momentum better than top-down mandates',
-            '**Informal Sector Disruption**: Formalizing waste management must include existing waste pickers — exclusion leads to both social harm and reduced collection efficiency',
-            '**Financing Gaps**: Waste infrastructure requires significant upfront investment — public-private partnerships and carbon credit revenues can bridge the gap',
+            '**Behavioral Resistance**: With {area_name}\'s waste emissions at {sector_value}t ({trend} trend), community engagement through visible pilot benefits is critical',
+            '**Informal Sector Impact**: Formalizing {area_name}\'s waste management must include existing waste pickers — exclusion reduces collection efficiency',
+            '**Financing Gaps**: {area_name}\'s waste infrastructure needs significant investment — PPP models and carbon credit revenues can bridge the gap',
         ],
     },
     'buildings': {
         'immediate_actions': [
-            '**Building Energy Audit Campaign** - [Expected Impact]: Identify 20-35% energy savings in commercial buildings in {area_name} - [Estimated Cost Range]: PKR 3-8 Million for audit team - [Implementation Priority]: High',
-            '**Cool Roof Initiative** - [Expected Impact]: Reduce cooling energy demand by 20-30% in treated buildings - [Estimated Cost Range]: PKR 5-12 Million for reflective coating program - [Implementation Priority]: High',
-            '**HVAC Efficiency Upgrade Incentive** - [Expected Impact]: Cut cooling/heating energy by 25-40% per upgraded system - [Estimated Cost Range]: PKR 15-25 Million rebate program - [Implementation Priority]: Medium',
-            '**Window Film and Insulation Retrofit** - [Expected Impact]: Reduce heat gain by 30-40% in older buildings - [Estimated Cost Range]: PKR 8-15 Million for targeted commercial buildings - [Implementation Priority]: Medium',
+            '**Energy Audit for {area_name} Buildings** - [Expected Impact]: Identify 20-35% savings from {area_name}\'s {sector_value}t building emissions - [Estimated Cost Range]: PKR 3-8 Million for audit team - [Implementation Priority]: {urgency}',
+            '**Cool Roof Initiative in {area_name}** - [Expected Impact]: Reduce cooling demand by 20-30% in treated buildings - [Estimated Cost Range]: PKR 5-12 Million for reflective coating program - [Implementation Priority]: High',
+            '**HVAC Efficiency Upgrades** - [Expected Impact]: Cut cooling/heating energy by 25-40% per system in {area_name} - [Estimated Cost Range]: PKR 15-25 Million rebate program - [Implementation Priority]: {priority_medium}',
+            '**Window Film and Insulation** - [Expected Impact]: Reduce heat gain by 30-40% in older {area_name} buildings - [Estimated Cost Range]: PKR 8-15 Million targeted program - [Implementation Priority]: {priority_medium}',
         ],
         'long_term_strategies': [
-            '**Green Building Code Adoption** - [Timeline]: 2-4 years - [Expected Reduction]: 30-40% energy reduction in new construction - [Key Milestones]: Year 1: Code development with stakeholders. Year 2: Voluntary adoption. Year 3-4: Mandatory for all new commercial.',
-            '**District Cooling System** - [Timeline]: 3-5 years - [Expected Reduction]: 35-45% cooling energy reduction for connected buildings - [Key Milestones]: Year 1: Demand assessment for {area_name}. Year 2: Central plant design. Year 3-5: Phased building connections.',
-            '**Net-Zero Building Demonstration Projects** - [Timeline]: 2-4 years - [Expected Reduction]: 80-100% operational emissions for demo buildings - [Key Milestones]: Year 1: Design competition. Year 2: Build 3 demo buildings. Year 3-4: Replication framework.',
+            '**Green Building Code for {area_name}** - [Timeline]: 2-4 years - [Expected Reduction]: 30-40% energy reduction in new {area_name} construction - [Key Milestones]: Year 1: Code development. Year 2: Voluntary adoption in {area_name}. Year 3-4: Mandatory for new commercial.',
+            '**{area_name} District Cooling System** - [Timeline]: 3-5 years - [Expected Reduction]: 35-45% of {sector_value}t cooling-related emissions - [Key Milestones]: Year 1: Demand assessment for {area_name}. Year 2: Central plant design. Year 3-5: Phased connections.',
+            '**Net-Zero Building Demos in {area_name}** - [Timeline]: 2-4 years - [Expected Reduction]: 80-100% operational emissions for demo buildings - [Key Milestones]: Year 1: Design competition. Year 2: Build 3 demos in {area_name}. Year 3-4: Replication framework.',
         ],
         'monitoring_metrics': [
-            '**Building Energy Use Intensity**: kWh per square meter per year for commercial and residential buildings in {area_name}',
-            '**Green Building Certifications**: Number of buildings with certified green/energy-efficient ratings',
-            '**Cooling Degree Days vs Energy Use**: Correlation tracking between temperature and consumption to measure efficiency gains',
+            '**{area_name} Building Energy Intensity**: kWh/sqm/year for {area_name} buildings — baseline from {sector_value}t emissions',
+            '**Green Certifications in {area_name}**: Number of buildings with energy-efficiency ratings — target 20% of commercial stock',
+            '**Cooling vs Temperature**: {area_name} energy use correlated with cooling degree days — current trend is {trend} ({trend_pct}% YoY)',
         ],
         'risk_factors': [
-            '**Split Incentive Problem**: Building owners bear retrofit costs while tenants benefit from lower bills — green lease frameworks and shared-savings models can align incentives',
-            '**Construction Capacity**: Local contractors may lack experience with green building techniques — training programs and technology transfer partnerships are essential',
-            '**Urban Heat Island Effect**: Lahore\'s rising temperatures increase cooling demand faster than efficiency gains — passive cooling and green infrastructure must complement mechanical solutions',
+            '**Split Incentive**: {area_name} building owners bear costs while tenants benefit — green lease frameworks needed to align incentives',
+            '**Construction Capacity**: With {sector_value}t building emissions ({trend} trend), local contractors need green building training and technology transfer',
+            '**Urban Heat Island**: Lahore\'s rising temperatures increase {area_name}\'s cooling demand — passive cooling and green infrastructure must complement mechanical solutions',
         ],
     },
+}
+
+# ---------------------------------------------------------------------------
+# Real Pakistan policy frameworks per sector (used when RAG has no results)
+# ---------------------------------------------------------------------------
+
+SECTOR_POLICY_DEFAULTS = {
+    'transport': [
+        '**Pakistan National Electric Vehicle Policy**: Align {area_name}\'s fleet transition with the federal EV policy framework including import duty concessions and charging infrastructure mandates for Lahore',
+        '**Lahore Transport Master Plan**: Implement dedicated BRT corridors and feeder routes planned for the {area_name} zone under LDA\'s transport master plan',
+        '**Punjab Motor Vehicle Emission Standards**: Enforce emission testing under Punjab Environmental Protection Act for commercial vehicles operating in {area_name}',
+        '**National Climate Change Policy (Transport)**: Align {area_name}\'s fuel efficiency and modal shift targets with Pakistan\'s Updated NDC commitments',
+    ],
+    'industry': [
+        '**Punjab Environmental Quality Standards (PEQS)**: Enforce stack emission limits for industrial units in {area_name} per EPA Punjab regulations',
+        '**NEECA Industrial Energy Efficiency**: Register {area_name}\'s major industrial units in the mandatory energy audit program for facilities consuming >1MW',
+        '**Pakistan Climate Change Act (Industry)**: Align {area_name}\'s industrial emission reduction targets with national NDC commitments',
+        '**UNIDO Cleaner Production Program**: Adopt cleaner production techniques from the UNIDO-Pakistan partnership for pollution prevention in {area_name}',
+    ],
+    'energy': [
+        '**NEPRA Net Metering Regulations**: Leverage distributed generation policy for rooftop solar installations across {area_name} buildings and facilities',
+        '**Alternative & Renewable Energy Policy 2019**: Contribute to Pakistan\'s 30% renewable energy target by 2030 through solar integration in {area_name}',
+        '**NEECA Energy Conservation Act**: Implement mandatory energy efficiency standards for appliances and building systems in {area_name}',
+        '**Punjab Energy Efficiency Action Plan**: Coordinate with provincial government on demand-side management targets for {area_name}',
+    ],
+    'waste': [
+        '**Punjab Local Government Act (Waste)**: Implement municipal solid waste management provisions with source segregation mandates for {area_name}',
+        '**Pakistan Environmental Protection Act**: Enforce disposal standards and anti-open-burning provisions for {area_name} waste streams',
+        '**LWMC Waste Management Strategy**: Coordinate with Lahore Waste Management Company on expanded collection and recycling for {area_name}',
+        '**National Climate Change Policy (Waste)**: Align {area_name}\'s methane capture targets with Pakistan\'s NDC commitments for the waste sector',
+    ],
+    'buildings': [
+        '**Pakistan Building Energy Code (BEEC)**: Adopt minimum energy performance standards for new construction and major renovations in {area_name}',
+        '**NEECA Building Efficiency Standards**: Implement mandatory energy labeling for HVAC and lighting in {area_name} commercial buildings',
+        '**LDA Green Building Guidelines**: Require green building compliance for new commercial developments in {area_name}',
+        '**National Climate Change Policy (Buildings)**: Align {area_name}\'s building efficiency targets with Pakistan\'s NDC and national cooling action plan',
+    ],
 }
 
 
@@ -164,6 +214,25 @@ class ResponseFormatter:
         sector_totals = emissions_analysis.get('sector_totals', {})
         sector_value = sector_totals.get(sector, 0)
         sector_pct = (sector_value / total * 100) if total > 0 else 0
+        trend = emissions_analysis.get('trend_direction', 'stable')
+        trend_pct = emissions_analysis.get('trend_percentage', 0)
+        forecast = emissions_analysis.get('forecast_direction', 'stable')
+        dominant = emissions_analysis.get('dominant_sector', sector)
+        hist_count = emissions_analysis.get('historical_count', 1)
+        monthly_avg = sector_value / max(hist_count, 1)
+
+        # Determine urgency from actual trend data
+        if trend == 'increasing' and abs(trend_pct) > 20:
+            urgency = 'Critical'
+        elif trend == 'increasing':
+            urgency = 'High'
+        elif trend == 'stable':
+            urgency = 'Moderate'
+        else:
+            urgency = 'Improving'
+
+        # Secondary priority adjusts with urgency
+        priority_medium = 'High' if urgency == 'Critical' else 'Medium'
 
         params = {
             'area_name': area_name,
@@ -171,6 +240,13 @@ class ResponseFormatter:
             'total': f'{total:.0f}',
             'sector_value': f'{sector_value:.0f}',
             'sector_pct': f'{sector_pct:.0f}',
+            'trend': trend,
+            'trend_pct': f'{abs(trend_pct):.1f}',
+            'forecast': forecast,
+            'dominant': dominant,
+            'urgency': urgency,
+            'priority_medium': priority_medium,
+            'monthly_avg': f'{monthly_avg:.0f}',
         }
 
         templates = SECTOR_TEMPLATES.get(sector, SECTOR_TEMPLATES['energy'])
@@ -230,53 +306,24 @@ class ResponseFormatter:
             'no_forecast': 'with limited forecast data available',
         }.get(forecast, '')
 
-        policy_mention = ''
-        if policy_results:
-            titles = [
-                r['metadata'].get('document_title', '')
-                for r in policy_results[:3]
-                if r['metadata'].get('document_title')
-            ]
-            if titles:
-                policy_mention = f' Relevant policy frameworks include {", ".join(titles)}.'
-
         return (
             f"{area_name}'s {sector} sector accounts for {sector_pct:.0f}% "
             f"({sector_value:.0f}t CO2e) of total area emissions ({total:.0f}t CO2e). "
             f"Analysis shows {trend_desc}, and emissions are {forecast_desc}. "
-            f"Immediate action is needed to address key emission drivers in this sector."
-            f"{policy_mention} "
-            f"The following recommendations are tailored to {area_name}'s context in "
-            f"Lahore, Pakistan, combining quick-win interventions with long-term changes."
+            f"Immediate action is needed to address key emission drivers in this sector. "
+            f"The following recommendations are grounded in Pakistan's regulatory framework "
+            f"including NEECA, Punjab EPA, and national NDC commitments, tailored to "
+            f"{area_name}'s specific context in Lahore."
         )
 
     def _build_policy_recs(self, policy_results, area_name, sector):
-        """Build policy recommendations from retrieved documents."""
-        if not policy_results:
-            return [
-                f'**National Climate Policy Alignment**: Align local {sector} measures '
-                f'with Pakistan\'s Updated NDC targets and NCCP framework',
-                f'**Provincial Coordination**: Coordinate with Punjab EPA on {sector} '
-                f'emission standards and enforcement mechanisms',
-                f'**International Best Practices**: Adopt proven {sector} decarbonization '
-                f'strategies from comparable South Asian cities',
-            ]
+        """Build policy recommendations from real Pakistan regulatory frameworks.
 
-        recs = []
-        for r in policy_results[:3]:
-            title = r['metadata'].get('document_title', 'Policy Framework')
-            snippet = r['text'][:150].strip()
-            last_period = snippet.rfind('.')
-            if last_period > 40:
-                snippet = snippet[:last_period + 1]
-            recs.append(f'**{title}**: {snippet}')
-
-        recs.append(
-            f'**Local Implementation Framework**: Develop {area_name}-specific '
-            f'{sector} emission targets aligned with retrieved policy frameworks'
-        )
-
-        return recs[:4]
+        RAG results are used for summary context only — not as recommendations,
+        since the vector store contains news articles, not actionable policies.
+        """
+        defaults = SECTOR_POLICY_DEFAULTS.get(sector, SECTOR_POLICY_DEFAULTS['energy'])
+        return [d.format(area_name=area_name) for d in defaults]
 
     # ------------------------------------------------------------------ #
     # Legacy LLM-based format (kept for compatibility)
