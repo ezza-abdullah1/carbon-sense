@@ -718,8 +718,8 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="border-l border-border bg-card flex flex-col">
-                <div className="flex-1 overflow-hidden p-6">
+              <div className="border-l border-border bg-card flex min-h-0 flex-col">
+                <div className="flex-1 min-h-0 overflow-hidden p-6">
                   {selectedAreaId && selectedArea ? (
                     <AreaDetailPanel
                       areaId={selectedAreaId}

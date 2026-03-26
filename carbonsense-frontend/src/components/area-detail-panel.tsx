@@ -129,7 +129,7 @@ export function AreaDetailPanel({
   ];
 
   return (
-    <Card className="w-full h-full flex flex-col">
+    <Card className="w-full h-full min-h-0 flex flex-col">
       <CardHeader className="flex-row items-start justify-between space-y-0 pb-4">
         <div className="space-y-1">
           <CardTitle className="text-xl">{areaName}</CardTitle>
@@ -145,7 +145,7 @@ export function AreaDetailPanel({
         </Button>
       </CardHeader>
 
-      <CardContent className="flex-1 space-y-6">
+      <CardContent className="flex-1 min-h-0 space-y-6 overflow-y-scroll overscroll-contain pr-2">
         <div className="space-y-2">
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-mono font-bold">
