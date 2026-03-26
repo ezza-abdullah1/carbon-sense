@@ -11,6 +11,10 @@ Flow:
 The template builder does 95% of the work.  Gemini only polishes the summary
 with minimal tokens so we stay well within free-tier limits (~50 recs/key).
 If Gemini is unavailable, the template response is returned as-is.
+
+NOTE: Web search fallback was REMOVED because DuckDuckGo returns irrelevant
+trending news (cricket scores, pharma CEOs) instead of climate policy.
+Policy recommendations now always come from real Pakistan regulatory frameworks.
 """
 
 from recommendations.tools.policy_retriever import PolicyRetriever
@@ -137,7 +141,7 @@ class RecommendationAgent:
             if self.llm.available:
                 t.add_data({
                     'action': 'llm_enhance',
-                    'model': 'gemini-1.5-flash',
+                    'model': 'gemini-2.0-flash',
                     'max_tokens': 150,
                     'mode': 'summary_polish_only',
                 })

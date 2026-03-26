@@ -48,7 +48,7 @@ class GeminiClient:
             return None
 
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-2.0-flash')
 
             prompt = (
                 f"Improve this environmental summary for {area_name} ({sector}) "
@@ -84,7 +84,7 @@ class GeminiClient:
             raise RuntimeError("Gemini API key is not configured.")
 
         model = genai.GenerativeModel(
-            'gemini-1.5-flash',
+            'gemini-2.0-flash',
             system_instruction=system_prompt,
         )
 
