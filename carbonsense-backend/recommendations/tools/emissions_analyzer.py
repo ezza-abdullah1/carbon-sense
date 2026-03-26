@@ -84,58 +84,46 @@ class EmissionsAnalyzer:
     # ------------------------------------------------------------------ #
 
     def format_for_prompt(self, analysis: dict) -> str:
-        """Convert an *analysis* dict into a human-readable text block
-        suitable for injection into an LLM prompt."""
+        """Convert analysis dict into a compact text block for the LLM prompt.
+        Minimizes tokens while preserving all key data."""
 
-        lines: list[str] = []
-
-        # -- header -------------------------------------------------- #
-        lines.append(f"=== Emissions Analysis: {analysis['area_name']} ===")
-        coords = analysis["coordinates"]
-        lines.append(f"Location: ({coords['lat']}, {coords['lng']})")
-        lines.append("")
-
-        # -- historical summary -------------------------------------- #
-        lines.append("-- Historical Data Summary --")
-        lines.append(
-            f"Date range: {analysis['earliest_date']} to {analysis['latest_date']}"
-        )
-        lines.append(f"Total historical records: {analysis['historical_count']}")
-        lines.append(f"Total forecast records: {analysis['forecast_count']}")
-        lines.append("")
-
-        # -- sector breakdown ---------------------------------------- #
         total = analysis["total_emissions"]
-        lines.append("-- Sector Breakdown --")
-        for sector in SECTORS:
-            value = analysis["sector_totals"].get(sector, 0)
-            pct = (value / total * 100) if total else 0
-            lines.append(f"  {sector.capitalize():12s}: {value:>12.2f}  ({pct:.1f}%)")
-        lines.append(f"  {'Total':12s}: {total:>12.2f}")
-        lines.append(f"Dominant sector: {analysis['dominant_sector'].capitalize()}")
-        lines.append("")
+        sectors = []
+        for s in SECTORS:
+            val = analysis["sector_totals"].get(s, 0)
+            pct = (val / total * 100) if total else 0
+            if val > 0:
+                sectors.append(f"{s}:{val:.0f}t({pct:.0f}%)")
 
-        # -- trend analysis ------------------------------------------ #
-        lines.append("-- Trend Analysis --")
-        lines.append(
-            f"Overall trend: {analysis['trend_direction']} "
-            f"({analysis['trend_percentage']:+.1f}% year-over-year)"
+        trend = analysis["trend_direction"]
+        trend_pct = analysis["trend_percentage"]
+
+        return (
+            f"Total: {total:.0f}t CO2e | Dominant: {analysis['dominant_sector']} | "
+            f"Trend: {trend}({trend_pct:+.1f}%) | Forecast: {analysis['forecast_direction']}\n"
+            f"Sectors: {', '.join(sectors)}\n"
+            f"Period: {analysis['earliest_date']} to {analysis['latest_date']} "
+            f"({analysis['historical_count']} records)"
         )
-        lines.append("Per-sector trends:")
-        for sector in SECTORS:
-            st = analysis["sector_trends"].get(sector, {})
-            direction = st.get("direction", "stable")
-            pct = st.get("percentage", 0.0)
-            lines.append(
-                f"  {sector.capitalize():12s}: {direction} ({pct:+.1f}%)"
-            )
-        lines.append("")
 
-        # -- forecast ------------------------------------------------ #
-        lines.append("-- Forecast --")
-        lines.append(f"Forecast direction: {analysis['forecast_direction']}")
+    def summarize(self, analysis: dict) -> str:
+        """Return a brief human-readable summary of emissions for LLM enhancement.
+        Keeps token count very low (~50 tokens)."""
+        total = analysis["total_emissions"]
+        dominant = analysis["dominant_sector"]
+        trend = analysis["trend_direction"]
+        trend_pct = analysis["trend_percentage"]
+        forecast = analysis["forecast_direction"]
 
-        return "\n".join(lines)
+        sectors = analysis["sector_totals"]
+        top_sectors = sorted(sectors.items(), key=lambda x: x[1], reverse=True)[:3]
+        sector_parts = [f"{s}: {v:.0f}t" for s, v in top_sectors if v > 0]
+
+        return (
+            f"{analysis['area_name']} emits {total:.0f}t CO2e. "
+            f"Dominant: {dominant}. Trend: {trend} ({trend_pct:+.1f}%). "
+            f"Forecast: {forecast}. Top: {', '.join(sector_parts)}."
+        )
 
     # ------------------------------------------------------------------ #
 

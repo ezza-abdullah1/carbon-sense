@@ -14,13 +14,16 @@ SECTOR_KEYWORDS = {
 }
 
 
+MIN_SIMILARITY_SCORE = 0.3
+
+
 class PolicyRetriever:
     """Retrieves relevant policy document chunks from the vector store."""
 
     def __init__(self):
         self.store = VectorStore()
 
-    def retrieve(self, area_name, sector, coordinates, n_results=8):
+    def retrieve(self, area_name, sector, coordinates, n_results=5):
         """Retrieve and re-rank relevant policy chunks.
 
         Args:
@@ -36,7 +39,7 @@ class PolicyRetriever:
         query_text = self._build_query(area_name, sector)
 
         # Step 2: Retrieve candidates from ChromaDB (fetch more than needed for re-ranking)
-        fetch_count = min(n_results * 3, 20)
+        fetch_count = min(n_results * 3, 15)
 
         try:
             results = self.store.query(
@@ -62,7 +65,10 @@ class PolicyRetriever:
 
         ranked = self._rerank(candidates, sector, area_name)
 
-        # Step 4: Return top N
+        # Step 4: Filter by minimum similarity threshold
+        ranked = [r for r in ranked if r['score'] >= MIN_SIMILARITY_SCORE]
+
+        # Step 5: Return top N
         return ranked[:n_results]
 
     def _build_query(self, area_name, sector):
@@ -127,31 +133,37 @@ class PolicyRetriever:
         return scored
 
     def format_for_prompt(self, results):
-        """Format retrieved policy chunks into a text block for the LLM prompt.
+        """Format retrieved policy chunks into a COMPACT text block for the LLM.
+
+        Extracts only key data points from each policy to minimize token usage.
+        The RAG does the heavy lifting; the LLM only needs to format and reason.
 
         Args:
             results: List of dicts from retrieve().
 
         Returns:
-            Formatted string with numbered policy excerpts and source info.
+            Compact formatted string with policy names, key measures, and targets.
         """
         if not results:
-            return "No relevant policy documents found in the knowledge base. Provide recommendations based on your general knowledge of climate policy best practices."
+            return "No relevant policy documents found. Provide recommendations based on general climate policy best practices for Pakistan."
 
         parts = []
         for i, item in enumerate(results, 1):
             meta = item['metadata']
-            title = meta.get('document_title', 'Unknown Document')
-            country = meta.get('country', 'Unknown')
-            year = meta.get('year', 'Unknown')
-            org = meta.get('source_organization', 'Unknown')
+            title = meta.get('document_title', 'Unknown')
+            country = meta.get('country', '')
+            year = meta.get('year', '')
             policy_type = meta.get('policy_type', '')
-            scale = meta.get('scale', '')
 
-            header = f"[{i}] {title} ({year}, {country}, {org})"
-            if policy_type:
-                header += f" [{policy_type}, {scale}]"
+            # Extract only the first 200 chars of text — key points only
+            text_snippet = item['text'][:200].strip()
+            # Try to cut at sentence boundary
+            last_period = text_snippet.rfind('.')
+            if last_period > 80:
+                text_snippet = text_snippet[:last_period + 1]
 
-            parts.append(f"{header}\n{item['text']}\n")
+            parts.append(
+                f"[{i}] {title} ({year}, {country}, {policy_type}): {text_snippet}"
+            )
 
-        return "\n---\n".join(parts)
+        return "\n".join(parts)
