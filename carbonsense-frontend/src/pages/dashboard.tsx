@@ -55,7 +55,7 @@ export default function Dashboard() {
   const { data: areas = [], isLoading: areasLoading } = useAreas();
   const { data: emissionData = {}, isLoading: emissionsLoading } = useLatestEmissions(dataType, selectedSectors, timeInterval);
   const { data: leaderboard = [], isLoading: leaderboardLoading } = useLeaderboard(dataType, selectedSectors, timeInterval);
-  const { data: timeSeriesData = [] } = useTimeSeriesData(selectedAreaId || undefined, dataType);
+  const { data: timeSeriesData = [] } = useTimeSeriesData(undefined, dataType);
   const { data: combinedData } = useCombinedTimeSeriesData(selectedAreaId || undefined);
 
   const handleLogout = () => {
