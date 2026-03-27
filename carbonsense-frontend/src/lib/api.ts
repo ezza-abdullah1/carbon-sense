@@ -15,16 +15,27 @@ export interface EmissionDataPoint {
   type: 'historical' | 'forecast';
 }
 
-export interface TransportSubSectorData {
-  road: number;
-  dom_avi: number;
-  intl_avi: number;
-  railways: number;
-  road_pct: number;
-  intensity_t_per_km2: number;
-  dominant_source: string;
-  risk_flags: string[];
+export interface SubSectorData {
+  // transport sub-sectors
+  road?: number;
+  dom_avi?: number;
+  intl_avi?: number;
+  railways?: number;
+  road_pct?: number;
+  intensity_t_per_km2?: number;
+  dominant_source?: string;
+  risk_flags?: string[];
   rank_in_division?: number;
+  // waste sub-sectors
+  point_source?: number;
+  solid_waste?: number;
+  wastewater?: number;
+  point_pct?: number;
+  risk_level?: string;
+  data_quality_flag?: string;
+  pop_weight?: number;
+  // allow any additional future fields
+  [key: string]: number | string | string[] | boolean | null | undefined;
 }
 
 export interface AreaInfo {
@@ -32,7 +43,7 @@ export interface AreaInfo {
   name: string;
   coordinates: [number, number];
   bounds: [[number, number], [number, number]];
-  subSectorData?: TransportSubSectorData | null;
+  subSectorData?: SubSectorData | null;
 }
 
 export interface EmissionsQueryParams {

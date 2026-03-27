@@ -347,17 +347,18 @@ export default function Dashboard() {
     ? emissionData[selectedAreaId]
     : 0;
 
-  const selectedAreaData = timeSeriesData.find((d: EmissionDataPoint) => d.area_id === selectedAreaId);
+  // findLast: timeSeriesData is sorted ascending, so the last match is the latest data point
+  const selectedAreaData = timeSeriesData.findLast((d: EmissionDataPoint) => d.area_id === selectedAreaId);
   const sectorBreakdown = selectedAreaData ? {
-    transport: selectedAreaData.transport,
-    industry: selectedAreaData.industry,
-    energy: selectedAreaData.energy,
-    waste: selectedAreaData.waste,
-    buildings: selectedAreaData.buildings,
+    transport: selectedSectors.includes('transport') ? selectedAreaData.transport : 0,
+    industry: selectedSectors.includes('industry') ? selectedAreaData.industry : 0,
+    energy: selectedSectors.includes('energy') ? selectedAreaData.energy : 0,
+    waste: selectedSectors.includes('waste') ? selectedAreaData.waste : 0,
+    buildings: selectedSectors.includes('buildings') ? selectedAreaData.buildings : 0,
   } : {
     transport: 0,
     industry: 0,
-    energy: selectedAreaEmissions, // Assume it's all energy for power plants
+    energy: 0,
     waste: 0,
     buildings: 0,
   };

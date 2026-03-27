@@ -6,7 +6,74 @@ import { Button } from "@/components/ui/button";
 import { X, TrendingUp, TrendingDown, Sparkles, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { RecommendationsModal } from "@/components/recommendations-modal";
-import type { Sector, TransportSubSectorData } from "@/lib/api";
+import type { Sector, SubSectorData } from "@/lib/api";
+
+// Keys to render as emission bars (tonnes)
+const EMISSION_BAR_KEYS: Record<string, { label: string; color: string }> = {
+  road:         { label: "Road",          color: "hsl(217, 91%, 60%)" },
+  intl_avi:     { label: "Intl. Aviation",color: "hsl(280, 67%, 55%)" },
+  railways:     { label: "Railways",      color: "hsl(142, 65%, 45%)" },
+  dom_avi:      { label: "Dom. Aviation", color: "hsl(45,  93%, 47%)" },
+  solid_waste:  { label: "Solid Waste",   color: "hsl(25,  95%, 53%)" },
+  wastewater:   { label: "Wastewater",    color: "hsl(200, 80%, 50%)" },
+  point_source: { label: "Point Sources", color: "hsl(338, 78%, 56%)" },
+};
+
+// Keys to render as info badges
+const BADGE_KEYS = new Set(["risk_level", "data_quality_flag", "dominant_source", "geo_type"]);
+// Skip entirely (percentage/meta fields)
+const SKIP_KEYS = new Set(["road_pct", "point_pct", "intensity_t_per_km2", "rank_in_division", "pop_weight"]);
+
+function SubSectorBreakdown({ data }: { data: SubSectorData }) {
+  const bars = Object.entries(EMISSION_BAR_KEYS)
+    .map(([key, cfg]) => ({ key, ...cfg, value: (data[key] as number) ?? 0 }))
+    .filter(({ value }) => value > 0);
+
+  const maxVal = Math.max(...bars.map(b => b.value), 1);
+
+  const badges: string[] = [];
+  BADGE_KEYS.forEach(k => { if (data[k]) badges.push(`${k.replace(/_/g, " ")}: ${data[k]}`); });
+  const riskFlags = (data.risk_flags as string[] | undefined) ?? [];
+
+  if (bars.length === 0 && badges.length === 0 && riskFlags.length === 0) return null;
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-sm font-semibold">Sub-sector Breakdown</h3>
+      {bars.length > 0 && (
+        <div className="space-y-3">
+          {bars.map(({ key, label, color, value }) => (
+            <div key={key} className="space-y-1">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">{label}</span>
+                <span className="font-mono text-muted-foreground">
+                  {(value / 1000).toFixed(1)}kt
+                </span>
+              </div>
+              <Progress
+                value={(value / maxVal) * 100}
+                className="h-2"
+                style={{ "--progress-background": color } as React.CSSProperties}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {(badges.length > 0 || riskFlags.length > 0) && (
+        <div className="flex flex-wrap gap-1">
+          {badges.map(b => (
+            <Badge key={b} variant="secondary" className="text-xs capitalize">{b}</Badge>
+          ))}
+          {riskFlags.map(flag => (
+            <Badge key={flag} variant="outline" className="text-xs">
+              {flag.replace(/_/g, " ")}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface RecommendationsResponse {
   success: boolean;
@@ -50,7 +117,7 @@ interface AreaDetailPanelProps {
   onClose: () => void;
   coordinates?: [number, number];
   selectedSectors?: Sector[];
-  subSectorData?: TransportSubSectorData | null;
+  subSectorData?: SubSectorData | null;
 }
 
 export function AreaDetailPanel({
@@ -198,46 +265,7 @@ export function AreaDetailPanel({
           </div>
         </div>
 
-        {subSectorData && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold">Transport Sub-sectors</h3>
-            <div className="space-y-3">
-              {[
-                { key: "road", label: "Road", color: "hsl(217, 91%, 60%)", value: subSectorData.road },
-                { key: "intl_avi", label: "Intl. Aviation", color: "hsl(280, 67%, 55%)", value: subSectorData.intl_avi },
-                { key: "railways", label: "Railways", color: "hsl(142, 65%, 45%)", value: subSectorData.railways },
-                { key: "dom_avi", label: "Dom. Aviation", color: "hsl(45, 93%, 47%)", value: subSectorData.dom_avi },
-              ].map(({ key, label, color, value }) => {
-                const maxVal = Math.max(subSectorData.road, subSectorData.intl_avi, subSectorData.railways, subSectorData.dom_avi);
-                const pct = maxVal > 0 ? (value / maxVal) * 100 : 0;
-                return (
-                  <div key={key} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{label}</span>
-                      <span className="font-mono text-muted-foreground">
-                        {(value / 1000).toFixed(1)}kt
-                      </span>
-                    </div>
-                    <Progress
-                      value={pct}
-                      className="h-2"
-                      style={{ "--progress-background": color } as React.CSSProperties}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            {subSectorData.risk_flags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {subSectorData.risk_flags.map((flag) => (
-                  <Badge key={flag} variant="outline" className="text-xs">
-                    {flag.replace(/_/g, " ")}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {subSectorData && <SubSectorBreakdown data={subSectorData} />}
 
         <div className="space-y-3">
           <Button
