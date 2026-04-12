@@ -4,3 +4,14 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Pipeline — downloaded & generated data (re-created by pipeline/main.py)
+carbonsense-backend/data/raw/
+carbonsense-backend/data/outputs/
+carbonsense-backend/pipeline/logs/
+carbonsense-backend/pipeline/state.json
+carbonsense-backend/nul
+
+# Jupyter notebooks — converted to .py scripts in pipeline/models/
+carbonsense-backend/models/*.ipynb
+*.ipynb

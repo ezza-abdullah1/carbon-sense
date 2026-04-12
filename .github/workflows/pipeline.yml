@@ -1,0 +1,97 @@
+name: CarbonSense Data Pipeline
+
+on:
+  # Run every Monday at 9:00 AM UTC
+  schedule:
+    - cron: "0 9 * * 1"
+
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force rerun even if no new data"
+        required: false
+        default: "false"
+        type: boolean
+      sectors:
+        description: "Sectors to process (space-separated: power waste transport)"
+        required: false
+        default: ""
+        type: string
+
+env:
+  SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # 2 hours — enough for all 3 models
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        working-directory: carbonsense-backend
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Restore state.json from the previous run.
+      # Uses a fixed cache key "pipeline-state-latest" so every run
+      # restores the same entry (last written by the previous run).
+      # state.json tracks the ZIP ETag + data hashes to skip reruns.
+      - name: Restore pipeline state
+        uses: actions/cache/restore@v4
+        with:
+          path: carbonsense-backend/pipeline/state.json
+          key: pipeline-state-latest
+          restore-keys: pipeline-state-
+
+      - name: Run pipeline
+        working-directory: carbonsense-backend
+        run: |
+          ARGS=""
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
+
+          if [ -n "${{ inputs.sectors }}" ]; then
+            ARGS="$ARGS --sectors ${{ inputs.sectors }}"
+          fi
+
+          python pipeline/main.py $ARGS
+
+      # Always save state.json after the run (even if pipeline found no new data)
+      # so the next run knows what was last checked.
+      - name: Save pipeline state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: carbonsense-backend/pipeline/state.json
+          key: pipeline-state-latest
+
+      - name: Upload pipeline logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-logs-${{ github.run_number }}
+          path: carbonsense-backend/pipeline/logs/
+          retention-days: 30
+
+      - name: Upload model outputs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-outputs-${{ github.run_number }}
+          path: carbonsense-backend/data/outputs/
+          retention-days: 90

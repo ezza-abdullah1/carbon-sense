@@ -36,6 +36,99 @@ def load_json(filepath):
         return json.load(f)
 
 
+def normalize_waste_new_format(data):
+    """
+    Normalize waste_new.json (uc_allocation nested inside aggregate_forecast)
+    into the standard format expected by the loader.
+    """
+    meta = data["metadata"]
+    agg_raw = data["aggregate_forecast"]
+    uc_list = agg_raw["uc_allocation"]
+    dates = agg_raw["dates"]
+
+    # Normalize metadata
+    meta.setdefault("model_architecture", meta.get("model", "Prophet"))
+    meta.setdefault("region", "Lahore District, Punjab, Pakistan")
+
+    # Normalize aggregate: prophet_values → values
+    agg = {
+        "dates": dates,
+        "values": agg_raw.get("prophet_values", []),
+        "lower": agg_raw.get("prophet_lower", []),
+        "upper": agg_raw.get("prophet_upper", []),
+        "weather": agg_raw.get("weather", []),
+    }
+
+    # Normalize UCs
+    locations = []
+    for uc in uc_list:
+        em = uc.get("emissions", {})
+        annual_t = em.get("total_annual_t", 0)
+        chart_raw = uc.get("chart_data", [])
+
+        # Flat chart_data → chart_data.forecast
+        # Each point has: date, month, predicted, lower_ci, upper_ci, shares
+        forecast_pts = []
+        for pt in chart_raw:
+            forecast_pts.append({
+                "date": pt["date"],
+                "month": pt.get("month", ""),
+                "emissions": pt.get("predicted", 0),
+                "lower_ci": pt.get("lower_ci"),
+                "upper_ci": pt.get("upper_ci"),
+            })
+
+        last_val = forecast_pts[-1]["emissions"] if forecast_pts else 0
+        last_chart_pt = chart_raw[-1] if chart_raw else {}
+
+        loc = {
+            "source": uc["uc_name"],
+            "uc_code": uc.get("uc_code", ""),
+            "type": uc.get("geo_type", "Distributed"),
+            "coordinates": {
+                "lat": uc["coordinates"]["lat"],
+                "lng": uc["coordinates"]["lon"],   # normalize lon → lng
+            },
+            "chart_data": {
+                "historical": [],
+                "forecast": forecast_pts,
+            },
+            "summary": {
+                "last_historical_date": "",
+                "last_historical_emissions": 0,
+                "forecast_12m_last": last_val,
+                "forecast_12m_average": round(annual_t / 12, 2) if annual_t else 0,
+                "forecast_12m_total": annual_t,
+                "change_pct": 0,
+                "change_tonnes": 0,
+                "trend": "stable",
+                "total_historical_tonnes": 0,
+            },
+            "sub_sector_data": {
+                # Use the last month's per-sub-sector shares so they exactly
+                # match the waste total shown in the panel (not annual totals).
+                "point_source": last_chart_pt.get("point_src_share", 0),
+                "solid_waste": last_chart_pt.get("area_sw_share", 0),
+                "wastewater": last_chart_pt.get("area_ww_share", 0),
+                "point_pct": em.get("point_pct", 0),
+                "risk_level": em.get("risk_level", ""),
+                "data_quality_flag": em.get("data_quality_flag", ""),
+                "pop_weight": uc.get("pop_weight", 0),
+            },
+        }
+        locations.append(loc)
+
+    # Also include the 6 top-level facility/area locations — they already have
+    # 60 months of historical data in standard chart_data format.
+    facility_locs = data.get("locations", [])
+
+    return {
+        "metadata": meta,
+        "aggregate_forecast": agg,
+        "locations": facility_locs + locations,
+    }
+
+
 def normalize_transport_new_format(data):
     """
     Normalize transport_new.json (v1.5 format with uc_emissions + division_total)
@@ -122,10 +215,12 @@ def normalize_transport_new_format(data):
                 "total_historical_tonnes": 0,
             },
             "sub_sector_data": {
-                "road": uc.get("road_annual_t", 0),
-                "dom_avi": uc.get("dom_avi_annual_t", 0),
-                "intl_avi": uc.get("intl_avi_annual_t", 0),
-                "railways": uc.get("rail_annual_t", 0),
+                # Scale annual sub-sector totals to the latest month so they
+                # exactly match the transport value shown in the panel.
+                "road": round(uc.get("road_annual_t", 0) * monthly_t[-1] / annual_t, 2) if annual_t else 0,
+                "dom_avi": round(uc.get("dom_avi_annual_t", 0) * monthly_t[-1] / annual_t, 2) if annual_t else 0,
+                "intl_avi": round(uc.get("intl_avi_annual_t", 0) * monthly_t[-1] / annual_t, 2) if annual_t else 0,
+                "railways": round(uc.get("rail_annual_t", 0) * monthly_t[-1] / annual_t, 2) if annual_t else 0,
                 "road_pct": uc.get("road_pct", 0),
                 "intensity_t_per_km2": uc.get("intensity_t_per_km2", 0),
                 "dominant_source": uc.get("dominant_source", "road"),
@@ -244,7 +339,7 @@ def insert_location(cur, run_id, loc):
     coords = loc.get("coordinates") or {}
     source = loc.get("source") or loc.get("source_name") or "unknown"
     lat = coords.get("lat") or loc.get("lat") or 0.0
-    lng = coords.get("lng") or loc.get("lon") or loc.get("lng") or 0.0
+    lng = coords.get("lng") or coords.get("lon") or loc.get("lon") or loc.get("lng") or 0.0
     loc_type = loc.get("type") or loc.get("source_type") or "other"
     uc_code = loc.get("uc_code") or None
 
@@ -467,11 +562,17 @@ def main():
         sys.exit(1)
 
     data = load_json(filepath)
+    original_data = data  # keep reference for format detection before normalization
 
     # Detect and normalize transport_new format (v1.5: uc_emissions + division_total)
     if "uc_emissions" in data:
         print(f"[FORMAT] Detected transport_new (v1.5) format — normalizing...")
         data = normalize_transport_new_format(data)
+
+    # Detect and normalize waste_new format (uc_allocation nested inside aggregate_forecast)
+    elif "uc_allocation" in data.get("aggregate_forecast", {}):
+        print(f"[FORMAT] Detected waste_new format — normalizing...")
+        data = normalize_waste_new_format(data)
 
     meta = data["metadata"]
     agg = data.get("aggregate_forecast")
@@ -487,13 +588,32 @@ def main():
     cur = conn.cursor()
 
     try:
-        # Delete previous runs for same sector+region
-        cur.execute(
-            "DELETE FROM forecast_runs WHERE sector = %s AND region = %s",
-            (meta["sector"], meta["region"]),
+        # Comprehensive spatial datasets (uc_allocation / uc_emissions) replace ALL
+        # runs for the sector regardless of region string.
+        is_spatial = (
+            "uc_allocation" in original_data.get("aggregate_forecast", {})
+            or "uc_emissions" in original_data
         )
+        if is_spatial:
+            # Only delete forecast-only runs (no historical points) so that
+            # historical area runs loaded separately are never wiped.
+            cur.execute("""
+                DELETE FROM forecast_runs
+                WHERE sector = %s
+                  AND id NOT IN (
+                    SELECT DISTINCT l.forecast_run_id
+                    FROM locations l
+                    JOIN emission_points ep ON ep.location_id = l.id
+                    WHERE ep.point_type = 'historical'
+                  )
+            """, (meta["sector"],))
+        else:
+            cur.execute(
+                "DELETE FROM forecast_runs WHERE sector = %s AND region = %s",
+                (meta["sector"], meta["region"]),
+            )
         if cur.rowcount:
-            print(f"[CLEANUP] Deleted {cur.rowcount} previous run(s) for {meta['sector']}/{meta['region']}")
+            print(f"[CLEANUP] Deleted {cur.rowcount} previous run(s) for {meta['sector']}")
 
         # Insert forecast run
         run_id = insert_forecast_run(cur, meta)

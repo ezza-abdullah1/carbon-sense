@@ -5,7 +5,9 @@
       "Bash(python manage.py migrate)",
       "Bash(python manage.py check)",
       "Bash(pip install:*)",
-      "Bash(python -m pip install django-redis psycopg2-binary dj-database-url)"
+      "Bash(python -m pip install django-redis psycopg2-binary dj-database-url)",
+      "Bash(/c/Python312/python -c ':*)",
+      "Bash(python -c ':*)"
     ],
     "additionalDirectories": [
       "d:\\carbon-sense\\carbonsense-backend\\recommendations\\migrations"
