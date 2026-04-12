@@ -76,7 +76,7 @@
   --chart-4: 25 95% 53%;
   --chart-5: 338 78% 56%;
 
-  --font-sans: "Plus Jakarta Sans", Inter, IBM Plex Sans, system-ui, sans-serif;
+  --font-sans: "Inter", "Plus Jakarta Sans", IBM Plex Sans, system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: IBM Plex Mono, Menlo, monospace;
   --radius: .5rem; /* 8px */

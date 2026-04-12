@@ -250,36 +250,43 @@ export default function AreaAnalysis() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden text-slate-900 dark:text-white">
-      {/* Animated Background Container */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 pointer-events-none z-0">
         <motion.div 
-          animate={{ x: [0, 50, -50, 0], y: [0, -50, 50, 0], scale: [1, 1.1, 0.9, 1] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-[0%] right-[10%] w-[40vw] h-[40vw] bg-emerald-400/10 dark:bg-emerald-600/10 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-100" 
+          animate={{ x: [0, 80, -40, 0], y: [0, -80, 40, 0], scale: [1, 1.15, 0.9, 1] }} 
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute top-[-5%] right-[-5%] w-[45vw] h-[45vw] bg-emerald-500/10 dark:bg-emerald-600/5 rounded-full filter blur-[120px] opacity-100" 
         />
       </div>
 
       {/* Header */}
-      <header className="bg-white/80 dark:bg-[#030303]/90 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.03)] border-b border-white/20 dark:border-white/10 sticky top-0 z-50 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="bg-white/80 dark:bg-[#030303]/90 backdrop-blur-2xl shadow-sm border-b border-black/5 dark:border-white/5 sticky top-0 z-50 px-6 py-5">
+        <div className="flex items-center justify-between max-w-7xl mx-auto w-full">
+          <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
+              className="h-10 w-10 rounded-xl hover:bg-black/5 dark:hover:bg-white/5"
               onClick={() => setLocation("/dashboard")}
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
               <Leaf className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold">{area.name}</h1>
-              <p className="text-sm text-muted-foreground">
-                Detailed Emission Analysis
+              <h1 className="text-xl font-bold tracking-tight">{area.name}</h1>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                Detailed Emission Profile
               </p>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1 border-0">
+              Live Source
+            </Badge>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
@@ -287,72 +294,76 @@ export default function AreaAnalysis() {
       <main className="flex-1 p-6 overflow-auto relative z-10">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-xl overflow-hidden hover:-translate-y-1 transition-transform">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Historical Emissions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">
-                  {stats ? Math.round(stats.totalHistorical / 1000).toLocaleString() : 0}
-                </div>
-                <p className="text-xs text-muted-foreground">thousand tons CO₂e</p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+              <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-black/5 dark:border-white/5 shadow-xl relative overflow-hidden h-full">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent pointer-events-none" />
+                <CardHeader className="pb-2 relative z-10">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mb-1">Total History</p>
+                  <CardTitle className="text-3xl font-bold font-mono">
+                    {stats ? Math.round(stats.totalHistorical / 1000).toLocaleString() : 0}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 relative z-10">
+                  <p className="text-xs text-muted-foreground">thousand tons CO₂e</p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Forecasted Emissions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">
-                  {stats ? Math.round(stats.totalForecast / 1000).toLocaleString() : 0}
-                </div>
-                <p className="text-xs text-muted-foreground">thousand tons CO₂e</p>
-              </CardContent>
-            </Card>
+            <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300, delay: 0.1 }}>
+              <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-black/5 dark:border-white/5 shadow-xl relative overflow-hidden h-full">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent pointer-events-none" />
+                <CardHeader className="pb-2 relative z-10">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mb-1">Forecasted Sum</p>
+                  <CardTitle className="text-3xl font-bold font-mono">
+                    {stats ? Math.round(stats.totalForecast / 1000).toLocaleString() : 0}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 relative z-10">
+                  <p className="text-xs text-muted-foreground">thousand tons CO₂e</p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Average Monthly Emissions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold font-mono">
-                  {stats ? Math.round(stats.avgHistorical / 1000).toLocaleString() : 0}
-                </div>
-                <p className="text-xs text-muted-foreground">thousand tons CO₂e/month</p>
-              </CardContent>
-            </Card>
+            <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300, delay: 0.2 }}>
+              <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-black/5 dark:border-white/5 shadow-xl relative overflow-hidden h-full">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent pointer-events-none" />
+                <CardHeader className="pb-2 relative z-10">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mb-1">Avg per Month</p>
+                  <CardTitle className="text-3xl font-bold font-mono">
+                    {stats ? Math.round(stats.avgHistorical / 1000).toLocaleString() : 0}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 relative z-10">
+                  <p className="text-xs text-muted-foreground">thousand tons CO₂e</p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Forecast Trend
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  {stats && stats.trendPercentage > 0 ? (
-                    <Badge variant="destructive" className="gap-1 text-lg px-3 py-1">
-                      <TrendingUp className="h-4 w-4" />
-                      +{Math.abs(stats.trendPercentage).toFixed(1)}%
-                    </Badge>
-                  ) : (
-                    <Badge className="gap-1 bg-primary text-lg px-3 py-1">
-                      <TrendingDown className="h-4 w-4" />
-                      -{stats ? Math.abs(stats.trendPercentage).toFixed(1) : 0}%
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">forecast vs historical avg</p>
-              </CardContent>
-            </Card>
+            <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300, delay: 0.3 }}>
+              <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-black/5 dark:border-white/5 shadow-xl relative overflow-hidden h-full">
+                <div className={`absolute inset-0 bg-gradient-to-br ${stats && stats.trendPercentage > 0 ? "from-red-500/10" : "from-emerald-500/10"} to-transparent pointer-events-none`} />
+                <CardHeader className="pb-2 relative z-10">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mb-1">Projected Trend</p>
+                  <div className="flex items-center gap-2">
+                    {stats && stats.trendPercentage > 0 ? (
+                      <Badge variant="destructive" className="gap-1 text-base px-3 py-1 font-mono">
+                        <TrendingUp className="h-4 w-4" />
+                        +{Math.abs(stats.trendPercentage).toFixed(1)}%
+                      </Badge>
+                    ) : (
+                      <Badge className="gap-1 bg-emerald-500 text-white text-base px-3 py-1 font-mono">
+                        <TrendingDown className="h-4 w-4" />
+                        {stats ? Math.abs(stats.trendPercentage).toFixed(1) : 0}%
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 relative z-10">
+                  <p className="text-xs text-muted-foreground">vs historical average</p>
+                </CardContent>
+              </Card>
+            </motion.div>
           </div>
 
           {/* Main Trend Chart */}
@@ -379,38 +390,43 @@ export default function AreaAnalysis() {
           </div>
 
           {/* Sector Breakdown Detail */}
-          <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-xl">
-            <CardHeader>
-              <CardTitle>Sectoral Breakdown (Historical Total)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                {sectors.map((sector) => {
-                  const value = stats?.sectorTotals[sector.key as keyof typeof stats.sectorTotals] || 0;
-                  const percentage = maxSectorValue > 0 ? (value / maxSectorValue) * 100 : 0;
+          <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+            <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-black/5 dark:border-white/5 shadow-2xl relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-transparent pointer-events-none" />
+              <CardHeader className="relative z-10">
+                <CardTitle>Sectoral Breakdown (Historical Total)</CardTitle>
+              </CardHeader>
+              <CardContent className="relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+                  {sectors.map((sector) => {
+                    const value = stats?.sectorTotals[sector.key as keyof typeof stats.sectorTotals] || 0;
+                    const percentage = maxSectorValue > 0 ? (value / maxSectorValue) * 100 : 0;
 
-                  return (
-                    <div key={sector.key} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{sector.label}</span>
+                    return (
+                      <div key={sector.key} className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{sector.label}</span>
+                        </div>
+                        <div className="text-2xl font-mono font-bold tracking-tight">
+                          {Math.round(value / 1000).toLocaleString()}
+                        </div>
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Relative Impact</p>
+                          <Progress
+                            value={percentage}
+                            className="h-2 rounded-full bg-black/5 dark:bg-white/5"
+                            style={{
+                              "--progress-background": sector.color,
+                            } as React.CSSProperties}
+                          />
+                        </div>
                       </div>
-                      <div className="text-xl font-mono font-bold">
-                        {Math.round(value / 1000).toLocaleString()}
-                      </div>
-                      <p className="text-xs text-muted-foreground">thousand tons CO₂e</p>
-                      <Progress
-                        value={percentage}
-                        className="h-2"
-                        style={{
-                          "--progress-background": sector.color,
-                        } as React.CSSProperties}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Data Info */}
           <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-xl">

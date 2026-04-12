@@ -2,9 +2,10 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, Minus, Trophy, Medal, Award, Factory, Truck, Zap, Trash2, Building2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Trophy, Medal, Award, Factory, Truck, Zap, Trash2, Building2, ChevronDown } from "lucide-react";
 import type { LeaderboardEntry } from "@shared/schema";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { motion } from "framer-motion";
 
 interface LeaderboardProps {
   entries: LeaderboardEntry[];
@@ -52,7 +53,7 @@ export function Leaderboard({ entries, selectedAreaId, onAreaSelect, sectorTotal
   }, [sectorTotals]);
 
   return (
-    <Card className="h-full flex flex-col overflow-hidden bg-gradient-to-b from-white/95 to-slate-50/95 dark:from-zinc-900/95 dark:to-zinc-950/95 backdrop-blur-xl border-0 sm:border border-black/10 dark:border-white/10 shadow-2xl">
+    <Card className="h-full flex flex-col overflow-hidden bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-0 sm:border border-black/10 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
       <CardHeader className="pb-2 flex-shrink-0 relative z-10">
         <CardTitle className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-800 dark:from-white dark:via-emerald-200 dark:to-teal-200">Emission Rankings</CardTitle>
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "areas" | "sectors")} className="mt-4">
@@ -62,10 +63,10 @@ export function Leaderboard({ entries, selectedAreaId, onAreaSelect, sectorTotal
           </TabsList>
         </Tabs>
       </CardHeader>
-      <CardContent className="flex-1 p-0 overflow-hidden">
-        {viewMode === "areas" ? (
-          <ScrollArea className="h-full max-h-[calc(100vh-280px)]">
-            <div className="space-y-1 px-6 pb-6">
+      <CardContent className="flex-1 p-0 min-h-0 overflow-hidden relative">
+        <ScrollArea className="h-full w-full">
+          {viewMode === "areas" ? (
+            <div className="space-y-1 px-6 pb-12 mt-1">
               {entries.map((entry) => (
                 <div
                   key={entry.areaId}
@@ -124,9 +125,7 @@ export function Leaderboard({ entries, selectedAreaId, onAreaSelect, sectorTotal
                 </div>
               ))}
             </div>
-          </ScrollArea>
-        ) : (
-          <ScrollArea className="h-full max-h-[calc(100vh-280px)]">
+          ) : (
             <div className="space-y-2 px-6 pb-6 pt-2">
               {sectorRankings.length > 0 ? (
                 sectorRankings.map((sector) => {
@@ -168,13 +167,24 @@ export function Leaderboard({ entries, selectedAreaId, onAreaSelect, sectorTotal
                   );
                 })
               ) : (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  Select an area to view sector breakdown
+                <div className="text-center py-12 text-muted-foreground text-sm">
+                  No data available for the selected period
                 </div>
               )}
             </div>
-          </ScrollArea>
-        )}
+          )}
+        </ScrollArea>
+        {/* Scroll Indicator Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white dark:from-[#0a0a0a] to-transparent pointer-events-none z-20 flex items-end justify-center pb-2">
+          <motion.div
+            animate={{ y: [0, 5, 0] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="flex flex-col items-center gap-1"
+          >
+            <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-500/50">Scroll for more</span>
+            <ChevronDown className="h-4 w-4 text-emerald-500/50" />
+          </motion.div>
+        </div>
       </CardContent>
     </Card>
   );

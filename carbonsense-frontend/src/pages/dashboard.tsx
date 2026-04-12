@@ -55,6 +55,7 @@ export default function Dashboard() {
   const [dataType, setDataType] = useState<DataType>("historical");
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   // Fetch real data using hooks (pass selectedSectors and timeInterval for filtering)
   const { data: areas = [], isLoading: areasLoading } = useAreas();
@@ -382,7 +383,7 @@ export default function Dashboard() {
     : 0;
 
   // findLast: timeSeriesData is sorted ascending, so the last match is the latest data point
-  const selectedAreaData = timeSeriesData.findLast((d: EmissionDataPoint) => d.area_id === selectedAreaId);
+  const selectedAreaData = [...timeSeriesData].reverse().find((d: EmissionDataPoint) => d.area_id === selectedAreaId);
   const sectorBreakdown = selectedAreaData ? {
     transport: selectedSectors.includes('transport') ? selectedAreaData.transport : 0,
     industry: selectedSectors.includes('industry') ? selectedAreaData.industry : 0,
@@ -441,124 +442,134 @@ export default function Dashboard() {
     },
   ];
 
+  const navItems = [
+    { id: "overview", label: "Overview", icon: Sparkles },
+    { id: "map", label: "Map View", icon: MapPin },
+    { id: "analytics", label: "Trends", icon: TrendingUp },
+    { id: "forecast", label: "ML Forecast", icon: Brain },
+    { id: "data", label: "Data Export", icon: Database },
+  ];
+
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-        {/* Modern Header */}
-        <header className="bg-white/80 dark:bg-[#030303]/90 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.03)] border-b border-white/20 dark:border-white/10 sticky top-0 z-50">
-          <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25">
-                  <Leaf className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-bold tracking-tight" data-testid="text-app-title">
-                      CarbonSense
-                    </h1>
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-0">
-                      BETA
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Environmental Intelligence Platform
-                  </p>
-                </div>
-              </div>
+    <div className="h-screen flex bg-background overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full w-full flex overflow-hidden">
+        {/* Hover-activated Sidebar */}
+        <motion.aside
+          initial={false}
+          animate={{ width: isSidebarExpanded ? 260 : 80 }}
+          onMouseEnter={() => setIsSidebarExpanded(true)}
+          onMouseLeave={() => setIsSidebarExpanded(false)}
+          className="h-full bg-white dark:bg-[#030303] border-r border-black/5 dark:border-white/5 shadow-2xl z-[100] relative flex flex-col transition-all duration-300 ease-in-out backdrop-blur-3xl"
+        >
+          {/* Sidebar Logo Area */}
+          <div className="p-6 mb-4 flex items-center gap-4 overflow-hidden">
+            <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25">
+              <Leaf className="h-5 w-5" />
+            </div>
+            <motion.div
+              animate={{ opacity: isSidebarExpanded ? 1 : 0, x: isSidebarExpanded ? 0 : -10 }}
+              className="whitespace-nowrap"
+            >
+              <h1 className="text-xl font-bold tracking-tight">CarbonSense</h1>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Intelligence</p>
+            </motion.div>
+          </div>
 
-              {/* Quick Stats */}
-              <div className="hidden lg:flex items-center gap-6 px-6 py-2 bg-muted/50 rounded-full">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-sm font-medium">{areas.length}</span>
-                  <span className="text-xs text-muted-foreground">Sources</span>
-                </div>
-                <div className="w-px h-4 bg-border" />
-                <div className="flex items-center gap-2">
-                  <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm font-medium">5</span>
-                  <span className="text-xs text-muted-foreground">Sectors</span>
-                </div>
-                <div className="w-px h-4 bg-border" />
-                <div className="flex items-center gap-2">
-                  <Badge variant={dataType === 'forecast' ? 'default' : 'secondary'} className="text-[10px] px-2 py-0 h-5">
-                    {dataType === 'forecast' ? 'Forecast Mode' : 'Historical'}
-                  </Badge>
-                </div>
-              </div>
+          {/* Navigation Items */}
+          <nav className="flex-1 px-3 space-y-2">
+            <TabsList className="bg-transparent flex flex-col items-stretch h-auto p-0 gap-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <TabsTrigger
+                    key={item.id}
+                    value={item.id}
+                    className={`
+                      w-full relative flex items-center gap-4 p-3 rounded-xl transition-all duration-300 border-none shadow-none text-left justify-start
+                      ${isActive 
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                        : 'text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground'}
+                    `}
+                  >
+                    <div className="flex-shrink-0 w-6 flex items-center justify-center">
+                      <Icon className={`h-5 w-5 transition-transform duration-300 ${isActive ? 'scale-110' : ''}`} />
+                    </div>
+                    <motion.span
+                      animate={{ opacity: isSidebarExpanded ? 1 : 0, x: isSidebarExpanded ? 0 : -10 }}
+                      className="whitespace-nowrap font-medium text-sm"
+                    >
+                      {item.label}
+                    </motion.span>
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-nav-indicator"
+                        className="absolute left-0 w-1 h-6 bg-emerald-500 rounded-r-full"
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </nav>
 
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
-                  onClick={() => setLocation("/")}
-                  data-testid="button-home"
-                >
-                  <Home className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
-                  onClick={handleLogout}
-                  data-testid="button-logout"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-                <div className="w-px h-6 bg-border mx-1" />
+          {/* Bottom Actions */}
+          <div className="p-4 border-t border-black/5 dark:border-white/5 space-y-2">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-4 p-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5"
+              onClick={() => setLocation("/")}
+            >
+              <div className="w-6 flex items-center justify-center">
+                <Home className="h-5 w-5" />
+              </div>
+              <motion.span
+                animate={{ opacity: isSidebarExpanded ? 1 : 0 }}
+                className="whitespace-nowrap"
+              >
+                Landing Page
+              </motion.span>
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-4 p-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 text-rose-500 hover:text-rose-600 hover:bg-rose-500/5"
+              onClick={handleLogout}
+            >
+              <div className="w-6 flex items-center justify-center">
+                <LogOut className="h-5 w-5" />
+              </div>
+              <motion.span
+                animate={{ opacity: isSidebarExpanded ? 1 : 0 }}
+                className="whitespace-nowrap"
+              >
+                Log Out
+              </motion.span>
+            </Button>
+            <div className="flex items-center gap-4 p-3">
+              <div className="w-6 flex items-center justify-center">
                 <ThemeToggle />
               </div>
+              <motion.span
+                animate={{ opacity: isSidebarExpanded ? 1 : 0 }}
+                className="whitespace-nowrap text-sm text-muted-foreground font-medium"
+              >
+                Theme Mode
+              </motion.span>
             </div>
           </div>
+        </motion.aside>
 
-          {/* Tab Navigation */}
-          <div className="px-6 pb-0 border-b border-white/10 dark:border-white/5">
-            <TabsList className="h-14 w-full flex bg-transparent p-0">
-              <TabsTrigger
-                value="overview"
-                data-testid="tab-overview"
-                className="flex-1 relative h-full rounded-none border-b-2 border-transparent bg-transparent px-2 sm:px-4 font-medium text-muted-foreground shadow-none transition-all hover:text-foreground hover:bg-muted/30 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 gap-2 flex items-center justify-center"
-              >
-                <Sparkles className="h-4 w-4" />
-                <span className="hidden sm:inline">Overview</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="map"
-                data-testid="tab-map"
-                className="flex-1 relative h-full rounded-none border-b-2 border-transparent bg-transparent px-2 sm:px-4 font-medium text-muted-foreground shadow-none transition-all hover:text-foreground hover:bg-muted/30 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 gap-2 flex items-center justify-center"
-              >
-                <MapPin className="h-4 w-4" />
-                <span className="hidden sm:inline">Map View</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="analytics"
-                data-testid="tab-analytics"
-                className="flex-1 relative h-full rounded-none border-b-2 border-transparent bg-transparent px-2 sm:px-4 font-medium text-muted-foreground shadow-none transition-all hover:text-foreground hover:bg-muted/30 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 gap-2 flex items-center justify-center"
-              >
-                <TrendingUp className="h-4 w-4" />
-                <span className="hidden sm:inline">Trends</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="forecast"
-                data-testid="tab-forecast"
-                className="flex-1 relative h-full rounded-none border-b-2 border-transparent bg-transparent px-2 sm:px-4 font-medium text-muted-foreground shadow-none transition-all hover:text-foreground hover:bg-muted/30 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 gap-2 flex items-center justify-center"
-              >
-                <Brain className="h-4 w-4" />
-                <span className="hidden sm:inline">ML Forecast</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="data"
-                data-testid="tab-data"
-                className="flex-1 relative h-full rounded-none border-b-2 border-transparent bg-transparent px-2 sm:px-4 font-medium text-muted-foreground shadow-none transition-all hover:text-foreground hover:bg-muted/30 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 gap-2 flex items-center justify-center"
-              >
-                <Database className="h-4 w-4" />
-                <span className="hidden sm:inline">Data Export</span>
-              </TabsTrigger>
-            </TabsList>
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col relative overflow-hidden">
+          {/* Dynamic Background */}
+          <div className="absolute inset-0 pointer-events-none z-0">
+             <motion.div 
+               animate={{ x: [0, 100, -50, 0], y: [0, -100, 50, 0], scale: [1, 1.2, 0.9, 1] }} 
+               transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+               className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-emerald-500/10 dark:bg-emerald-600/5 rounded-full filter blur-[120px] opacity-100" 
+             />
           </div>
-        </header>
 
         {/* Tab Content */}
         <div className="flex-1 overflow-hidden">
@@ -898,7 +909,7 @@ export default function Dashboard() {
                       <Button
                         variant="secondary"
                         onClick={() => setIsFiltersOpen(true)}
-                        className="shadow-lg bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-black/10 dark:border-white/10 flex items-center gap-2"
+                        className="shadow-lg bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 dark:border-white/10 flex items-center gap-2"
                       >
                         <Filter className="h-4 w-4" />
                         <span className="font-semibold text-sm">Filters</span>
@@ -914,7 +925,7 @@ export default function Dashboard() {
                       className="w-[320px]"
                     >
                       <div className="space-y-4">
-                        <Card className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-black/10 dark:border-white/10 shadow-2xl rounded-2xl relative overflow-hidden">
+                        <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 dark:border-white/10 shadow-2xl rounded-2xl relative overflow-hidden">
                           <CardHeader className="pb-3 border-b border-black/5 dark:border-white/5 flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-bold tracking-tight">Filters</CardTitle>
                             <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={() => setIsFiltersOpen(false)}>
@@ -951,7 +962,7 @@ export default function Dashboard() {
               </div>
 
               {/* Right Side: Area Details or Leaderboard */}
-              <div className="absolute top-4 right-4 bottom-4 w-[380px] pointer-events-auto shadow-2xl rounded-2xl flex flex-col z-[1000]">
+              <div className="absolute top-4 right-4 h-[calc(100%-2.5rem)] w-[380px] pointer-events-auto shadow-2xl rounded-2xl flex flex-col z-[1000]">
                   {selectedAreaId && selectedArea ? (
                     <AreaDetailPanel
                       areaId={selectedAreaId}
@@ -1020,78 +1031,95 @@ export default function Dashboard() {
 
               {/* Monthly Comparison Section */}
               <div className="mb-8">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Monthly Emission Patterns</CardTitle>
-                    <CardDescription>
-                      Average emissions by month across all years - identify seasonal trends
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedSectors.length === 0 ? (
-                      <div className="py-12 text-center">
-                        <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                        <p className="text-muted-foreground">Select sectors from the Map View to see monthly patterns</p>
-                      </div>
-                    ) : (
-                      <EmissionChart
-                        title=""
-                        type="bar"
-                        data={monthlyComparisonData}
-                      />
-                    )}
-                  </CardContent>
-                </Card>
+                <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-black/5 dark:border-white/5 shadow-2xl overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 pointer-events-none" />
+                    <CardHeader className="relative z-10">
+                      <CardTitle>Monthly Emission Patterns</CardTitle>
+                      <CardDescription>
+                        Average emissions by month across all years - identify seasonal trends
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="relative z-10">
+                      {selectedSectors.length === 0 ? (
+                        <div className="py-12 text-center flex flex-col items-center justify-center">
+                          <motion.div
+                            animate={{ rotate: [0, 10, -10, 0] }}
+                            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                          >
+                            <BarChart3 className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                          </motion.div>
+                          <p className="text-muted-foreground font-medium">Select sectors from the Map View to see monthly patterns</p>
+                        </div>
+                      ) : (
+                        <EmissionChart
+                          title=""
+                          type="bar"
+                          data={monthlyComparisonData}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </div>
 
               {/* Year over Year Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                        <Database className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-blue-500/10 shadow-lg relative overflow-hidden h-full">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent pointer-events-none" />
+                    <CardContent className="pt-6 relative z-10">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center shadow-inner">
+                          <Database className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Data Source</p>
+                          <p className="text-lg font-bold tracking-tight">Climate Trace</p>
+                          <p className="text-xs text-muted-foreground">2021 - Present</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Data Source</p>
-                        <p className="text-lg font-bold">Climate Trace</p>
-                        <p className="text-xs text-muted-foreground">2021 - Present</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300, delay: 0.05 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-emerald-500/10 shadow-lg relative overflow-hidden h-full">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none" />
+                    <CardContent className="pt-6 relative z-10">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-emerald-500/20 flex items-center justify-center shadow-inner">
+                          <MapPin className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Coverage</p>
+                          <p className="text-lg font-bold tracking-tight">{areas.length} Sources</p>
+                          <p className="text-xs text-muted-foreground">Lahore Division</p>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                        <MapPin className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300, delay: 0.1 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-amber-500/10 shadow-lg relative overflow-hidden h-full">
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent pointer-events-none" />
+                    <CardContent className="pt-6 relative z-10">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-amber-500/20 flex items-center justify-center shadow-inner">
+                          <Activity className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Total Tracked</p>
+                          <p className="text-lg font-bold tracking-tight">
+                            {leaderboard.length > 0
+                              ? `${(Math.round((leaderboard as LeaderboardEntry[]).reduce((sum: number, e: LeaderboardEntry) => sum + e.emissions, 0) / 1000000 * 10) / 10).toLocaleString()}M`
+                              : '—'} tons
+                          </p>
+                          <p className="text-xs text-muted-foreground">CO₂ equivalent</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Coverage</p>
-                        <p className="text-lg font-bold">{areas.length} Sources</p>
-                        <p className="text-xs text-muted-foreground">Lahore Division</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                        <Activity className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Total Tracked</p>
-                        <p className="text-lg font-bold">
-                          {leaderboard.length > 0
-                            ? `${(Math.round((leaderboard as LeaderboardEntry[]).reduce((sum: number, e: LeaderboardEntry) => sum + e.emissions, 0) / 1000000 * 10) / 10).toLocaleString()}M`
-                            : '—'} tons
-                        </p>
-                        <p className="text-xs text-muted-foreground">CO₂ equivalent</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </div>
             </div>
           </TabsContent>
@@ -1116,97 +1144,114 @@ export default function Dashboard() {
 
               {/* Forecast Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <Card className="bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
-                      <div className="h-14 w-14 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                        <Brain className="h-7 w-7 text-purple-600 dark:text-purple-400" />
+                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-purple-500/10 shadow-lg relative overflow-hidden h-full">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent pointer-events-none" />
+                    <CardContent className="pt-6 relative z-10">
+                      <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-xl bg-purple-500/20 flex items-center justify-center shadow-inner">
+                          <Brain className="h-7 w-7 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Models Used</p>
+                          <p className="text-xl font-bold tracking-tight">Hybrid XGBoost + Prophet</p>
+                          <p className="text-xs text-muted-foreground">Sector-specific model selection</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Models Used</p>
-                        <p className="text-xl font-bold">Hybrid XGBoost + Prophet</p>
-                        <p className="text-xs text-muted-foreground">Sector-specific model selection</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300, delay: 0.05 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-blue-500/10 shadow-lg relative overflow-hidden h-full">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent pointer-events-none" />
+                    <CardContent className="pt-6 relative z-10">
+                      <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-xl bg-blue-500/20 flex items-center justify-center shadow-inner">
+                          <TrendingUp className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Forecast Horizon</p>
+                          <p className="text-xl font-bold tracking-tight">12 Months</p>
+                          <p className="text-xs text-muted-foreground">Future predictions</p>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
-                      <div className="h-14 w-14 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                        <TrendingUp className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300, delay: 0.1 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-emerald-500/10 shadow-lg relative overflow-hidden h-full">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none" />
+                    <CardContent className="pt-6 relative z-10">
+                      <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-xl bg-emerald-500/20 flex items-center justify-center shadow-inner">
+                          <Activity className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Accuracy</p>
+                          <p className="text-xl font-bold tracking-tight">~94%</p>
+                          <p className="text-xs text-muted-foreground">R² on validation data</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Forecast Horizon</p>
-                        <p className="text-xl font-bold">12 Months</p>
-                        <p className="text-xs text-muted-foreground">Future predictions</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
-                      <div className="h-14 w-14 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                        <Activity className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Accuracy</p>
-                        <p className="text-xl font-bold">~94%</p>
-                        <p className="text-xs text-muted-foreground">R² on validation data</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </div>
 
               {/* Combined Historical + Forecast Chart */}
               <div className="mb-8">
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>Historical vs Predicted Emissions</CardTitle>
-                        <CardDescription>
-                          Combined view showing actual data transitioning into 12-month forecasts
-                        </CardDescription>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <div className="h-3 w-8 bg-blue-500 rounded" />
-                          <span className="text-sm text-muted-foreground">Historical</span>
+                <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-black/5 dark:border-white/5 shadow-2xl overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/5 to-transparent pointer-events-none" />
+                    <CardHeader className="relative z-10">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle>Historical vs Predicted Emissions</CardTitle>
+                          <CardDescription>
+                            Combined view showing actual data transitioning into 12-month forecasts
+                          </CardDescription>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="h-3 w-8 bg-amber-500 rounded border-2 border-dashed border-amber-600" />
-                          <span className="text-sm text-muted-foreground">Forecast</span>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <div className="h-3 w-8 bg-blue-500 rounded" />
+                            <span className="text-sm text-muted-foreground font-medium">Historical</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-3 w-8 bg-amber-500 rounded border-2 border-dashed border-amber-600" />
+                            <span className="text-sm text-muted-foreground font-medium">Forecast</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {selectedSectors.length === 0 ? (
-                      <div className="py-12 text-center">
-                        <Brain className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                        <p className="text-muted-foreground">Select sectors from the Map View to see forecasts</p>
-                      </div>
-                    ) : (
+                    </CardHeader>
+                    <CardContent className="relative z-10">
+                      {selectedSectors.length === 0 ? (
+                        <div className="py-20 text-center flex flex-col items-center justify-center">
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
+                          >
+                            <Brain className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                          </motion.div>
+                          <p className="text-muted-foreground font-medium">Select sectors from the Map View to see forecasts</p>
+                        </div>
+                      ) : (
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {selectedSectors.map((sector) => {
                           const data = sectorChartData[sector];
                           if (!data || data.datasets.length === 0) return null;
                           return (
-                            <div key={sector} className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <div className={`h-2.5 w-2.5 rounded-full`} style={{ backgroundColor: sectorConfig[sector].historical }} />
-                                  <span className="font-medium text-sm">{sectorConfig[sector].label}</span>
-                                </div>
-                                <Badge variant="outline" className="text-xs">
-                                  95% confidence
-                                </Badge>
-                              </div>
+                            <div key={sector} className="h-[420px]">
                               <EmissionChart
-                                title=""
+                                titleNode={
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 relative mt-[-2px]">
+                                      <div className={`h-2.5 w-2.5 rounded-full`} style={{ backgroundColor: sectorConfig[sector].historical }} />
+                                      <span className="font-semibold text-sm tracking-tight text-foreground">{sectorConfig[sector].label}</span>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 backdrop-blur-md">
+                                      95% confidence
+                                    </Badge>
+                                  </div>
+                                }
                                 type="line"
                                 data={data}
                               />
@@ -1216,64 +1261,68 @@ export default function Dashboard() {
                       </div>
                     )}
                   </CardContent>
-                </Card>
+                  </Card>
+                </motion.div>
               </div>
 
               {/* How It Works Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>How ML Forecasting Works</CardTitle>
-                  <CardDescription>
-                    Understanding our prediction methodology
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-3 gap-6">
-                    <div className="flex gap-4">
-                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                        <Database className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                            STEP 1
-                          </span>
+              <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+                <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-black/5 dark:border-white/5 shadow-2xl relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 to-transparent pointer-events-none" />
+                  <CardHeader className="relative z-10">
+                    <CardTitle>How ML Forecasting Works</CardTitle>
+                    <CardDescription>
+                      Understanding our prediction methodology
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="relative z-10">
+                    <div className="grid md:grid-cols-3 gap-6">
+                      <motion.div whileHover={{ scale: 1.05 }} className="flex gap-4 p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <Database className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <h3 className="font-semibold mb-1">Data Collection</h3>
-                        <p className="text-sm text-muted-foreground">Climate Trace power emissions data (2021-2025) aggregated monthly with interpolation for gaps</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4">
-                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-purple-500/10 flex items-center justify-center">
-                        <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                            STEP 2
-                          </span>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 shadow-sm">
+                              STEP 1
+                            </span>
+                          </div>
+                          <h3 className="font-semibold mb-1">Data Collection</h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed">Climate Trace power emissions data (2021-2025) aggregated monthly with interpolation for gaps</p>
                         </div>
-                        <h3 className="font-semibold mb-1">Model Training</h3>
-                        <p className="text-sm text-muted-foreground">Hybrid XGBoost + Prophet for power, Prophet for transport and waste — each sector uses the best-fit model</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4">
-                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                        <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                            STEP 3
-                          </span>
+                      </motion.div>
+                      <motion.div whileHover={{ scale: 1.05 }} className="flex gap-4 p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                          <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <h3 className="font-semibold mb-1">Prediction</h3>
-                        <p className="text-sm text-muted-foreground">Generate 12-month forecasts with 95% confidence intervals for proactive planning</p>
-                      </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-400 shadow-sm">
+                              STEP 2
+                            </span>
+                          </div>
+                          <h3 className="font-semibold mb-1">Model Training</h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed">Hybrid XGBoost + Prophet for power, Prophet for transport and waste — each sector uses the best-fit model</p>
+                        </div>
+                      </motion.div>
+                      <motion.div whileHover={{ scale: 1.05 }} className="flex gap-4 p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                          <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shadow-sm">
+                              STEP 3
+                            </span>
+                          </div>
+                          <h3 className="font-semibold mb-1">Prediction</h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed">Generate 12-month forecasts with 95% confidence intervals for proactive planning</p>
+                        </div>
+                      </motion.div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
           </TabsContent>
 
@@ -1281,7 +1330,8 @@ export default function Dashboard() {
             <DataExplorer />
           </TabsContent>
         </div>
-      </Tabs>
-    </div>
-  );
+      </div>
+    </Tabs>
+  </div>
+);
 }

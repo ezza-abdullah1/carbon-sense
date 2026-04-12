@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
+import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
 import { motion } from "framer-motion";
 
 interface EmissionChartProps {
-  title: string;
+  title?: string;
+  titleNode?: React.ReactNode;
   type: "line" | "bar" | "pie" | "doughnut";
   data: {
     labels: string[];
@@ -19,7 +20,7 @@ interface EmissionChartProps {
   };
 }
 
-export function EmissionChart({ title, type, data }: EmissionChartProps) {
+export function EmissionChart({ title, titleNode, type, data }: EmissionChartProps) {
   // Convert Chart.js data format to Recharts format
   const chartData = useMemo(() => {
     if (type === "pie" || type === "doughnut") {
@@ -71,30 +72,58 @@ export function EmissionChart({ title, type, data }: EmissionChartProps) {
       }
       return null;
     };
-
     if (type === "line") {
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="6" result="blur1" />
+                <feGaussianBlur stdDeviation="12" result="blur2" />
+                <feMerge>
+                  <feMergeNode in="blur2" />
+                  <feMergeNode in="blur1" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter id="neon-glow-dark" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="4" result="blur1" />
+                <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#000" floodOpacity="0.5" result="shadow" />
+                <feMerge>
+                  <feMergeNode in="shadow" />
+                  <feMergeNode in="blur1" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              {data.datasets.map((dataset, idx) => (
+                <linearGradient key={`gradient-${idx}`} id={`gradient-${dataset.label.replace(/\s+/g, '-')}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={dataset.borderColor as string} stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor={dataset.borderColor as string} stopOpacity={0}/>
+                </linearGradient>
+              ))}
+            </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: textColor }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: textColor }} />
             <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: gridColor, strokeWidth: 2 }} />
-            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
+            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} verticalAlign="bottom" />
             {data.datasets.map((dataset, idx) => (
-              <Line
+              <Area
                 key={dataset.label}
                 type="monotone"
                 dataKey={dataset.label}
                 stroke={dataset.borderColor as string}
-                strokeWidth={3}
-                strokeDasharray={dataset.borderDash ? "5 5" : undefined}
+                strokeWidth={4}
+                strokeDasharray={dataset.borderDash ? "6 6" : undefined}
+                fillOpacity={1}
+                fill={`url(#gradient-${dataset.label.replace(/\s+/g, '-')})`}
                 dot={false}
-                activeDot={{ r: 6, fill: dataset.borderColor as string, strokeWidth: 0 }}
+                activeDot={{ r: 8, fill: "#fff", stroke: dataset.borderColor as string, strokeWidth: 3 }}
                 isAnimationActive={true}
+                filter={isDark ? "url(#neon-glow-dark)" : "url(#neon-glow)"}
               />
             ))}
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       );
     }
@@ -103,6 +132,11 @@ export function EmissionChart({ title, type, data }: EmissionChartProps) {
       return (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <filter id="bar-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="3" dy="4" stdDeviation="3" floodColor="#000" floodOpacity="0.3" />
+              </filter>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: textColor }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: textColor }} />
@@ -115,6 +149,7 @@ export function EmissionChart({ title, type, data }: EmissionChartProps) {
                 fill={dataset.backgroundColor as string || dataset.borderColor as string}
                 radius={[4, 4, 0, 0]}
                 isAnimationActive={true}
+                filter="url(#bar-shadow)"
               />
             ))}
           </BarChart>
@@ -126,6 +161,11 @@ export function EmissionChart({ title, type, data }: EmissionChartProps) {
       return (
         <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <defs>
+              <filter id="pie-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="3" dy="5" stdDeviation="4" floodColor="#000" floodOpacity="0.4" />
+              </filter>
+            </defs>
             <Pie
               data={chartData}
               cx="50%"
@@ -136,6 +176,7 @@ export function EmissionChart({ title, type, data }: EmissionChartProps) {
               dataKey="value"
               stroke="none"
               isAnimationActive={true}
+              filter="url(#pie-shadow)"
             >
               {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
@@ -160,16 +201,20 @@ export function EmissionChart({ title, type, data }: EmissionChartProps) {
       <Card className="relative h-full flex flex-col overflow-hidden border-white/20 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-xl shadow-2xl shadow-emerald-500/5 group">
         <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
         
-        {title && (
+        {(title || titleNode) && (
           <CardHeader className="pb-2 relative z-10 flex-none">
-            <CardTitle className="text-base font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">{title}</CardTitle>
+            {titleNode ? (
+              titleNode
+            ) : (
+              <CardTitle className="text-base font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">{title}</CardTitle>
+            )}
           </CardHeader>
         )}
         
-        <CardContent className={`${title ? 'pt-2' : 'pt-6'} flex-1 relative z-10 w-full min-h-0`}>
+        <CardContent className={`${(title || titleNode) ? 'pt-2' : 'pt-6'} flex-1 relative z-10 w-full min-h-0`}>
           <div
             className="w-full h-full"
-            style={{ minHeight: type === "pie" || type === "doughnut" ? "280px" : "300px" }}
+            style={{ height: type === "pie" || type === "doughnut" ? "280px" : "300px" }}
             data-testid={`chart-${title ? title.toLowerCase().replace(/\s+/g, "-") : type}`}
           >
             {renderChart()}

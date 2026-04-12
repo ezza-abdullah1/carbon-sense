@@ -196,7 +196,7 @@ export function AreaDetailPanel({
   ];
 
   return (
-    <Card className="w-full h-full min-h-0 flex flex-col bg-gradient-to-b from-white/95 to-slate-50/95 dark:from-zinc-900/95 dark:to-zinc-950/95 backdrop-blur-xl border border-black/10 dark:border-white/10 shadow-2xl relative overflow-hidden">
+    <Card className="w-full h-full min-h-0 flex flex-col bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-emerald-500/5 to-transparent pointer-events-none" />
       <CardHeader className="flex-row items-start justify-between space-y-0 px-6 pt-6 pb-4 relative z-10 border-b border-white/10 shrink-0">
         <div className="space-y-1">

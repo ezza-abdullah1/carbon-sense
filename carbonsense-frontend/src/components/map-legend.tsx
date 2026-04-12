@@ -20,7 +20,7 @@ export function MapLegend() {
         variant="secondary" 
         size="icon" 
         onClick={() => setIsOpen(true)}
-        className="w-10 h-10 rounded-full shadow-lg bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border border-black/10 dark:border-white/10 group"
+        className="w-10 h-10 rounded-full shadow-lg bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 dark:border-white/10 group"
       >
         <HelpCircle className="h-5 w-5 opacity-70 group-hover:opacity-100 transition-opacity" />
       </Button>
@@ -28,7 +28,7 @@ export function MapLegend() {
   }
 
   return (
-    <Card className="w-48 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-black/10 dark:border-white/10 shadow-xl transition-all duration-300">
+    <Card className="w-48 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] transition-all duration-300">
       <CardHeader className="flex flex-row items-center justify-between pb-2 pt-3 px-4 shadow-sm border-b border-black/5 dark:border-white/5">
         <CardTitle className="text-xs font-semibold flex items-center gap-1.5"><MapIcon className="h-3.5 w-3.5"/> Emission Levels</CardTitle>
         <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={() => setIsOpen(false)}>
