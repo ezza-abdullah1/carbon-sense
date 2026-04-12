@@ -33,7 +33,6 @@ import {
   TrendingDown,
   Calendar,
   Factory,
-  Truck,
 } from "lucide-react";
 import { EmissionChart } from "@/components/emission-chart";
 import { useAreas, useEmissions } from "@/hooks/use-emissions";

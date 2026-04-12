@@ -1,6 +1,6 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import L from "leaflet";
-import type { AreaInfo } from "@shared/schema";
+import type { AreaInfo } from "@/lib/api";
 import "leaflet/dist/leaflet.css";
 
 interface EmissionMapProps {

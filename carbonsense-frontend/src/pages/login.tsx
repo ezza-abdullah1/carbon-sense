@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Leaf } from "lucide-react";
 import { motion } from "framer-motion";
+import { PageHeader } from "@/components/page-header";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -37,7 +38,7 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(data.user));
       setLocation("/dashboard");
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password",
@@ -51,7 +52,19 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden">
+      <div className="z-20">
+        <PageHeader 
+          title="Sign In"
+          subtitle="Access your CarbonSense environmental dashboard"
+          icon={Leaf}
+          breadcrumbItems={[
+            { label: "Home", href: "/" },
+            { label: "Sign In" }
+          ]}
+        />
+      </div>
+      <div className="flex-1 flex items-center justify-center p-4">
       {/* Animated Background Container */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <motion.div 

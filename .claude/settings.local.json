@@ -5,7 +5,11 @@
       "Bash(python manage.py migrate)",
       "Bash(python manage.py check)",
       "Bash(pip install:*)",
-      "Bash(python -m pip install django-redis psycopg2-binary dj-database-url)"
+      "Bash(python -m pip install django-redis psycopg2-binary dj-database-url)",
+      "Bash(npx tsc:*)",
+      "Bash(ls node_modules/.bin/tsc*)",
+      "Bash(/c/Windows/System32/cmd.exe /c \"cd /d d:\\\\carbon-sense\\\\carbonsense-frontend && node node_modules\\\\typescript\\\\bin\\\\tsc --noEmit\")",
+      "Bash(/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -Command \"Get-Command node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source; Get-ChildItem 'C:\\\\Program Files\\\\nodejs\\\\' -ErrorAction SilentlyContinue | Select-Object Name\")"
     ],
     "additionalDirectories": [
       "d:\\carbon-sense\\carbonsense-backend\\recommendations\\migrations"

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Leaf } from "lucide-react";
 import { motion } from "framer-motion";
+import { PageHeader } from "@/components/page-header";
 
 export default function Signup() {
   const [, setLocation] = useLocation();
@@ -38,7 +39,7 @@ export default function Signup() {
       localStorage.setItem("user", JSON.stringify(data.user));
       setTimeout(() => setLocation("/dashboard"), 1500);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Signup failed",
         description: error.message || "Unable to create account",
@@ -52,7 +53,19 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden">
+      <div className="z-20">
+        <PageHeader 
+          title="Create Account"
+          subtitle="Join the Lahore environmental monitoring network"
+          icon={Leaf}
+          breadcrumbItems={[
+            { label: "Home", href: "/" },
+            { label: "Create Account" }
+          ]}
+        />
+      </div>
+      <div className="flex-1 flex items-center justify-center p-4">
       {/* Animated Background Container */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <motion.div 

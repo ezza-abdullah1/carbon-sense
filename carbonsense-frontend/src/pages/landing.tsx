@@ -1,17 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useLocation } from "wouter";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Leaf, ArrowRight, Check, MapPin, Brain, BarChart3, Database,
-  TrendingUp, Download, ShieldCheck, Zap
+  TrendingUp, Download
 } from "lucide-react";
 import { useEffect, useState } from "react";
-
-const fadeUpParams = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } }
-};
 
 const staggerContainer = {
   hidden: { opacity: 0 },
@@ -24,7 +19,6 @@ const staggerContainer = {
 export default function Landing() {
   const [, setLocation] = useLocation();
   const [scrolled, setScrolled] = useState(false);
-  const { scrollYProgress } = useScroll();
   const [imgError, setImgError] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -284,7 +278,7 @@ export default function Landing() {
       </section>
 
       {/* ============ STATS SECTION (MODERN FLOAT) ============ */}
-      <section className="py-16 px-6 relative z-10 z-20">
+      <section className="py-16 px-6 relative z-20">
         <div className="max-w-7xl mx-auto">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}

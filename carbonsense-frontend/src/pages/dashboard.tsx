@@ -9,6 +9,7 @@ import { AreaDetailPanel } from "@/components/area-detail-panel";
 import { MapLegend } from "@/components/map-legend";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DataExplorer } from "@/components/data-explorer";
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,20 +33,11 @@ import {
   Filter,
   X
 } from "lucide-react";
-import type { Sector, DataType } from "@shared/schema";
+import type { Sector, DataType, LeaderboardEntry } from "@shared/schema";
 import type { TimeInterval } from "@/lib/api";
 import { useAreas, useLatestEmissions, useLeaderboard, useTimeSeriesData, useCombinedTimeSeriesData } from "@/hooks/use-emissions";
 import type { EmissionDataPoint, AreaInfo } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface LeaderboardEntry {
-  rank: number;
-  areaId: string;
-  areaName: string;
-  emissions: number;
-  trend: 'up' | 'down' | 'stable';
-  trendPercentage: number;
-}
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -570,6 +562,34 @@ export default function Dashboard() {
                className="absolute top-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-emerald-500/10 dark:bg-emerald-600/5 rounded-full filter blur-[120px] opacity-100" 
              />
           </div>
+
+          {/* Page Header (Hidden on Overview) */}
+          <AnimatePresence mode="wait">
+            {activeTab !== 'overview' && (
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="z-20"
+              >
+                <PageHeader 
+                  title={navItems.find(i => i.id === activeTab)?.label || "Dashboard"}
+                  subtitle={
+                    activeTab === "map" ? "Geospatial distribution of carbon sources in Lahore" :
+                    activeTab === "analytics" ? "Deep dive into historical emission patterns" :
+                    activeTab === "forecast" ? "AI-powered predictions for proactive environmental planning" :
+                    activeTab === "data" ? "Manage and export environmental datasets" : ""
+                  }
+                  icon={navItems.find(i => i.id === activeTab)?.icon}
+                  breadcrumbItems={[
+                    { label: "Dashboard", href: "/dashboard" },
+                    { label: navItems.find(i => i.id === activeTab)?.label || "Overview" }
+                  ]}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
         {/* Tab Content */}
         <div className="flex-1 overflow-hidden">

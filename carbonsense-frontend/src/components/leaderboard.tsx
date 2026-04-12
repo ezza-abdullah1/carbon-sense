@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, TrendingDown, Minus, Trophy, Medal, Award, Factory, Truck, Zap, Trash2, Building2, ChevronDown } from "lucide-react";
 import type { LeaderboardEntry } from "@shared/schema";
 import { ScrollArea } from "@/components/ui/scroll-area";

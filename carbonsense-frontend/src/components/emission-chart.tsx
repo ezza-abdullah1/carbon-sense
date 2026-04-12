@@ -142,7 +142,7 @@ export function EmissionChart({ title, titleNode, type, data }: EmissionChartPro
             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: textColor }} />
             <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }} />
             {data.datasets.length > 1 && <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />}
-            {data.datasets.map((dataset, idx) => (
+            {data.datasets.map((dataset) => (
               <Bar
                 key={dataset.label}
                 dataKey={dataset.label}
