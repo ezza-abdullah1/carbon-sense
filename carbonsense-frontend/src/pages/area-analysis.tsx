@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Leaf, ArrowLeft, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { useAreas, useCombinedTimeSeriesData } from "@/hooks/use-emissions";
+import { motion } from "framer-motion";
 
 export default function AreaAnalysis() {
   const [, setLocation] = useLocation();
@@ -248,9 +249,17 @@ export default function AreaAnalysis() {
   const maxSectorValue = stats ? Math.max(...Object.values(stats.sectorTotals)) : 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden text-slate-900 dark:text-white">
+      {/* Animated Background Container */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <motion.div 
+          animate={{ x: [0, 50, -50, 0], y: [0, -50, 50, 0], scale: [1, 1.1, 0.9, 1] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute top-[0%] right-[10%] w-[40vw] h-[40vw] bg-emerald-400/10 dark:bg-emerald-600/10 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-100" 
+        />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-border bg-card px-6 py-4">
+      <header className="bg-white/80 dark:bg-[#030303]/90 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.03)] border-b border-white/20 dark:border-white/10 sticky top-0 z-50 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
@@ -275,11 +284,11 @@ export default function AreaAnalysis() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 overflow-auto">
+      <main className="flex-1 p-6 overflow-auto relative z-10">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+            <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-xl overflow-hidden hover:-translate-y-1 transition-transform">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Total Historical Emissions
@@ -370,7 +379,7 @@ export default function AreaAnalysis() {
           </div>
 
           {/* Sector Breakdown Detail */}
-          <Card>
+          <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-xl">
             <CardHeader>
               <CardTitle>Sectoral Breakdown (Historical Total)</CardTitle>
             </CardHeader>
@@ -404,7 +413,7 @@ export default function AreaAnalysis() {
           </Card>
 
           {/* Data Info */}
-          <Card>
+          <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-xl">
             <CardHeader>
               <CardTitle className="text-base">Data Information</CardTitle>
             </CardHeader>

@@ -52,13 +52,13 @@ export function Leaderboard({ entries, selectedAreaId, onAreaSelect, sectorTotal
   }, [sectorTotals]);
 
   return (
-    <Card className="h-full flex flex-col overflow-hidden">
-      <CardHeader className="pb-2 flex-shrink-0">
-        <CardTitle className="text-lg">Emission Rankings</CardTitle>
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "areas" | "sectors")} className="mt-2">
-          <TabsList className="grid w-full grid-cols-2 h-8">
-            <TabsTrigger value="areas" className="text-xs">Areas ({entries.length})</TabsTrigger>
-            <TabsTrigger value="sectors" className="text-xs">Sectors</TabsTrigger>
+    <Card className="h-full flex flex-col overflow-hidden bg-gradient-to-b from-white/95 to-slate-50/95 dark:from-zinc-900/95 dark:to-zinc-950/95 backdrop-blur-xl border-0 sm:border border-black/10 dark:border-white/10 shadow-2xl">
+      <CardHeader className="pb-2 flex-shrink-0 relative z-10">
+        <CardTitle className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-800 dark:from-white dark:via-emerald-200 dark:to-teal-200">Emission Rankings</CardTitle>
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "areas" | "sectors")} className="mt-4">
+          <TabsList className="grid w-full grid-cols-2 h-10 p-1 bg-black/5 dark:bg-white/5 rounded-xl backdrop-blur-md">
+            <TabsTrigger value="areas" className="text-sm rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-black/40 data-[state=active]:shadow-sm data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 font-medium transition-all duration-300">Areas ({entries.length})</TabsTrigger>
+            <TabsTrigger value="sectors" className="text-sm rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-black/40 data-[state=active]:shadow-sm data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 font-medium transition-all duration-300">Sectors</TabsTrigger>
           </TabsList>
         </Tabs>
       </CardHeader>
@@ -71,9 +71,9 @@ export function Leaderboard({ entries, selectedAreaId, onAreaSelect, sectorTotal
                   key={entry.areaId}
                   onClick={() => onAreaSelect(entry.areaId)}
                   className={`
-                    flex items-center gap-3 p-3 rounded-md cursor-pointer transition-colors
-                    hover-elevate active-elevate-2
-                    ${selectedAreaId === entry.areaId ? 'bg-accent' : ''}
+                    flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-300
+                    hover:scale-[1.02] hover:shadow-lg hover:bg-white/60 dark:hover:bg-white/10 border border-transparent
+                    ${selectedAreaId === entry.areaId ? 'bg-emerald-500/10 dark:bg-emerald-500/20 shadow-inner !border-emerald-500/30 z-10' : 'bg-transparent'}
                   `}
                   data-testid={`leaderboard-item-${entry.areaId}`}
                 >
@@ -88,37 +88,37 @@ export function Leaderboard({ entries, selectedAreaId, onAreaSelect, sectorTotal
                     )}
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{entry.areaName}</div>
-                    <div className="font-mono text-xs text-muted-foreground">
-                      {entry.emissions.toLocaleString(undefined, { maximumFractionDigits: 0 })} tons CO₂e
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="font-medium text-[15px] leading-tight mb-1 text-slate-800 dark:text-slate-200 line-clamp-2" title={entry.areaName}>{entry.areaName}</div>
+                    <div className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 bg-emerald-500/10 rounded-md inline-block">
+                      {entry.emissions.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="font-sans font-normal opacity-80 text-[10px]">tons CO₂e</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-col items-end gap-1 shrink-0">
                     {entry.trend === "up" && (
-                      <>
-                        <TrendingUp className="h-4 w-4 text-destructive" />
-                        <span className="font-mono text-xs text-destructive">
-                          +{entry.trendPercentage}%
+                      <div className="flex items-center bg-destructive/10 px-2 py-1 rounded-full">
+                        <TrendingUp className="h-3 w-3 text-destructive mr-1" />
+                        <span className="font-mono text-[11px] font-medium text-destructive whitespace-nowrap">
+                          +{Number(entry.trendPercentage).toFixed(1)}%
                         </span>
-                      </>
+                      </div>
                     )}
                     {entry.trend === "down" && (
-                      <>
-                        <TrendingDown className="h-4 w-4 text-primary" />
-                        <span className="font-mono text-xs text-primary">
-                          -{entry.trendPercentage}%
+                      <div className="flex items-center bg-emerald-500/10 px-2 py-1 rounded-full">
+                        <TrendingDown className="h-3 w-3 text-emerald-600 dark:text-emerald-400 mr-1" />
+                        <span className="font-mono text-[11px] font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                          -{Number(entry.trendPercentage).toFixed(1)}%
                         </span>
-                      </>
+                      </div>
                     )}
                     {entry.trend === "stable" && (
-                      <>
-                        <Minus className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {entry.trendPercentage}%
+                      <div className="flex items-center bg-slate-500/10 px-2 py-1 rounded-full">
+                        <Minus className="h-3 w-3 text-slate-500 mr-1" />
+                        <span className="font-mono text-[11px] font-medium text-slate-500 whitespace-nowrap">
+                          {Number(entry.trendPercentage).toFixed(1)}%
                         </span>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -154,16 +154,16 @@ export function Leaderboard({ entries, selectedAreaId, onAreaSelect, sectorTotal
                         <Icon className="h-5 w-5 text-white" />
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm">{sector.config.label}</div>
-                        <div className="font-mono text-xs text-muted-foreground">
-                          {Math.round(sector.value / 1000).toLocaleString()}k tons CO₂e
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="font-medium text-[15px] text-slate-800 dark:text-slate-200">{sector.config.label}</div>
+                        <div className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 bg-emerald-500/10 rounded-md inline-block mt-1">
+                          {Math.round(sector.value / 1000).toLocaleString()} <span className="font-sans font-normal opacity-80 text-[10px]">k tons CO₂e</span>
                         </div>
                       </div>
 
-                      <Badge variant="secondary" className="font-mono">
-                        {sector.percentage.toFixed(1)}%
-                      </Badge>
+                      <div className="flex items-center justify-center bg-black/5 dark:bg-white/5 rounded-full px-3 py-1 shrink-0 border border-black/10 dark:border-white/10">
+                        <span className="font-mono text-xs font-semibold">{sector.percentage.toFixed(1)}%</span>
+                      </div>
                     </div>
                   );
                 })

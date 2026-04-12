@@ -1,8 +1,7 @@
-import { useEffect, useRef } from "react";
-import { Chart, ChartConfiguration, registerables } from "chart.js";
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-Chart.register(...registerables);
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend } from "recharts";
+import { motion } from "framer-motion";
 
 interface EmissionChartProps {
   title: string;
@@ -21,139 +20,162 @@ interface EmissionChartProps {
 }
 
 export function EmissionChart({ title, type, data }: EmissionChartProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef = useRef<Chart | null>(null);
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-
-    if (chartRef.current) {
-      chartRef.current.destroy();
+  // Convert Chart.js data format to Recharts format
+  const chartData = useMemo(() => {
+    if (type === "pie" || type === "doughnut") {
+      return data.labels.map((label, index) => {
+        const dataset = data.datasets[0];
+        const color = Array.isArray(dataset.backgroundColor)
+          ? dataset.backgroundColor[index]
+          : dataset.backgroundColor || "hsl(142, 65%, 45%)";
+        
+        return {
+          name: label,
+          value: dataset.data[index] || 0,
+          color,
+        };
+      }).filter(item => item.value > 0);
     }
 
-    const config: ChartConfiguration = {
-      type,
-      data,
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        spanGaps: true,
-        interaction: {
-          intersect: false,
-          mode: 'index',
-        },
-        plugins: {
-          legend: {
-            position: "bottom",
-            labels: {
-              font: {
-                family: "Inter, system-ui, sans-serif",
-                size: 12,
-                weight: 500,
-              },
-              padding: 20,
-              usePointStyle: true,
-              pointStyle: 'circle',
-            },
-          },
-          tooltip: {
-            backgroundColor: "rgba(17, 24, 39, 0.95)",
-            titleFont: {
-              family: "Inter, system-ui, sans-serif",
-              size: 14,
-              weight: 600,
-            },
-            bodyFont: {
-              family: "Inter, system-ui, sans-serif",
-              size: 13,
-            },
-            padding: 14,
-            cornerRadius: 10,
-            boxPadding: 6,
-          },
-        },
-        scales: type === "line" || type === "bar" ? {
-          y: {
-            beginAtZero: true,
-            border: {
-              display: false,
-            },
-            grid: {
-              color: "rgba(156, 163, 175, 0.15)",
-            },
-            ticks: {
-              font: {
-                family: "Inter, system-ui, sans-serif",
-                size: 11,
-              },
-              padding: 8,
-              color: "#6b7280",
-            },
-          },
-          x: {
-            border: {
-              display: false,
-            },
-            grid: {
-              display: false,
-            },
-            ticks: {
-              font: {
-                family: "Inter, system-ui, sans-serif",
-                size: 11,
-              },
-              padding: 8,
-              color: "#6b7280",
-              maxRotation: 45,
-              minRotation: 0,
-            },
-          },
-        } : undefined,
-        elements: {
-          line: {
-            tension: 0.35,
-            borderWidth: 3,
-          },
-          point: {
-            radius: 4,
-            hoverRadius: 7,
-            borderWidth: 2,
-            backgroundColor: '#fff',
-          },
-          bar: {
-            borderRadius: 6,
-          },
-          arc: {
-            borderWidth: 2,
-            borderColor: '#fff',
-          },
-        },
-      },
-    };
+    return data.labels.map((label, index) => {
+      const point: any = { name: label };
+      data.datasets.forEach(dataset => {
+        point[dataset.label] = dataset.data[index];
+      });
+      return point;
+    });
+  }, [data, type]);
 
-    chartRef.current = new Chart(canvasRef.current, config);
+  const renderChart = () => {
+    const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#94a3b8' : '#64748b'; // slate-400 / slate-500
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+    const tooltipBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)'; // slate-900 / white
+    const tooltipColor = isDark ? '#f8fafc' : '#0f172a';
+    const tooltipBorder = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
-    return () => {
-      if (chartRef.current) {
-        chartRef.current.destroy();
-        chartRef.current = null;
+    const CustomTooltip = ({ active, payload, label }: any) => {
+      if (active && payload && payload.length) {
+        return (
+          <div style={{ backgroundColor: tooltipBg, color: tooltipColor, borderColor: tooltipBorder }} className="px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md">
+            <p className="font-semibold text-sm mb-2">{label}</p>
+            {payload.map((entry: any, index: number) => (
+              <div key={index} className="flex items-center gap-2 mb-1">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color || entry.payload?.color }} />
+                <span className="text-xs text-muted-foreground">{entry.name}:</span>
+                <span className="text-sm font-mono font-medium">{entry.value?.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        );
       }
+      return null;
     };
-  }, [type, data]);
+
+    if (type === "line") {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: textColor }} dy={10} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: textColor }} />
+            <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: gridColor, strokeWidth: 2 }} />
+            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
+            {data.datasets.map((dataset, idx) => (
+              <Line
+                key={dataset.label}
+                type="monotone"
+                dataKey={dataset.label}
+                stroke={dataset.borderColor as string}
+                strokeWidth={3}
+                strokeDasharray={dataset.borderDash ? "5 5" : undefined}
+                dot={false}
+                activeDot={{ r: 6, fill: dataset.borderColor as string, strokeWidth: 0 }}
+                isAnimationActive={true}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (type === "bar") {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: textColor }} dy={10} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: textColor }} />
+            <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }} />
+            {data.datasets.length > 1 && <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />}
+            {data.datasets.map((dataset, idx) => (
+              <Bar
+                key={dataset.label}
+                dataKey={dataset.label}
+                fill={dataset.backgroundColor as string || dataset.borderColor as string}
+                radius={[4, 4, 0, 0]}
+                isAnimationActive={true}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (type === "pie" || type === "doughnut") {
+      return (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              innerRadius={type === "doughnut" ? "65%" : 0}
+              outerRadius="80%"
+              paddingAngle={type === "doughnut" ? 3 : 0}
+              dataKey="value"
+              stroke="none"
+              isAnimationActive={true}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <RechartsTooltip content={<CustomTooltip />} />
+            <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} layout="vertical" verticalAlign="middle" align="right" />
+          </PieChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    return null;
+  };
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-2">
-        <div
-          className="relative w-full"
-          style={{ height: type === "pie" || type === "doughnut" ? "320px" : "300px" }}
-        >
-          <canvas ref={canvasRef} data-testid={`chart-${title.toLowerCase().replace(/\s+/g, "-")}`} />
-        </div>
-      </CardContent>
-    </Card>
+    <motion.div
+      whileHover={{ y: -5 }}
+      transition={{ duration: 0.3, type: "spring" }}
+      className="h-full"
+    >
+      <Card className="relative h-full flex flex-col overflow-hidden border-white/20 dark:border-white/10 bg-white/50 dark:bg-black/40 backdrop-blur-xl shadow-2xl shadow-emerald-500/5 group">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent dark:from-white/5 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+        
+        {title && (
+          <CardHeader className="pb-2 relative z-10 flex-none">
+            <CardTitle className="text-base font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400">{title}</CardTitle>
+          </CardHeader>
+        )}
+        
+        <CardContent className={`${title ? 'pt-2' : 'pt-6'} flex-1 relative z-10 w-full min-h-0`}>
+          <div
+            className="w-full h-full"
+            style={{ minHeight: type === "pie" || type === "doughnut" ? "280px" : "300px" }}
+            data-testid={`chart-${title ? title.toLowerCase().replace(/\s+/g, "-") : type}`}
+          >
+            {renderChart()}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

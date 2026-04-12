@@ -27,12 +27,16 @@ import {
   MapPin,
   Zap,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Layers,
+  Filter,
+  X
 } from "lucide-react";
 import type { Sector, DataType } from "@shared/schema";
 import type { TimeInterval } from "@/lib/api";
 import { useAreas, useLatestEmissions, useLeaderboard, useTimeSeriesData, useCombinedTimeSeriesData } from "@/hooks/use-emissions";
 import type { EmissionDataPoint, AreaInfo } from "@/lib/api";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface LeaderboardEntry {
   rank: number;
@@ -50,6 +54,7 @@ export default function Dashboard() {
   const [timeInterval, setTimeInterval] = useState<TimeInterval>("monthly");
   const [dataType, setDataType] = useState<DataType>("historical");
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Fetch real data using hooks (pass selectedSectors and timeInterval for filtering)
   const { data: areas = [], isLoading: areasLoading } = useAreas();
@@ -318,10 +323,39 @@ export default function Dashboard() {
   // Loading state
   if (areasLoading || emissionsLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Loading emissions data...</p>
+      <div className="h-screen flex items-center justify-center bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none z-0">
+          <motion.div 
+            animate={{ x: [0, 100, -50, 0], y: [0, -100, 50, 0], scale: [1, 1.2, 0.9, 1] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute top-[20%] left-[30%] w-[40vw] h-[40vw] bg-emerald-400/10 dark:bg-emerald-600/10 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-100" 
+          />
+        </div>
+        <div className="text-center space-y-6 z-10">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="relative h-24 w-24 mx-auto"
+          >
+            <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-xl animate-pulse" />
+            <div className="relative h-full w-full rounded-2xl bg-white/10 dark:bg-black/10 backdrop-blur-xl border border-white/20 dark:border-white/10 flex items-center justify-center shadow-2xl">
+              <Leaf className="h-10 w-10 text-emerald-500 animate-bounce" />
+            </div>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="space-y-2"
+          >
+            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300">
+              Initializing Data Core
+            </h2>
+            <p className="text-muted-foreground flex items-center justify-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading carbon emission datasets...
+            </p>
+          </motion.div>
         </div>
       </div>
     );
@@ -411,7 +445,7 @@ export default function Dashboard() {
     <div className="h-screen flex flex-col bg-background">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
         {/* Modern Header */}
-        <header className="bg-card/95 backdrop-blur-md border-b border-border sticky top-0 z-50">
+        <header className="bg-white/80 dark:bg-[#030303]/90 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.03)] border-b border-white/20 dark:border-white/10 sticky top-0 z-50">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -480,47 +514,47 @@ export default function Dashboard() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="px-6 pb-0">
-            <TabsList className="h-11 w-full justify-start bg-transparent p-0 gap-1">
+          <div className="px-6 pb-0 border-b border-white/10 dark:border-white/5">
+            <TabsList className="h-14 w-full flex bg-transparent p-0">
               <TabsTrigger
                 value="overview"
                 data-testid="tab-overview"
-                className="relative h-11 rounded-t-lg rounded-b-none border-b-2 border-transparent bg-transparent px-4 font-medium text-muted-foreground shadow-none transition-all data-[state=active]:border-emerald-500 data-[state=active]:text-foreground data-[state=active]:bg-muted/50 gap-2"
+                className="flex-1 relative h-full rounded-none border-b-2 border-transparent bg-transparent px-2 sm:px-4 font-medium text-muted-foreground shadow-none transition-all hover:text-foreground hover:bg-muted/30 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 gap-2 flex items-center justify-center"
               >
                 <Sparkles className="h-4 w-4" />
-                Overview
+                <span className="hidden sm:inline">Overview</span>
               </TabsTrigger>
               <TabsTrigger
                 value="map"
                 data-testid="tab-map"
-                className="relative h-11 rounded-t-lg rounded-b-none border-b-2 border-transparent bg-transparent px-4 font-medium text-muted-foreground shadow-none transition-all data-[state=active]:border-emerald-500 data-[state=active]:text-foreground data-[state=active]:bg-muted/50 gap-2"
+                className="flex-1 relative h-full rounded-none border-b-2 border-transparent bg-transparent px-2 sm:px-4 font-medium text-muted-foreground shadow-none transition-all hover:text-foreground hover:bg-muted/30 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 gap-2 flex items-center justify-center"
               >
                 <MapPin className="h-4 w-4" />
-                Map View
+                <span className="hidden sm:inline">Map View</span>
               </TabsTrigger>
               <TabsTrigger
                 value="analytics"
                 data-testid="tab-analytics"
-                className="relative h-11 rounded-t-lg rounded-b-none border-b-2 border-transparent bg-transparent px-4 font-medium text-muted-foreground shadow-none transition-all data-[state=active]:border-emerald-500 data-[state=active]:text-foreground data-[state=active]:bg-muted/50 gap-2"
+                className="flex-1 relative h-full rounded-none border-b-2 border-transparent bg-transparent px-2 sm:px-4 font-medium text-muted-foreground shadow-none transition-all hover:text-foreground hover:bg-muted/30 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 gap-2 flex items-center justify-center"
               >
                 <TrendingUp className="h-4 w-4" />
-                Trends
+                <span className="hidden sm:inline">Trends</span>
               </TabsTrigger>
               <TabsTrigger
                 value="forecast"
                 data-testid="tab-forecast"
-                className="relative h-11 rounded-t-lg rounded-b-none border-b-2 border-transparent bg-transparent px-4 font-medium text-muted-foreground shadow-none transition-all data-[state=active]:border-emerald-500 data-[state=active]:text-foreground data-[state=active]:bg-muted/50 gap-2"
+                className="flex-1 relative h-full rounded-none border-b-2 border-transparent bg-transparent px-2 sm:px-4 font-medium text-muted-foreground shadow-none transition-all hover:text-foreground hover:bg-muted/30 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 gap-2 flex items-center justify-center"
               >
                 <Brain className="h-4 w-4" />
-                ML Forecast
+                <span className="hidden sm:inline">ML Forecast</span>
               </TabsTrigger>
               <TabsTrigger
                 value="data"
                 data-testid="tab-data"
-                className="relative h-11 rounded-t-lg rounded-b-none border-b-2 border-transparent bg-transparent px-4 font-medium text-muted-foreground shadow-none transition-all data-[state=active]:border-emerald-500 data-[state=active]:text-foreground data-[state=active]:bg-muted/50 gap-2"
+                className="flex-1 relative h-full rounded-none border-b-2 border-transparent bg-transparent px-2 sm:px-4 font-medium text-muted-foreground shadow-none transition-all hover:text-foreground hover:bg-muted/30 data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 gap-2 flex items-center justify-center"
               >
                 <Database className="h-4 w-4" />
-                Data Export
+                <span className="hidden sm:inline">Data Export</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -530,197 +564,394 @@ export default function Dashboard() {
         <div className="flex-1 overflow-hidden">
           {/* Overview Tab - Welcome & Feature Navigation */}
           <TabsContent value="overview" className="h-full mt-0 overflow-auto">
-            <div className="min-h-full bg-gradient-to-br from-background via-background to-muted/30">
+            <div className="min-h-full bg-[#fafafa] dark:bg-[#030303] text-slate-900 dark:text-slate-50 relative overflow-hidden">
+              <div className="absolute inset-0 pointer-events-none z-0">
+                <motion.div 
+                  animate={{ x: [0, 100, -50, 0], y: [0, -100, 50, 0], scale: [1, 1.2, 0.9, 1] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  className="absolute top-[0%] left-[20%] w-[40vw] h-[40vw] bg-emerald-400/10 dark:bg-emerald-600/10 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-100" 
+                />
+              </div>
               {/* Hero Section */}
-              <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-teal-500/5" />
-                <div className="relative px-8 py-12">
-                  <div className="max-w-4xl">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm font-medium mb-4">
-                      <Zap className="h-3.5 w-3.5" />
-                      Environmental Intelligence Platform
+              <div className="relative overflow-hidden z-10 mt-6 mx-8 mb-8 rounded-3xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shadow-xl backdrop-blur-xl">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-transparent to-teal-500/5 pointer-events-none" />
+                <div className="relative px-10 py-12 flex flex-col md:flex-row items-center justify-between gap-8">
+                  <div className="max-w-xl">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/60 dark:bg-black/40 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-widest mb-6 shadow-sm">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      Live Environmental Core
                     </div>
-                    <h1 className="text-4xl font-bold tracking-tight mb-4">
-                      Welcome to CarbonSense
+                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-emerald-800 to-teal-800 dark:from-white dark:via-emerald-200 dark:to-teal-200">
+                      Welcome to CarbonSense.
                     </h1>
-                    <p className="text-lg text-muted-foreground max-w-2xl">
-                      Monitor, analyze, and forecast carbon emissions across Lahore's neighborhoods.
-                      Make data-driven decisions for a sustainable future.
+                    <p className="text-base text-slate-600 dark:text-slate-400 max-w-lg mb-8 leading-relaxed">
+                      Monitor, analyze, and accurately forecast carbon emissions across Lahore. Instantly empower your sustainability initiatives with data-driven precision.
                     </p>
+                    <div className="flex items-center gap-4">
+                      <Button onClick={() => setActiveTab("map")} className="rounded-full px-6 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20">
+                        <MapPin className="h-4 w-4 mr-2" /> Explore Live Map
+                      </Button>
+                      <Button variant="outline" onClick={() => setActiveTab("analytics")} className="rounded-full px-6 bg-white/50 dark:bg-black/50 backdrop-blur-md">
+                        <TrendingUp className="h-4 w-4 mr-2" /> View Trends
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Decorative abstract visualization for Hero right side */}
+                  <div className="hidden md:flex relative h-48 w-48 items-center justify-center">
+                    <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-[60px] animate-pulse" />
+                    <svg viewBox="0 0 200 200" className="w-full h-full relative z-10 animate-[spin_40s_linear_infinite] opacity-80 mix-blend-overlay">
+                      <path fill="currentColor" className="text-emerald-500" d="M42.7,-68.8C55.9,-61.7,67.6,-51.2,76.5,-38.5C85.4,-25.9,91.6,-11.1,89.6,2.8C87.6,16.7,77.5,29.7,66.8,40.8C56.1,51.8,44.9,60.8,31.7,68.6C18.5,76.3,3.3,82.8,-11.8,81.1C-26.9,79.4,-41.8,69.5,-55.1,58.8C-68.4,48.1,-80,36.6,-86.3,22.2C-92.6,7.8,-93.6,-9.4,-87.3,-23.7C-81,-38,-67.4,-49.4,-53.4,-57.2C-39.4,-65,-25,-69.1,-10.8,-71.4C3.4,-73.7,17.7,-74.3,29.8,-70.6C41.9,-66.9,51.8,-58.9,42.7,-68.8Z" transform="translate(100 100) scale(0.9)" />
+                    </svg>
+                    <Leaf className="absolute h-14 w-14 text-white drop-shadow-[0_0_15px_rgba(16,185,129,0.8)] z-20" />
                   </div>
                 </div>
               </div>
 
               {/* Quick Stats */}
               <div className="px-8 -mt-4">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                  <Card className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
-                    <CardContent className="pt-6">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, staggerChildren: 0.1 }}
+                  className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+                >
+                  <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="relative overflow-hidden bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-emerald-500/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(16,185,129,0.05)] group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <CardContent className="pt-6 relative z-10">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Total Sources</p>
-                          <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{areas.length}</p>
+                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Sources</p>
+                          <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300">{areas.length}</p>
                         </div>
-                        <div className="h-12 w-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 flex items-center justify-center border border-emerald-500/20 shadow-inner">
                           <MapPin className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                  <Card className="bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
-                    <CardContent className="pt-6">
+                  </motion.div>
+                  <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="relative overflow-hidden bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-blue-500/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(59,130,246,0.05)] group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <CardContent className="pt-6 relative z-10">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Sectors Tracked</p>
-                          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">5</p>
+                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Sectors Tracked</p>
+                          <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-300">5</p>
                         </div>
-                        <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/10 flex items-center justify-center border border-blue-500/20 shadow-inner">
                           <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                  <Card className="bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20">
-                    <CardContent className="pt-6">
+                  </motion.div>
+                  <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="relative overflow-hidden bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-purple-500/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(168,85,247,0.05)] group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <CardContent className="pt-6 relative z-10">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Years of Data</p>
-                          <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">3+</p>
+                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Years of Data</p>
+                          <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500 dark:from-purple-400 dark:to-pink-300">3+</p>
                         </div>
-                        <div className="h-12 w-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/10 flex items-center justify-center border border-purple-500/20 shadow-inner">
                           <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                  <Card className="bg-gradient-to-br from-amber-500/5 to-amber-500/10 border-amber-500/20">
-                    <CardContent className="pt-6">
+                  </motion.div>
+                  <motion.div whileHover={{ y: -5 }} transition={{ type: "spring", stiffness: 300 }}>
+                  <Card className="relative overflow-hidden bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-amber-500/20 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(245,158,11,0.05)] group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <CardContent className="pt-6 relative z-10">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-muted-foreground">Total Emissions</p>
-                          <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
+                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Emissions</p>
+                          <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-500 dark:from-amber-400 dark:to-orange-300 flex items-baseline gap-1">
                             {leaderboard.length > 0
                               ? `${(Math.round((leaderboard as LeaderboardEntry[]).reduce((sum: number, e: LeaderboardEntry) => sum + e.emissions, 0) / 1000000 * 10) / 10).toLocaleString()}M`
                               : '—'}
+                            <span className="text-xs font-normal text-slate-400 dark:text-slate-500">CO₂e tons</span>
                           </p>
                         </div>
-                        <div className="h-12 w-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 flex items-center justify-center border border-amber-500/20 shadow-inner">
                           <Activity className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">tons CO₂e</p>
                     </CardContent>
                   </Card>
-                </div>
+                  </motion.div>
+                </motion.div>
               </div>
 
-              {/* Feature Cards Section */}
-              <div className="px-8 pb-8">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold mb-2">Platform Features</h2>
-                  <p className="text-muted-foreground">
-                    Tools for monitoring, analyzing, and forecasting carbon emissions
-                  </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                  {featureCards.map((feature) => {
-                    const Icon = feature.icon;
-                    return (
-                      <Card
-                        key={feature.id}
-                        className={`group cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-2 ${feature.borderClass}`}
-                        onClick={() => setActiveTab(feature.id)}
-                      >
-                        <CardContent className="pt-6">
-                          <div className={`h-12 w-12 rounded-xl ${feature.bgClass} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                            <Icon className={`h-6 w-6 ${feature.textClass}`} />
+              {/* Main Dashboard Grid inside Overview */}
+              <div className="px-8 pb-12">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column: Charts */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                    >
+                      <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <CardHeader className="relative z-10 pb-0 flex flex-row items-center justify-between">
+                          <div>
+                            <CardTitle className="flex items-center gap-2">
+                              <BarChart3 className="h-5 w-5 text-emerald-500" />
+                              Top Emission Sources
+                            </CardTitle>
+                            <CardDescription className="mt-1">Highest producing areas</CardDescription>
                           </div>
-                          <h3 className="font-semibold text-lg mb-1">{feature.title}</h3>
-                          <p className="text-sm text-muted-foreground mb-4">{feature.description}</p>
-                          <div className={`flex items-center gap-1 text-sm font-medium ${feature.textClass}`}>
-                            <span>Explore</span>
-                            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                          <Button variant="ghost" size="sm" onClick={() => setActiveTab("analytics")} className="text-xs">
+                            View Full Analytics <ArrowRight className="h-3 w-3 ml-1" />
+                          </Button>
+                        </CardHeader>
+                        <CardContent className="relative z-10 pt-4">
+                          <EmissionChart title="" type="bar" data={areaBarData} />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                    
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.1 }}
+                      className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                    >
+                      <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <CardHeader className="relative z-10 pb-0">
+                          <CardTitle className="flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-blue-500" />
+                            Overview by Sector
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="relative z-10 pt-4 max-w-full">
+                          <EmissionChart title="" type="doughnut" data={sectorPieData} />
+                        </CardContent>
+                      </Card>
+                      
+                      {/* Interactive map feature shortcut */}
+                      <Card 
+                        className="bg-white/40 dark:bg-black/30 backdrop-blur-xl border border-emerald-500/30 shadow-[0_8px_30px_rgb(16,185,129,0.1)] overflow-hidden relative group cursor-pointer hover:border-emerald-500/50 transition-all duration-300"
+                        onClick={() => setActiveTab('map')}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent z-0" />
+                        <CardContent className="relative z-10 h-full flex flex-col items-center justify-center text-center p-8">
+                          <div className="h-20 w-20 rounded-full bg-emerald-500/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                            <MapPin className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <h3 className="text-xl font-bold mb-2">Live Map View</h3>
+                          <p className="text-sm text-muted-foreground mb-6">
+                            Interact with spatial data to explore emission hotspots in Lahore.
+                          </p>
+                          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/10 px-4 py-2 rounded-full group-hover:bg-emerald-500/20 transition-colors">
+                            Explore Map <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                           </div>
                         </CardContent>
                       </Card>
-                    );
-                  })}
-                </div>
+                    </motion.div>
+                  </div>
 
-                {/* Sector Tags */}
-                <Card className="bg-muted/30">
-                  <CardContent className="pt-6">
-                    <h3 className="font-semibold mb-4">Monitored Sectors</h3>
-                    <div className="flex flex-wrap gap-3">
-                      {[
-                        { label: "Transport", color: "bg-blue-500", description: "Vehicle emissions, traffic" },
-                        { label: "Industry", color: "bg-purple-500", description: "Manufacturing, factories" },
-                        { label: "Energy", color: "bg-amber-500", description: "Power plants, electricity" },
-                        { label: "Waste", color: "bg-orange-500", description: "Landfills, treatment" },
-                        { label: "Buildings", color: "bg-pink-500", description: "Residential, commercial" },
-                      ].map((sector) => (
-                        <div
-                          key={sector.label}
-                          className="flex items-center gap-3 px-4 py-2 rounded-lg bg-card border hover:shadow-md transition-shadow"
-                        >
-                          <span className={`h-3 w-3 rounded-full ${sector.color}`} />
-                          <div>
-                            <span className="font-medium">{sector.label}</span>
-                            <span className="text-xs text-muted-foreground ml-2">{sector.description}</span>
+                  {/* Right Column: Platform Features & Tags */}
+                  <div className="space-y-6">
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+                      <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                        <CardHeader className="pb-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
+                          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                            <Sparkles className="h-4 w-4 text-emerald-500" /> Platform Quick Links
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                          <div className="flex flex-col divide-y divide-black/5 dark:divide-white/5">
+                            {featureCards.map((feature, i) => {
+                              const Icon = feature.icon;
+                              return (
+                                <motion.div key={feature.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1, duration: 0.5 }}>
+                                  <button
+                                    className={`w-full flex items-center gap-4 p-4 text-left transition-colors hover:bg-black/[0.02] dark:hover:bg-white/[0.02] group`}
+                                    onClick={() => setActiveTab(feature.id)}
+                                  >
+                                    <div className={`h-10 w-10 rounded-xl flex-shrink-0 ${feature.bgClass} flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300`}>
+                                      <Icon className={`h-5 w-5 ${feature.textClass}`} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h3 className="font-semibold text-sm mb-0.5 text-slate-800 dark:text-slate-200">{feature.title}</h3>
+                                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{feature.description}</p>
+                                    </div>
+                                    <ArrowRight className={`h-4 w-4 ${feature.textClass} opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-300`} />
+                                  </button>
+                                </motion.div>
+                              );
+                            })}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+
+                    {/* Sector Tags Panel */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.4 }}>
+                      <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                        <CardHeader className="pb-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
+                          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                            <Layers className="h-4 w-4 text-blue-500" /> Monitored Sectors
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-5 md:p-6">
+                          <div className="flex flex-wrap gap-3 md:gap-4">
+                            {[
+                              { label: "Transport", color: "bg-indigo-500", shadow: "shadow-indigo-500/50" },
+                              { label: "Industry", color: "bg-rose-500", shadow: "shadow-rose-500/50" },
+                              { label: "Energy", color: "bg-amber-500", shadow: "shadow-amber-500/50" },
+                              { label: "Waste", color: "bg-orange-500", shadow: "shadow-orange-500/50" },
+                              { label: "Buildings", color: "bg-emerald-500", shadow: "shadow-emerald-500/50" },
+                            ].map((sector) => (
+                              <div
+                                key={sector.label}
+                                className="flex items-center gap-2.5 px-4 py-2 rounded-lg bg-black/[0.03] dark:bg-white/[0.03] border border-black/5 dark:border-white/5 text-sm font-medium hover:bg-black/[0.05] dark:hover:bg-white/[0.05] transition-colors cursor-default"
+                              >
+                                <span className={`h-2.5 w-2.5 rounded-full ${sector.color} ${sector.shadow} shadow-sm`} />
+                                <span className="text-slate-700 dark:text-slate-300">{sector.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+
+                    {/* Live System Updates */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.5 }}>
+                      <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <CardHeader className="pb-3 flex flex-row items-center justify-between relative z-10">
+                          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                            <Activity className="h-4 w-4 text-indigo-500" /> System Updates
+                          </CardTitle>
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          </span>
+                        </CardHeader>
+                        <CardContent className="relative z-10 p-5 md:p-6 pt-2">
+                          <div className="space-y-6 md:space-y-7">
+                            {[
+                              { title: "Anomaly Detected", desc: "Spike in Gulberg energy usage", time: "Just now", icon: Zap, color: "text-amber-500", bg: "bg-amber-500/10" },
+                              { title: "Model Deployed", desc: "ML Forecast updated to v2.1", time: "2h ago", icon: Brain, color: "text-purple-500", bg: "bg-purple-500/10" },
+                              { title: "Data Sync Complete", desc: "Climate Trace API synchronized", time: "5h ago", icon: Database, color: "text-blue-500", bg: "bg-blue-500/10" },
+                              { title: "New Route Parsed", desc: "Transport tracking optimized", time: "1d ago", icon: Activity, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                            ].map((update, idx) => (
+                              <div key={idx} className="flex gap-4 group/item items-start">
+                                <div className={`flex-shrink-0 h-10 w-10 rounded-full ${update.bg} flex items-center justify-center mt-0.5 group-hover/item:scale-110 transition-transform`}>
+                                  <update.icon className={`h-5 w-5 ${update.color}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-center mb-1">
+                                    <h4 className="text-[15px] font-semibold text-slate-800 dark:text-slate-200 truncate">{update.title}</h4>
+                                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2 flex-shrink-0">{update.time}</span>
+                                  </div>
+                                  <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{update.desc}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </div>
+                </div>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="map" className="h-full mt-0 p-0">
-            <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_380px]">
-              <div className="relative h-full">
-                <EmissionMap
-                  areas={areas}
-                  selectedAreaId={selectedAreaId}
-                  onAreaSelect={setSelectedAreaId}
-                  emissionData={emissionData}
-                  maxEmission={maxEmission}
-                />
+          <TabsContent value="map" className="h-full mt-0 p-0 relative">
+            <div className="absolute inset-0 z-0">
+              <EmissionMap
+                areas={areas}
+                selectedAreaId={selectedAreaId}
+                onAreaSelect={setSelectedAreaId}
+                emissionData={emissionData}
+                maxEmission={maxEmission}
+              />
+            </div>
 
-                <div className="absolute top-4 right-4 max-w-xs space-y-4 z-[1000]">
-                  <Card className="backdrop-blur-md bg-card/95">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm">Filters</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-muted-foreground">Sectors</label>
-                        <SectorFilter
-                          selectedSectors={selectedSectors}
-                          onToggleSector={handleToggleSector}
-                          onSelectAll={handleSelectAllSectors}
-                          onClearAll={handleClearAllSectors}
-                        />
+            <div className="absolute inset-0 pointer-events-none z-10 mix-blend-normal">
+              {/* Left Side: Collapsible Filters */}
+              <div className="absolute top-4 left-4 pointer-events-auto z-[1000]">
+                <AnimatePresence mode="wait">
+                  {!isFiltersOpen ? (
+                    <motion.div
+                      key="filter-button"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Button
+                        variant="secondary"
+                        onClick={() => setIsFiltersOpen(true)}
+                        className="shadow-lg bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-black/10 dark:border-white/10 flex items-center gap-2"
+                      >
+                        <Filter className="h-4 w-4" />
+                        <span className="font-semibold text-sm">Filters</span>
+                      </Button>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="filter-panel"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="w-[320px]"
+                    >
+                      <div className="space-y-4">
+                        <Card className="bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl border border-black/10 dark:border-white/10 shadow-2xl rounded-2xl relative overflow-hidden">
+                          <CardHeader className="pb-3 border-b border-black/5 dark:border-white/5 flex flex-row items-center justify-between">
+                            <CardTitle className="text-sm font-bold tracking-tight">Filters</CardTitle>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" onClick={() => setIsFiltersOpen(false)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </CardHeader>
+                          <CardContent className="space-y-4 p-4 pt-4">
+                            <div className="space-y-2">
+                              <label className="text-xs font-medium text-muted-foreground">Sectors</label>
+                              <SectorFilter
+                                selectedSectors={selectedSectors}
+                                onToggleSector={handleToggleSector}
+                                onSelectAll={handleSelectAllSectors}
+                                onClearAll={handleClearAllSectors}
+                              />
+                            </div>
+                            <TimeControls
+                              interval={timeInterval}
+                              onIntervalChange={setTimeInterval}
+                              dataType={dataType}
+                              onDataTypeChange={setDataType}
+                            />
+                          </CardContent>
+                        </Card>
                       </div>
-                      <TimeControls
-                        interval={timeInterval}
-                        onIntervalChange={setTimeInterval}
-                        dataType={dataType}
-                        onDataTypeChange={setDataType}
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className="absolute bottom-4 left-4 z-[1000]">
-                  <MapLegend />
-                </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              <div className="border-l border-border bg-card flex min-h-0 flex-col">
-                <div className="flex-1 min-h-0 overflow-hidden p-6">
+              {/* Legend back to left hand side */}
+              <div className="absolute bottom-4 left-4 pointer-events-auto z-[1000]">
+                <MapLegend />
+              </div>
+
+              {/* Right Side: Area Details or Leaderboard */}
+              <div className="absolute top-4 right-4 bottom-4 w-[380px] pointer-events-auto shadow-2xl rounded-2xl flex flex-col z-[1000]">
                   {selectedAreaId && selectedArea ? (
                     <AreaDetailPanel
                       areaId={selectedAreaId}
@@ -750,7 +981,6 @@ export default function Dashboard() {
                       )}
                     </>
                   )}
-                </div>
               </div>
             </div>
           </TabsContent>
