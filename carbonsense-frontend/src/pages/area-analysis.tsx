@@ -9,7 +9,6 @@ import { Progress } from "@/components/ui/progress";
 import { Leaf, ArrowLeft, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
 import { useAreas, useCombinedTimeSeriesData } from "@/hooks/use-emissions";
 import { motion } from "framer-motion";
-import { PageHeader } from "@/components/page-header";
 
 export default function AreaAnalysis() {
   const [, setLocation] = useLocation();
@@ -260,16 +259,36 @@ export default function AreaAnalysis() {
         />
       </div>
 
-      <PageHeader
-        title={area.name}
-        subtitle="Detailed Emission Analysis and Forecast Profile"
-        icon={Leaf}
-        breadcrumbItems={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Area Analysis", href: "/dashboard" },
-          { label: area.name }
-        ]}
-      />
+      {/* Header */}
+      <header className="bg-white/80 dark:bg-[#030303]/90 backdrop-blur-2xl shadow-sm border-b border-black/5 dark:border-white/5 sticky top-0 z-50 px-6 py-5">
+        <div className="flex items-center justify-between max-w-7xl mx-auto w-full">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-xl hover:bg-black/5 dark:hover:bg-white/5"
+              onClick={() => setLocation("/dashboard")}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
+              <Leaf className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">{area.name}</h1>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                Detailed Emission Profile
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-3 py-1 border-0">
+              Live Source
+            </Badge>
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
 
       {/* Main Content */}
       <main className="flex-1 p-6 overflow-auto relative z-10">

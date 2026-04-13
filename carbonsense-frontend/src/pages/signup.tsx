@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Leaf } from "lucide-react";
 import { motion } from "framer-motion";
-import { PageHeader } from "@/components/page-header";
 
 export default function Signup() {
   const [, setLocation] = useLocation();
@@ -53,39 +52,27 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden">
-      <div className="z-20">
-        <PageHeader 
-          title="Create Account"
-          subtitle="Join the Lahore environmental monitoring network"
-          icon={Leaf}
-          breadcrumbItems={[
-            { label: "Home", href: "/" },
-            { label: "Create Account" }
-          ]}
-        />
-      </div>
-      <div className="flex-1 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden">
       {/* Animated Background Container */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <motion.div 
+        <motion.div
           animate={{ x: [0, 100, -50, 0], y: [0, -100, 50, 0], scale: [1, 1.2, 0.9, 1] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-[10%] left-[30%] w-[50vw] h-[50vw] md:w-[30vw] md:h-[30vw] bg-emerald-400/20 dark:bg-emerald-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] md:blur-[120px] opacity-100" 
+          className="absolute top-[10%] left-[30%] w-[50vw] h-[50vw] md:w-[30vw] md:h-[30vw] bg-emerald-400/20 dark:bg-emerald-600/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] md:blur-[120px] opacity-100"
         />
-        <motion.div 
+        <motion.div
           animate={{ x: [0, -80, 60, 0], y: [0, 80, -60, 0], scale: [1, 0.8, 1.1, 1] }} transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-[10%] right-[30%] w-[40vw] h-[40vw] md:w-[25vw] md:h-[25vw] bg-teal-300/20 dark:bg-teal-700/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] md:blur-[120px] opacity-100" 
+          className="absolute bottom-[10%] right-[30%] w-[40vw] h-[40vw] md:w-[25vw] md:h-[25vw] bg-teal-300/20 dark:bg-teal-700/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] md:blur-[120px] opacity-100"
         />
         <div className="absolute inset-0 overflow-hidden [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)]">
-          <motion.div 
+          <motion.div
             animate={{ y: [0, 40] }}
             transition={{ repeat: Infinity, duration: 2.5, ease: "linear" }}
-            className="absolute -top-[40px] -left-0 -right-0 bottom-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHBhdGggZD0iTTAgMGg0MHY0MEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0wIDAuNWg0ME0wIDQwLjVoNDBNMC41IDB2NDBNNDAuNSAwdjQwIiBzdHJva2U9InJnYmEoMTUwLDE1MCwxNTAsMC4xKSIvPjwvc3ZnPg==')] dark:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHBhdGggZD0iTTAgMGg0MHY0MEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0wIDAuNWg0ME0wIDQwLjVoNDBNMC41IDB2NDBNNDAuNSAwdjQwIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-100 dark:opacity-70 pointer-events-none" 
+            className="absolute -top-[40px] -left-0 -right-0 bottom-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHBhdGggZD0iTTAgMGg0MHY0MEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0wIDAuNWg0ME0wIDQwLjVoNDBNMC41IDB2NDBNNDAuNSAwdjQwIiBzdHJva2U9InJnYmEoMTUwLDE1MCwxNTAsMC4xKSIvPjwvc3ZnPg==')] dark:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHBhdGggZD0iTTAgMGg0MHY0MEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik0wIDAuNWg0ME0wIDQwLjVoNDBNMC41IDB2NDBNNDAuNSAwdjQwIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3N2Zz4=')] opacity-100 dark:opacity-70 pointer-events-none"
           />
         </div>
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.8, type: "spring", bounce: 0.4 }}
@@ -94,7 +81,7 @@ export default function Signup() {
         <Card className="w-full bg-white/70 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border border-white/40 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(16,185,129,0.1)] rounded-[2rem] overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-0" />
           <CardHeader className="space-y-2 relative z-10 pt-10">
-            <motion.div 
+            <motion.div
               whileHover={{ rotate: 180 }}
               transition={{ duration: 0.5 }}
               className="flex items-center justify-center mb-4"
