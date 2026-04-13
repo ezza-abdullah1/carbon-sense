@@ -1,0 +1,25 @@
+{
+  "last_checked": "2026-04-12T17:15:35.231362+00:00",
+  "sectors": {
+    "power": {
+      "last_year_processed": null,
+      "last_data_hash": "a8f5e92998ef7145dbd01d08d67045762c5a64f2576e14698ff36515508ed87a",
+      "last_run": "2026-04-12T21:22:19.902241+00:00",
+      "status": "failed"
+    },
+    "waste": {
+      "last_year_processed": null,
+      "last_data_hash": null,
+      "last_run": null,
+      "status": null
+    },
+    "transport": {
+      "last_year_processed": null,
+      "last_data_hash": null,
+      "last_run": null,
+      "status": null
+    }
+  },
+  "remote_last_modified": "Wed, 25 Mar 2026 22:41:15 GMT",
+  "remote_etag": "\"321f76dc528bc1d2dba14bc0d279d2f3-2\""
+}
