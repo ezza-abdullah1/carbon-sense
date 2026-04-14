@@ -76,7 +76,7 @@
   --chart-4: 25 95% 53%;
   --chart-5: 338 78% 56%;
 
-  --font-sans: Inter, IBM Plex Sans, system-ui, sans-serif;
+  --font-sans: "Inter", "Plus Jakarta Sans", IBM Plex Sans, system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: IBM Plex Mono, Menlo, monospace;
   --radius: .5rem; /* 8px */
@@ -239,6 +239,22 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.4);
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 114, 128, 0.8);
   }
 }
 

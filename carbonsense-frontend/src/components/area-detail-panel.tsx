@@ -196,11 +196,12 @@ export function AreaDetailPanel({
   ];
 
   return (
-    <Card className="w-full h-full min-h-0 flex flex-col">
-      <CardHeader className="flex-row items-start justify-between space-y-0 pb-4">
+    <Card className="w-full h-full min-h-0 flex flex-col bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-emerald-500/5 to-transparent pointer-events-none" />
+      <CardHeader className="flex-row items-start justify-between space-y-0 px-6 pt-6 pb-4 relative z-10 border-b border-white/10 shrink-0">
         <div className="space-y-1">
-          <CardTitle className="text-xl">{areaName}</CardTitle>
-          <p className="text-sm text-muted-foreground">Emission Details</p>
+          <CardTitle className="text-xl bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300">{areaName}</CardTitle>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Emission Details</p>
         </div>
         <Button
           variant="ghost"
@@ -208,13 +209,13 @@ export function AreaDetailPanel({
           onClick={onClose}
           data-testid="button-close-detail"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5 opacity-70 hover:opacity-100" />
         </Button>
       </CardHeader>
 
-      <CardContent className="flex-1 min-h-0 space-y-6 overflow-y-scroll overscroll-contain pr-2">
-        <div className="space-y-2">
-          <div className="flex items-baseline gap-2">
+      <CardContent className="flex-1 min-h-0 space-y-6 pt-6 px-6 overflow-y-auto overscroll-contain pb-6">
+        <div className="space-y-3">
+          <div className="flex items-baseline flex-wrap gap-x-2 gap-y-1">
             <span className="text-3xl font-mono font-bold">
               {totalEmissions.toFixed(2)}
             </span>

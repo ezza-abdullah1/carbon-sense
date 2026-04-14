@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ import {
   TrendingUp,
   TrendingDown,
   Calendar,
+  Factory,
 } from "lucide-react";
 import { EmissionChart } from "@/components/emission-chart";
 import { useAreas, useEmissions } from "@/hooks/use-emissions";
@@ -228,7 +230,7 @@ export function DataExplorer() {
   };
 
   return (
-    <div className="p-6 space-y-6 bg-muted/30 min-h-full">
+    <div className="p-6 space-y-6 min-h-full w-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -245,288 +247,301 @@ export function DataExplorer() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Historical Records</p>
-                <p className="text-2xl font-bold">{stats.historicalCount.toLocaleString()}</p>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-blue-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Forecast Records</p>
-                <p className="text-2xl font-bold">{stats.forecastCount.toLocaleString()}</p>
-              </div>
-              <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-amber-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avg Historical</p>
-                <p className="text-2xl font-bold">{formatNumber(stats.historicalAvg)}</p>
-                <p className="text-xs text-muted-foreground">tons CO₂e</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Forecast Trend</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold">
-                    {stats.change > 0 ? "+" : ""}{stats.change.toFixed(1)}%
-                  </p>
-                  {stats.change > 0 ? (
-                    <TrendingUp className="h-5 w-5 text-red-500" />
-                  ) : (
-                    <TrendingDown className="h-5 w-5 text-green-500" />
-                  )}
+        <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
+          <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-black/5 dark:border-white/5 shadow-2xl relative overflow-hidden h-full">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent pointer-events-none" />
+            <CardContent className="pt-6 relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Historical Records</p>
+                  <p className="text-2xl font-bold tracking-tight">{stats.historicalCount.toLocaleString()}</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center shadow-inner">
+                  <Calendar className="h-5 w-5 text-blue-500" />
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300, delay: 0.05 }}>
+          <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-black/5 dark:border-white/5 shadow-2xl relative overflow-hidden h-full">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent pointer-events-none" />
+            <CardContent className="pt-6 relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Forecast Records</p>
+                  <p className="text-2xl font-bold tracking-tight">{stats.forecastCount.toLocaleString()}</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-amber-500/20 flex items-center justify-center shadow-inner">
+                  <TrendingUp className="h-5 w-5 text-amber-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300, delay: 0.1 }}>
+          <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-black/5 dark:border-white/5 shadow-2xl relative overflow-hidden h-full">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent pointer-events-none" />
+            <CardContent className="pt-6 relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Avg Historical</p>
+                  <p className="text-2xl font-bold tracking-tight">{formatNumber(stats.historicalAvg)}</p>
+                  <p className="text-xs text-muted-foreground">tons CO₂e</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-purple-500/20 flex items-center justify-center shadow-inner">
+                  <Factory className="h-5 w-5 text-purple-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300, delay: 0.15 }}>
+          <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-black/5 dark:border-white/5 shadow-2xl relative overflow-hidden h-full">
+            <div className={`absolute inset-0 bg-gradient-to-br ${stats.change > 0 ? "from-red-500/10" : "from-emerald-500/10"} to-transparent pointer-events-none`} />
+            <CardContent className="pt-6 relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground font-medium">Forecast Trend</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-2xl font-bold tracking-tight">
+                      {stats.change > 0 ? "+" : ""}{stats.change.toFixed(1)}%
+                    </p>
+                    {stats.change > 0 ? (
+                      <TrendingUp className="h-6 w-6 text-red-500/80 drop-shadow-sm" />
+                    ) : (
+                      <TrendingDown className="h-6 w-6 text-emerald-500/80 drop-shadow-sm" />
+                    )}
+                  </div>
+                </div>
+                <div className={`h-10 w-10 rounded-xl ${stats.change > 0 ? "bg-red-500/20" : "bg-emerald-500/20"} flex items-center justify-center shadow-inner`}>
+                  {stats.change > 0 ? <TrendingUp className="h-5 w-5 text-red-500" /> : <TrendingDown className="h-5 w-5 text-emerald-500" />}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Filters and View Toggle */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-end gap-4">
-            {/* View Mode Toggle */}
-            <div className="space-y-2">
-              <Label>View</Label>
-              <div className="flex gap-1 bg-muted p-1 rounded-lg">
-                <Button
-                  variant={viewMode === "table" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("table")}
-                >
-                  <TableIcon className="h-4 w-4 mr-1" />
-                  Table
-                </Button>
-                <Button
-                  variant={viewMode === "graph" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("graph")}
-                >
-                  <BarChart3 className="h-4 w-4 mr-1" />
-                  Graph
-                </Button>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-black/5 dark:border-white/5 shadow-xl relative overflow-hidden">
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-end gap-5">
+              {/* View Mode Toggle */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">View</Label>
+                <div className="flex gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl border border-black/5 dark:border-white/5 backdrop-blur-md">
+                  <Button
+                    variant={viewMode === "table" ? "secondary" : "ghost"}
+                    size="sm"
+                    className={`rounded-lg ${viewMode === "table" ? "shadow-sm bg-background dark:bg-background" : ""}`}
+                    onClick={() => setViewMode("table")}
+                  >
+                    <TableIcon className="h-4 w-4 mr-1.5" />
+                    Table
+                  </Button>
+                  <Button
+                    variant={viewMode === "graph" ? "secondary" : "ghost"}
+                    size="sm"
+                    className={`rounded-lg ${viewMode === "graph" ? "shadow-sm bg-background dark:bg-background" : ""}`}
+                    onClick={() => setViewMode("graph")}
+                  >
+                    <BarChart3 className="h-4 w-4 mr-1.5" />
+                    Graph
+                  </Button>
+                </div>
+              </div>
+
+              {/* Data Type Filter */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Data Type</Label>
+                <Select value={dataType} onValueChange={(v) => setDataType(v as DataType)}>
+                  <SelectTrigger className="w-[150px] rounded-xl bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 focus:ring-1 focus:ring-emerald-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-black/5 dark:border-white/5 shadow-xl backdrop-blur-2xl bg-white/90 dark:bg-[#0a0a0a]/90">
+                    <SelectItem value="both">All Data</SelectItem>
+                    <SelectItem value="historical">Historical</SelectItem>
+                    <SelectItem value="forecast">Forecast</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Area Filter */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Area</Label>
+                <Select value={selectedArea} onValueChange={setSelectedArea}>
+                  <SelectTrigger className="w-[220px] rounded-xl bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 focus:ring-1 focus:ring-emerald-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-black/5 dark:border-white/5 shadow-xl backdrop-blur-2xl bg-white/90 dark:bg-[#0a0a0a]/90">
+                    <SelectItem value="all">All Areas</SelectItem>
+                    {areas.map((area: AreaInfo) => (
+                      <SelectItem key={area.id} value={area.id}>
+                        {area.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Search */}
+              <div className="space-y-2 flex-1 min-w-[240px]">
+                <Label className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">Search</Label>
+                <div className="relative group">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-emerald-500 transition-colors" />
+                  <Input
+                    placeholder="Search by area or date..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 focus-visible:ring-emerald-500 rounded-xl transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Results Count */}
+              <div className="ml-auto flex items-center h-10">
+                <Badge variant="secondary" className="text-xs font-mono bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 px-3 py-1">
+                  {filteredData.length.toLocaleString()} <span className="opacity-50 ml-1 font-sans">records</span>
+                </Badge>
               </div>
             </div>
-
-            {/* Data Type Filter */}
-            <div className="space-y-2">
-              <Label>Data Type</Label>
-              <Select value={dataType} onValueChange={(v) => setDataType(v as DataType)}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="both">All Data</SelectItem>
-                  <SelectItem value="historical">Historical</SelectItem>
-                  <SelectItem value="forecast">Forecast</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Area Filter */}
-            <div className="space-y-2">
-              <Label>Area</Label>
-              <Select value={selectedArea} onValueChange={setSelectedArea}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Areas</SelectItem>
-                  {areas.map((area: AreaInfo) => (
-                    <SelectItem key={area.id} value={area.id}>
-                      {area.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Search */}
-            <div className="space-y-2 flex-1 min-w-[200px]">
-              <Label>Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by area or date..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
-            {/* Results Count */}
-            <div className="ml-auto">
-              <Badge variant="secondary" className="text-sm">
-                {filteredData.length.toLocaleString()} records
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Data Display */}
-      {viewMode === "table" ? (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="sticky top-0 bg-card z-10">
-                  <TableRow>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleSort("date")}
-                    >
-                      <div className="flex items-center">
-                        Date
-                        <SortIcon field="date" />
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleSort("area_name")}
-                    >
-                      <div className="flex items-center">
-                        Area
-                        <SortIcon field="area_name" />
-                      </div>
-                    </TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50 text-right"
-                      onClick={() => handleSort("transport")}
-                    >
-                      <div className="flex items-center justify-end">
-                        Transport
-                        <SortIcon field="transport" />
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50 text-right"
-                      onClick={() => handleSort("industry")}
-                    >
-                      <div className="flex items-center justify-end">
-                        Industry
-                        <SortIcon field="industry" />
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50 text-right"
-                      onClick={() => handleSort("energy")}
-                    >
-                      <div className="flex items-center justify-end">
-                        Energy
-                        <SortIcon field="energy" />
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50 text-right"
-                      onClick={() => handleSort("waste")}
-                    >
-                      <div className="flex items-center justify-end">
-                        Waste
-                        <SortIcon field="waste" />
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50 text-right"
-                      onClick={() => handleSort("buildings")}
-                    >
-                      <div className="flex items-center justify-end">
-                        Buildings
-                        <SortIcon field="buildings" />
-                      </div>
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer hover:bg-muted/50 text-right"
-                      onClick={() => handleSort("total")}
-                    >
-                      <div className="flex items-center justify-end">
-                        Total
-                        <SortIcon field="total" />
-                      </div>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.slice(0, 500).map((row, idx) => (
-                    <TableRow key={`${row.area_id}-${row.date}-${idx}`}>
-                      <TableCell className="font-mono text-sm">
-                        {new Date(row.date).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </TableCell>
-                      <TableCell className="font-medium max-w-[200px] truncate">
-                        {row.area_name}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={row.type === "historical" ? "default" : "secondary"}
-                          className={
-                            row.type === "historical"
-                              ? "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"
-                              : "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20"
-                          }
-                        >
-                          {row.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatNumber(row.transport)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatNumber(row.industry)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatNumber(row.energy)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatNumber(row.waste)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatNumber(row.buildings)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-semibold">
-                        {formatNumber(row.total)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            {filteredData.length > 500 && (
-              <div className="p-4 text-center text-sm text-muted-foreground border-t">
-                Showing first 500 of {filteredData.length.toLocaleString()} records.
-                Use filters to narrow down results.
-              </div>
-            )}
           </CardContent>
         </Card>
-      ) : (
+      </motion.div>
+
+      {/* Data Display */}
+      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+        {viewMode === "table" ? (
+          <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-3xl backdrop-saturate-200 border-black/5 dark:border-white/5 shadow-2xl relative overflow-hidden">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 z-10 bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-black/5 dark:border-white/5">
+                    <TableRow className="hover:bg-transparent border-none">
+                      <TableHead
+                        className="cursor-pointer hover:text-emerald-600 transition-colors py-4 px-6"
+                        onClick={() => handleSort("date")}
+                      >
+                        <div className="flex items-center text-xs tracking-wider uppercase font-bold text-foreground opacity-80">
+                          Date
+                          <SortIcon field="date" />
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:text-emerald-600 transition-colors py-4 px-6"
+                        onClick={() => handleSort("area_name")}
+                      >
+                        <div className="flex items-center text-xs tracking-wider uppercase font-bold text-foreground opacity-80">
+                          Area
+                          <SortIcon field="area_name" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="py-4 px-6 text-xs tracking-wider uppercase font-bold text-foreground opacity-80">Type</TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:text-emerald-600 transition-colors py-4 px-6 text-right"
+                        onClick={() => handleSort("transport")}
+                      >
+                        <div className="flex items-center justify-end text-xs tracking-wider uppercase font-bold text-foreground opacity-80">
+                          Transport
+                          <SortIcon field="transport" />
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:text-emerald-600 transition-colors py-4 px-6 text-right"
+                        onClick={() => handleSort("industry")}
+                      >
+                        <div className="flex items-center justify-end text-xs tracking-wider uppercase font-bold text-foreground opacity-80">
+                          Industry
+                          <SortIcon field="industry" />
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:text-emerald-600 transition-colors py-4 px-6 text-right"
+                        onClick={() => handleSort("energy")}
+                      >
+                        <div className="flex items-center justify-end text-xs tracking-wider uppercase font-bold text-foreground opacity-80">
+                          Energy
+                          <SortIcon field="energy" />
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:text-emerald-600 transition-colors py-4 px-6 text-right"
+                        onClick={() => handleSort("waste")}
+                      >
+                        <div className="flex items-center justify-end text-xs tracking-wider uppercase font-bold text-foreground opacity-80">
+                          Waste
+                          <SortIcon field="waste" />
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:text-emerald-600 transition-colors py-4 px-6 text-right"
+                        onClick={() => handleSort("buildings")}
+                      >
+                        <div className="flex items-center justify-end text-xs tracking-wider uppercase font-bold text-foreground opacity-80">
+                          Buildings
+                          <SortIcon field="buildings" />
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="cursor-pointer hover:text-emerald-600 transition-colors py-4 px-6 text-right"
+                        onClick={() => handleSort("total")}
+                      >
+                        <div className="flex items-center justify-end text-xs tracking-wider uppercase font-bold text-foreground opacity-80">
+                          Total
+                          <SortIcon field="total" />
+                        </div>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-black/5 dark:divide-white/5">
+                    {filteredData.slice(0, 500).map((row, idx) => (
+                      <TableRow key={`${row.area_id}-${row.date}-${idx}`} className="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors border-none group">
+                        <TableCell className="font-mono text-[13px] px-6 py-3 text-muted-foreground group-hover:text-foreground transition-colors">
+                          {new Date(row.date).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </TableCell>
+                        <TableCell className="font-medium max-w-[200px] truncate px-6 py-3">
+                          {row.area_name}
+                        </TableCell>
+                        <TableCell className="px-6 py-3">
+                          <Badge
+                            variant={row.type === "historical" ? "default" : "secondary"}
+                            className={
+                              row.type === "historical"
+                                ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                                : "bg-amber-500/10 text-amber-600 border border-amber-500/20 border-dashed"
+                            }
+                          >
+                            {row.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-[13px] px-6 py-3 text-muted-foreground">{formatNumber(row.transport)}</TableCell>
+                        <TableCell className="text-right font-mono text-[13px] px-6 py-3 text-muted-foreground">{formatNumber(row.industry)}</TableCell>
+                        <TableCell className="text-right font-mono text-[13px] px-6 py-3 text-muted-foreground">{formatNumber(row.energy)}</TableCell>
+                        <TableCell className="text-right font-mono text-[13px] px-6 py-3 text-muted-foreground">{formatNumber(row.waste)}</TableCell>
+                        <TableCell className="text-right font-mono text-[13px] px-6 py-3 text-muted-foreground">{formatNumber(row.buildings)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm font-semibold px-6 py-3 text-foreground">
+                          {formatNumber(row.total)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {filteredData.length > 500 && (
+                <div className="p-4 text-center text-xs font-medium text-muted-foreground border-t border-black/5 dark:border-white/5 bg-black/[0.01] dark:bg-white/[0.01]">
+                  Showing first 500 of {filteredData.length.toLocaleString()} records.
+                  Use filters to narrow down results.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
         <div className="grid grid-cols-1 gap-6">
           <EmissionChart
             title="Emission Trends Over Time"
@@ -591,6 +606,7 @@ export function DataExplorer() {
           </div>
         </div>
       )}
+      </motion.div>
     </div>
   );
 }
