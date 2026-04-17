@@ -20,6 +20,7 @@ import {
   Loader2,
   Database,
   TrendingUp,
+  TrendingDown,
   Brain,
   Download,
   Activity,
@@ -30,11 +31,22 @@ import {
   Sparkles,
   Layers,
   Filter,
-  X
+  X,
+  Calendar,
+  Trophy,
+  RotateCcw,
+  LineChart
 } from "lucide-react";
 import type { Sector, DataType, LeaderboardEntry } from "@shared/schema";
 import type { TimeInterval } from "@/lib/api";
-import { useAreas, useLatestEmissions, useLeaderboard, useTimeSeriesData, useCombinedTimeSeriesData } from "@/hooks/use-emissions";
+import { useAreas, useEmissions, useLatestEmissions, useLeaderboard, useTimeSeriesData, useCombinedTimeSeriesData } from "@/hooks/use-emissions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { EmissionDataPoint, AreaInfo } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -47,6 +59,18 @@ export default function Dashboard() {
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+
+  // Analytics tab filters
+  const [trendsSector, setTrendsSector] = useState<string>("all");
+  const [trendsArea, setTrendsArea] = useState<string>("all");
+  const [trendsTopN, setTrendsTopN] = useState<number>(5);
+  const [trendsSeasonalYear, setTrendsSeasonalYear] = useState<string>("all");
+
+  // Forecast tab filters
+  const [forecastView, setForecastView] = useState<'table' | 'graph'>('table');
+  const [forecastSector, setForecastSector] = useState<string>("all");
+  const [forecastArea, setForecastArea] = useState<string>("all");
+  const [forecastGroupBy, setForecastGroupBy] = useState<'month' | 'year'>('month');
 
   // Fetch real data using hooks (pass selectedSectors and timeInterval for filtering)
   const { data: areas = [], isLoading: areasLoading } = useAreas();
@@ -311,6 +335,349 @@ export default function Dashboard() {
   }, [combinedData, selectedSectors]);
 
   const selectedArea = areas.find((a: AreaInfo) => a.id === selectedAreaId);
+
+  // ── Analytics tab: fetch ALL historical data once ──
+  const { data: allHistorical = [] } = useEmissions({ data_type: 'historical' });
+
+  // Filter historical data by selected sector & area
+  const trendsFiltered = useMemo(() => {
+    let data = allHistorical;
+    if (trendsSector !== 'all') {
+      data = data.filter((d: EmissionDataPoint) => (d as any)[trendsSector] > 0);
+    }
+    if (trendsArea !== 'all') {
+      data = data.filter((d: EmissionDataPoint) => d.area_id === trendsArea);
+    }
+    return data;
+  }, [allHistorical, trendsSector, trendsArea]);
+
+  // Areas available for the selected sector
+  const trendsAreaOptions = useMemo(() => {
+    let data = allHistorical;
+    if (trendsSector !== 'all') {
+      data = data.filter((d: EmissionDataPoint) => (d as any)[trendsSector] > 0);
+    }
+    const unique = new Map<string, string>();
+    data.forEach((d: EmissionDataPoint) => unique.set(d.area_id, d.area_name));
+    return Array.from(unique.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [allHistorical, trendsSector]);
+
+  // Top emission sources bar chart for analytics tab
+  const trendsTopSourcesData = useMemo(() => {
+    const areaMap = new Map<string, { name: string; total: number }>();
+    trendsFiltered.forEach((d: EmissionDataPoint) => {
+      const val = trendsSector === 'all' ? d.total : ((d as any)[trendsSector] as number || 0);
+      const existing = areaMap.get(d.area_id) || { name: d.area_name, total: 0 };
+      existing.total += val;
+      areaMap.set(d.area_id, existing);
+    });
+    const sorted = Array.from(areaMap.values()).sort((a, b) => b.total - a.total).slice(0, trendsTopN);
+    return {
+      labels: sorted.map(s => s.name),
+      datasets: [{
+        label: `Total Emissions (thousands tons CO₂e)`,
+        data: sorted.map(s => Math.round(s.total / 1000)),
+        backgroundColor: "hsl(142, 60%, 50%)",
+      }],
+    };
+  }, [trendsFiltered, trendsTopN, trendsSector]);
+
+  // Sector distribution pie for analytics tab
+  const trendsSectorPieData = useMemo(() => {
+    const totals = { transport: 0, industry: 0, energy: 0, waste: 0, buildings: 0 };
+    trendsFiltered.forEach((d: EmissionDataPoint) => {
+      totals.transport += d.transport;
+      totals.industry += d.industry;
+      totals.energy += d.energy;
+      totals.waste += d.waste;
+      totals.buildings += d.buildings;
+    });
+    const labels = trendsSector === 'all'
+      ? ["Transport", "Industry", "Energy", "Waste", "Buildings"]
+      : [sectorConfig[trendsSector as Sector]?.label || trendsSector];
+    const data = trendsSector === 'all'
+      ? Object.values(totals).map(v => Math.round(v / 1000))
+      : [Math.round(totals[trendsSector as keyof typeof totals] / 1000)];
+    const colors = trendsSector === 'all'
+      ? ["hsl(217, 91%, 60%)", "hsl(280, 67%, 55%)", "hsl(45, 93%, 47%)", "hsl(25, 95%, 53%)", "hsl(338, 78%, 56%)"]
+      : [sectorConfig[trendsSector as Sector]?.historical || "hsl(142, 60%, 50%)"];
+    return { labels, datasets: [{ label: "Emissions by Sector", data, backgroundColor: colors }] };
+  }, [trendsFiltered, trendsSector]);
+
+  // Available years in the filtered data
+  const trendsYearOptions = useMemo(() => {
+    const years = new Set<string>();
+    trendsFiltered.forEach((d: EmissionDataPoint) => years.add(d.date.slice(0, 4)));
+    return Array.from(years).sort();
+  }, [trendsFiltered]);
+
+  // Monthly emission patterns for analytics tab (respects seasonal year filter)
+  const trendsMonthlyData = useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const sectorsToShow: Sector[] = trendsSector === 'all'
+      ? ['transport', 'industry', 'energy', 'waste', 'buildings']
+      : [trendsSector as Sector];
+
+    // Filter by year if specific year chosen
+    const yearFiltered = trendsSeasonalYear === 'all'
+      ? trendsFiltered
+      : trendsFiltered.filter(d => d.date.startsWith(trendsSeasonalYear));
+
+    const datasets = sectorsToShow.map(sector => {
+      const monthMap = new Map<string, { sum: number; count: number }>();
+      yearFiltered.forEach((item: EmissionDataPoint) => {
+        const date = new Date(item.date);
+        const label = date.toLocaleDateString('en-US', { month: 'short' });
+        const value = (item as any)[sector] as number;
+        if (value > 0) {
+          const existing = monthMap.get(label) || { sum: 0, count: 0 };
+          monthMap.set(label, { sum: existing.sum + value, count: existing.count + 1 });
+        }
+      });
+      const allValues = Array.from(monthMap.values()).map(v => v.sum / v.count);
+      const maxValue = allValues.length > 0 ? Math.max(...allValues) : 0;
+      const shouldScale = maxValue > 1000;
+      return {
+        label: sectorConfig[sector]?.label || sector,
+        data: months.map(m => {
+          const entry = monthMap.get(m);
+          if (!entry) return 0;
+          const avg = entry.sum / entry.count;
+          return shouldScale ? Math.round(avg / 1000) : Math.round(avg * 10) / 10;
+        }),
+        backgroundColor: sectorConfig[sector]?.historical || "hsl(142, 60%, 50%)",
+      };
+    });
+
+    return { labels: months, datasets };
+  }, [trendsFiltered, trendsSector, trendsSeasonalYear]);
+
+  // ── Emission Timeline (line chart, all months chronologically) ──
+  const trendsTimelineData = useMemo(() => {
+    const monthMap = new Map<string, number>();
+    trendsFiltered.forEach((d: EmissionDataPoint) => {
+      const val = trendsSector === 'all' ? d.total : ((d as any)[trendsSector] as number || 0);
+      if (val > 0) monthMap.set(d.date, (monthMap.get(d.date) || 0) + val);
+    });
+    const sorted = Array.from(monthMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    const shouldScale = sorted.length > 0 && Math.max(...sorted.map(([_, v]) => v)) > 1000;
+    return {
+      labels: sorted.map(([d]) => {
+        const dt = new Date(d);
+        return dt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      }),
+      datasets: [{
+        label: shouldScale ? 'Emissions (kt CO₂e)' : 'Emissions (t CO₂e)',
+        data: sorted.map(([_, v]) => shouldScale ? Math.round(v / 1000) : Math.round(v * 10) / 10),
+        backgroundColor: "rgba(16, 185, 129, 0.2)",
+        borderColor: "hsl(160, 84%, 39%)",
+        borderWidth: 2,
+      }],
+    };
+  }, [trendsFiltered, trendsSector]);
+
+  // ── Yearly comparison bar chart ──
+  const trendsYearlyData = useMemo(() => {
+    const yearMap = new Map<string, number>();
+    trendsFiltered.forEach((d: EmissionDataPoint) => {
+      const year = d.date.slice(0, 4);
+      const val = trendsSector === 'all' ? d.total : ((d as any)[trendsSector] as number || 0);
+      if (val > 0) yearMap.set(year, (yearMap.get(year) || 0) + val);
+    });
+    const sorted = Array.from(yearMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    const shouldScale = sorted.length > 0 && Math.max(...sorted.map(([_, v]) => v)) > 1000;
+    return {
+      labels: sorted.map(([y]) => y),
+      datasets: [{
+        label: shouldScale ? 'Annual emissions (kt CO₂e)' : 'Annual emissions (t CO₂e)',
+        data: sorted.map(([_, v]) => shouldScale ? Math.round(v / 1000) : Math.round(v * 10) / 10),
+        backgroundColor: "hsl(217, 91%, 60%)",
+      }],
+    };
+  }, [trendsFiltered, trendsSector]);
+
+  // ── Key stats (peak month, YoY, top emitter, data span) ──
+  const trendsStats = useMemo(() => {
+    if (trendsFiltered.length === 0) {
+      return { peakMonth: '—', yoyPct: 0, topEmitter: '—', topEmitterPct: 0, dataSpan: '—', months: 0 };
+    }
+
+    // Peak month (across all years, avg by month)
+    const monthAvg = new Map<string, { sum: number; count: number }>();
+    trendsFiltered.forEach((d: EmissionDataPoint) => {
+      const label = new Date(d.date).toLocaleDateString('en-US', { month: 'long' });
+      const val = trendsSector === 'all' ? d.total : ((d as any)[trendsSector] as number || 0);
+      const entry = monthAvg.get(label) || { sum: 0, count: 0 };
+      monthAvg.set(label, { sum: entry.sum + val, count: entry.count + 1 });
+    });
+    const peakMonthEntry = Array.from(monthAvg.entries())
+      .map(([m, v]) => [m, v.sum / v.count] as [string, number])
+      .sort((a, b) => b[1] - a[1])[0];
+    const peakMonth = peakMonthEntry ? peakMonthEntry[0] : '—';
+
+    // YoY — compare latest year to previous year
+    const yearTotals = new Map<string, number>();
+    trendsFiltered.forEach((d: EmissionDataPoint) => {
+      const y = d.date.slice(0, 4);
+      const val = trendsSector === 'all' ? d.total : ((d as any)[trendsSector] as number || 0);
+      yearTotals.set(y, (yearTotals.get(y) || 0) + val);
+    });
+    const years = Array.from(yearTotals.keys()).sort();
+    let yoyPct = 0;
+    if (years.length >= 2) {
+      const latest = yearTotals.get(years[years.length - 1]) || 0;
+      const prev = yearTotals.get(years[years.length - 2]) || 0;
+      yoyPct = prev > 0 ? ((latest - prev) / prev) * 100 : 0;
+    }
+
+    // Top emitter
+    const areaMap = new Map<string, { name: string; total: number }>();
+    trendsFiltered.forEach((d: EmissionDataPoint) => {
+      const val = trendsSector === 'all' ? d.total : ((d as any)[trendsSector] as number || 0);
+      const existing = areaMap.get(d.area_id) || { name: d.area_name, total: 0 };
+      existing.total += val;
+      areaMap.set(d.area_id, existing);
+    });
+    const sortedAreas = Array.from(areaMap.values()).sort((a, b) => b.total - a.total);
+    const grandTotal = sortedAreas.reduce((s, a) => s + a.total, 0);
+    const topEmitter = sortedAreas[0]?.name || '—';
+    const topEmitterPct = grandTotal > 0 && sortedAreas[0] ? (sortedAreas[0].total / grandTotal) * 100 : 0;
+
+    // Data span
+    const dates = trendsFiltered.map(d => d.date).sort();
+    const first = dates[0];
+    const last = dates[dates.length - 1];
+    const fmt = (s: string) => new Date(s).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const uniqueMonths = new Set(dates).size;
+    const dataSpan = first && last ? `${fmt(first)} – ${fmt(last)}` : '—';
+
+    return { peakMonth, yoyPct, topEmitter, topEmitterPct, dataSpan, months: uniqueMonths };
+  }, [trendsFiltered, trendsSector]);
+
+  // ── Forecast tab: fetch ALL forecast data ──
+  const { data: allForecast = [] } = useEmissions({ data_type: 'forecast' });
+
+  // Filter forecast data
+  const forecastFiltered = useMemo(() => {
+    let data = allForecast;
+    if (forecastSector !== 'all') {
+      data = data.filter((d: EmissionDataPoint) => (d as any)[forecastSector] > 0);
+    }
+    if (forecastArea !== 'all') {
+      data = data.filter((d: EmissionDataPoint) => d.area_id === forecastArea);
+    }
+    return data;
+  }, [allForecast, forecastSector, forecastArea]);
+
+  // Available areas for forecast filter
+  const forecastAreaOptions = useMemo(() => {
+    let data = allForecast;
+    if (forecastSector !== 'all') {
+      data = data.filter((d: EmissionDataPoint) => (d as any)[forecastSector] > 0);
+    }
+    const unique = new Map<string, string>();
+    data.forEach((d: EmissionDataPoint) => unique.set(d.area_id, d.area_name));
+    return Array.from(unique.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [allForecast, forecastSector]);
+
+  // Table rows: pivot forecast by (area × period)
+  // periods = months or years
+  const forecastTable = useMemo(() => {
+    // Get all unique periods from filtered data
+    const periodKey = (d: EmissionDataPoint) =>
+      forecastGroupBy === 'month'
+        ? new Date(d.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+        : d.date.slice(0, 4);
+
+    const allPeriodsSet = new Set<string>();
+    const areaMap = new Map<string, { id: string; name: string; periods: Map<string, number> }>();
+
+    forecastFiltered.forEach((d: EmissionDataPoint) => {
+      const period = periodKey(d);
+      allPeriodsSet.add(period);
+      const val = forecastSector === 'all' ? d.total : ((d as any)[forecastSector] as number || 0);
+      const entry = areaMap.get(d.area_id) || { id: d.area_id, name: d.area_name, periods: new Map() };
+      entry.periods.set(period, (entry.periods.get(period) || 0) + val);
+      areaMap.set(d.area_id, entry);
+    });
+
+    // Sort periods chronologically
+    const periods = Array.from(allPeriodsSet).sort((a, b) => {
+      if (forecastGroupBy === 'year') return a.localeCompare(b);
+      return new Date(a).getTime() - new Date(b).getTime();
+    });
+
+    // Sort areas by total emissions descending
+    const areas = Array.from(areaMap.values())
+      .map(a => ({
+        ...a,
+        total: Array.from(a.periods.values()).reduce((s, v) => s + v, 0),
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    return { periods, areas };
+  }, [forecastFiltered, forecastGroupBy, forecastSector]);
+
+  // Chart data: total forecast per period
+  const forecastChartData = useMemo(() => {
+    const periodTotals = new Map<string, number>();
+    forecastTable.periods.forEach(p => periodTotals.set(p, 0));
+    forecastTable.areas.forEach(a => {
+      a.periods.forEach((v, p) => periodTotals.set(p, (periodTotals.get(p) || 0) + v));
+    });
+    const shouldScale = Math.max(...Array.from(periodTotals.values()), 0) > 1000;
+    return {
+      labels: forecastTable.periods,
+      datasets: [{
+        label: shouldScale ? 'Forecast (kt CO₂e)' : 'Forecast (t CO₂e)',
+        data: forecastTable.periods.map(p => {
+          const v = periodTotals.get(p) || 0;
+          return shouldScale ? Math.round(v / 1000) : Math.round(v * 10) / 10;
+        }),
+        backgroundColor: "hsl(280, 67%, 55%)",
+        borderColor: "hsl(280, 67%, 55%)",
+        borderWidth: 2,
+      }],
+    };
+  }, [forecastTable]);
+
+  // CSV export for forecast
+  const handleExportForecastCsv = () => {
+    if (forecastTable.areas.length === 0) return;
+    const header = ['Area', ...forecastTable.periods, 'Total'].join(',');
+    const rows = [header];
+    forecastTable.areas.forEach(a => {
+      const vals = forecastTable.periods.map(p => (a.periods.get(p) || 0).toFixed(2));
+      rows.push([`"${a.name}"`, ...vals, a.total.toFixed(2)].join(','));
+    });
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `forecast_${forecastSector}_${forecastArea}_${forecastGroupBy}_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── CSV export for historical data ──
+  const handleExportCsv = () => {
+    if (trendsFiltered.length === 0) return;
+    const headers = ['date', 'area_name', 'area_id', 'transport', 'industry', 'energy', 'waste', 'buildings', 'total'];
+    const rows = [headers.join(',')];
+    trendsFiltered.forEach((d: EmissionDataPoint) => {
+      rows.push([
+        d.date, `"${d.area_name}"`, d.area_id,
+        d.transport, d.industry, d.energy, d.waste, d.buildings, d.total,
+      ].join(','));
+    });
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `emissions_${trendsSector}_${trendsArea}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Loading state
   if (areasLoading || emissionsLoading) {
@@ -988,199 +1355,499 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="analytics" className="h-full mt-0 overflow-auto bg-muted/30">
-            <div className="p-8">
-              {/* Page Header */}
-              <div className="mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            {/* Sticky filter bar */}
+            <div className="sticky top-0 z-20 bg-background/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-border/50">
+              <div className="px-8 py-4 flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-3 mr-4">
+                  <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Historical Trends</h1>
-                    <p className="text-muted-foreground">
-                      Analyze past emission patterns across {areas.length} sources
-                    </p>
+                    <h1 className="text-lg font-bold tracking-tight leading-tight">Historical Trends</h1>
+                    <p className="text-xs text-muted-foreground">{trendsStats.dataSpan}</p>
                   </div>
                 </div>
-              </div>
 
-              {/* Main Charts Grid */}
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-                <div className="xl:col-span-2">
-                  <EmissionChart
-                    title="Top Emission Sources"
-                    type="bar"
-                    data={areaBarData}
-                  />
-                </div>
-                <EmissionChart
-                  title="Sector Distribution"
-                  type="doughnut"
-                  data={sectorPieData}
-                />
-              </div>
+                <div className="h-8 w-px bg-border mx-1 hidden md:block" />
 
-              {/* Monthly Comparison Section */}
-              <div className="mb-8">
-                <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-black/5 dark:border-white/5 shadow-2xl overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 pointer-events-none" />
-                    <CardHeader className="relative z-10">
-                      <CardTitle>Monthly Emission Patterns</CardTitle>
-                      <CardDescription>
-                        Average emissions by month across all years - identify seasonal trends
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="relative z-10">
-                      {selectedSectors.length === 0 ? (
-                        <div className="py-12 text-center flex flex-col items-center justify-center">
-                          <motion.div
-                            animate={{ rotate: [0, 10, -10, 0] }}
-                            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-                          >
-                            <BarChart3 className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                          </motion.div>
-                          <p className="text-muted-foreground font-medium">Select sectors from the Map View to see monthly patterns</p>
-                        </div>
-                      ) : (
-                        <EmissionChart
-                          title=""
-                          type="bar"
-                          data={monthlyComparisonData}
-                        />
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </div>
-
-              {/* Year over Year Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-blue-500/10 shadow-lg relative overflow-hidden h-full">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent pointer-events-none" />
-                    <CardContent className="pt-6 relative z-10">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center shadow-inner">
-                          <Database className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Data Source</p>
-                          <p className="text-lg font-bold tracking-tight">Climate Trace</p>
-                          <p className="text-xs text-muted-foreground">2021 - Present</p>
-                        </div>
+                <div className="flex flex-wrap items-center gap-2 flex-1">
+                  <Select value={trendsSector} onValueChange={(v) => { setTrendsSector(v); setTrendsArea("all"); }}>
+                    <SelectTrigger className="w-[170px] h-9 bg-white/80 dark:bg-[#0a0a0a]/80">
+                      <div className="flex items-center gap-2">
+                        <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                        <SelectValue placeholder="Sector" />
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300, delay: 0.05 }}>
-                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-emerald-500/10 shadow-lg relative overflow-hidden h-full">
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sectors</SelectItem>
+                      <SelectItem value="transport">Transport</SelectItem>
+                      <SelectItem value="industry">Industry</SelectItem>
+                      <SelectItem value="energy">Energy</SelectItem>
+                      <SelectItem value="waste">Waste</SelectItem>
+                      <SelectItem value="buildings">Buildings</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={trendsArea} onValueChange={setTrendsArea}>
+                    <SelectTrigger className="w-[220px] h-9 bg-white/80 dark:bg-[#0a0a0a]/80">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                        <SelectValue placeholder="Area" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[320px]">
+                      <SelectItem value="all">All Areas ({trendsAreaOptions.length})</SelectItem>
+                      {trendsAreaOptions.map(([id, name]) => (
+                        <SelectItem key={id} value={id}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {(trendsSector !== 'all' || trendsArea !== 'all') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setTrendsSector('all'); setTrendsArea('all'); }}
+                      className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Reset
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportCsv}
+                    disabled={trendsFiltered.length === 0}
+                    className="h-9 gap-1.5"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export CSV
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 space-y-6">
+              {/* Key Stats — 4 meaningful cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-emerald-500/10 shadow-lg h-full relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none" />
                     <CardContent className="pt-6 relative z-10">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-emerald-500/20 flex items-center justify-center shadow-inner">
-                          <MapPin className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className="h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                          <Activity className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Coverage</p>
-                          <p className="text-lg font-bold tracking-tight">{areas.length} Sources</p>
-                          <p className="text-xs text-muted-foreground">Lahore Division</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground font-medium">Total Emissions</p>
+                          <p className="text-xl font-bold tracking-tight truncate">
+                            {(() => {
+                              if (trendsFiltered.length === 0) return '—';
+                              const total = trendsFiltered.reduce((sum: number, d: EmissionDataPoint) => sum + (trendsSector === 'all' ? d.total : (d as any)[trendsSector] || 0), 0);
+                              if (total >= 1_000_000) return `${(total / 1_000_000).toFixed(2)}M`;
+                              if (total >= 1_000) return `${(total / 1_000).toFixed(1)}K`;
+                              return total.toLocaleString('en-US', { maximumFractionDigits: 0 });
+                            })()}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">tons CO₂e</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 </motion.div>
-                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300, delay: 0.1 }}>
-                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-amber-500/10 shadow-lg relative overflow-hidden h-full">
+
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.05 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-purple-500/10 shadow-lg h-full relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent pointer-events-none" />
+                    <CardContent className="pt-6 relative z-10">
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                          <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground font-medium">Peak Month</p>
+                          <p className="text-xl font-bold tracking-tight truncate">{trendsStats.peakMonth}</p>
+                          <p className="text-[11px] text-muted-foreground">highest avg emissions</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
+                  <Card className={`bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-lg h-full relative overflow-hidden ${trendsStats.yoyPct >= 0 ? 'border-rose-500/10' : 'border-emerald-500/10'}`}>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${trendsStats.yoyPct >= 0 ? 'from-rose-500/10' : 'from-emerald-500/10'} to-transparent pointer-events-none`} />
+                    <CardContent className="pt-6 relative z-10">
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${trendsStats.yoyPct >= 0 ? 'bg-rose-500/20' : 'bg-emerald-500/20'}`}>
+                          {trendsStats.yoyPct >= 0 ? (
+                            <TrendingUp className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                          ) : (
+                            <TrendingDown className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground font-medium">Year-over-Year</p>
+                          <p className={`text-xl font-bold tracking-tight ${trendsStats.yoyPct >= 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                            {trendsStats.yoyPct >= 0 ? '+' : ''}{trendsStats.yoyPct.toFixed(1)}%
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">latest vs previous year</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-amber-500/10 shadow-lg h-full relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent pointer-events-none" />
                     <CardContent className="pt-6 relative z-10">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-amber-500/20 flex items-center justify-center shadow-inner">
-                          <Activity className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                          <Trophy className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Total Tracked</p>
-                          <p className="text-lg font-bold tracking-tight">
-                            {leaderboard.length > 0
-                              ? `${(Math.round((leaderboard as LeaderboardEntry[]).reduce((sum: number, e: LeaderboardEntry) => sum + e.emissions, 0) / 1000000 * 10) / 10).toLocaleString()}M`
-                              : '—'} tons
-                          </p>
-                          <p className="text-xs text-muted-foreground">CO₂ equivalent</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground font-medium">Top Emitter</p>
+                          <p className="text-base font-bold tracking-tight truncate" title={trendsStats.topEmitter}>{trendsStats.topEmitter}</p>
+                          <p className="text-[11px] text-muted-foreground">{trendsStats.topEmitterPct.toFixed(1)}% of total</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 </motion.div>
               </div>
+
+              {/* Empty state */}
+              {trendsFiltered.length === 0 ? (
+                <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-lg">
+                  <CardContent className="py-16 text-center flex flex-col items-center">
+                    <motion.div
+                      animate={{ y: [0, -6, 0] }}
+                      transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                    >
+                      <BarChart3 className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                    </motion.div>
+                    <h3 className="text-lg font-semibold mb-1">No historical data</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      No records match the current filters. Try clearing filters or selecting a different sector / area.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setTrendsSector('all'); setTrendsArea('all'); }}
+                      className="mt-4 gap-1.5"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Reset filters
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {/* Emission Timeline — full-width hero chart */}
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}>
+                    <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-2xl overflow-hidden relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 pointer-events-none" />
+                      <CardHeader className="relative z-10">
+                        <div className="flex items-center gap-2">
+                          <LineChart className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          <CardTitle className="text-base">Emission Timeline</CardTitle>
+                        </div>
+                        <CardDescription>
+                          {trendsStats.months} months of data
+                          {trendsSector !== 'all' && ` · ${sectorConfig[trendsSector as Sector]?.label}`}
+                          {trendsArea !== 'all' && ` · ${trendsAreaOptions.find(([id]) => id === trendsArea)?.[1]}`}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="relative z-10">
+                        <EmissionChart title="" type="line" data={trendsTimelineData} />
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  {/* Two-column grid: Yearly comparison + Seasonal pattern */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.25 }}>
+                      <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-xl overflow-hidden relative h-full">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 pointer-events-none" />
+                        <CardHeader className="relative z-10">
+                          <div className="flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <CardTitle className="text-base">Yearly Comparison</CardTitle>
+                          </div>
+                          <CardDescription>Total emissions per year</CardDescription>
+                        </CardHeader>
+                        <CardContent className="relative z-10">
+                          <EmissionChart title="" type="bar" data={trendsYearlyData} />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.3 }}>
+                      <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-xl overflow-hidden relative h-full">
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 pointer-events-none" />
+                        <CardHeader className="relative z-10 flex flex-row items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                              <CardTitle className="text-base">Seasonal Patterns</CardTitle>
+                            </div>
+                            <CardDescription>
+                              {trendsSeasonalYear === 'all'
+                                ? `Average by month (${trendsYearOptions[0] || ''}–${trendsYearOptions[trendsYearOptions.length - 1] || ''})`
+                                : `Monthly emissions for ${trendsSeasonalYear}`}
+                            </CardDescription>
+                          </div>
+                          <Select value={trendsSeasonalYear} onValueChange={setTrendsSeasonalYear}>
+                            <SelectTrigger className="w-[130px] h-9 bg-white/80 dark:bg-[#0a0a0a]/80">
+                              <SelectValue placeholder="Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All years avg</SelectItem>
+                              {trendsYearOptions.map((y) => (
+                                <SelectItem key={y} value={y}>{y}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </CardHeader>
+                        <CardContent className="relative z-10">
+                          <EmissionChart title="" type="bar" data={trendsMonthlyData} />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </div>
+
+                  {/* Top Emission Sources — hidden when specific area selected */}
+                  {trendsArea === 'all' && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.35 }}>
+                      <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-xl overflow-hidden relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 pointer-events-none" />
+                        <CardHeader className="relative z-10 flex flex-row items-center justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Trophy className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                              <CardTitle className="text-base">Top Emission Sources</CardTitle>
+                            </div>
+                            <CardDescription>
+                              Highest emitters by total historical emissions
+                              {trendsSector !== 'all' && ` in ${sectorConfig[trendsSector as Sector]?.label}`}
+                            </CardDescription>
+                          </div>
+                          <Select value={String(trendsTopN)} onValueChange={(v) => setTrendsTopN(Number(v))}>
+                            <SelectTrigger className="w-[110px] h-9 bg-white/80 dark:bg-[#0a0a0a]/80">
+                              <SelectValue placeholder="Top N" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="5">Top 5</SelectItem>
+                              <SelectItem value="7">Top 7</SelectItem>
+                              <SelectItem value="10">Top 10</SelectItem>
+                              <SelectItem value="15">Top 15</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </CardHeader>
+                        <CardContent className="relative z-10">
+                          <EmissionChart title="" type="bar" data={trendsTopSourcesData} />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
+                </>
+              )}
             </div>
           </TabsContent>
 
           {/* ML Forecast Tab */}
           <TabsContent value="forecast" className="h-full mt-0 overflow-auto bg-muted/30">
-            <div className="p-8">
-              {/* Page Header */}
-              <div className="mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                    <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            {/* Sticky filter bar */}
+            <div className="sticky top-0 z-20 bg-background/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-border/50">
+              <div className="px-8 py-4 flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-3 mr-4">
+                  <div className="h-9 w-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                    <Brain className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold tracking-tight">ML Forecasting</h1>
-                    <p className="text-muted-foreground">
-                      AI-powered predictions for proactive environmental planning
-                    </p>
+                    <h1 className="text-lg font-bold tracking-tight leading-tight">ML Forecasting</h1>
+                    <p className="text-xs text-muted-foreground">Per-area predicted emissions · 2026</p>
                   </div>
                 </div>
-              </div>
 
-              {/* Forecast Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-purple-500/10 shadow-lg relative overflow-hidden h-full">
+                <div className="h-8 w-px bg-border mx-1 hidden md:block" />
+
+                <div className="flex flex-wrap items-center gap-2 flex-1">
+                  <Select value={forecastSector} onValueChange={(v) => { setForecastSector(v); setForecastArea("all"); }}>
+                    <SelectTrigger className="w-[170px] h-9 bg-white/80 dark:bg-[#0a0a0a]/80">
+                      <div className="flex items-center gap-2">
+                        <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                        <SelectValue placeholder="Sector" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sectors</SelectItem>
+                      <SelectItem value="transport">Transport</SelectItem>
+                      <SelectItem value="industry">Industry</SelectItem>
+                      <SelectItem value="energy">Energy</SelectItem>
+                      <SelectItem value="waste">Waste</SelectItem>
+                      <SelectItem value="buildings">Buildings</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={forecastArea} onValueChange={setForecastArea}>
+                    <SelectTrigger className="w-[220px] h-9 bg-white/80 dark:bg-[#0a0a0a]/80">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                        <SelectValue placeholder="Area" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[320px]">
+                      <SelectItem value="all">All Areas ({forecastAreaOptions.length})</SelectItem>
+                      {forecastAreaOptions.map(([id, name]) => (
+                        <SelectItem key={id} value={id}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={forecastGroupBy} onValueChange={(v: any) => setForecastGroupBy(v)}>
+                    <SelectTrigger className="w-[130px] h-9 bg-white/80 dark:bg-[#0a0a0a]/80">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                        <SelectValue />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="month">Monthly</SelectItem>
+                      <SelectItem value="year">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Table/Graph toggle */}
+                  <div className="inline-flex items-center rounded-lg border border-border bg-white/80 dark:bg-[#0a0a0a]/80 p-0.5">
+                    <Button
+                      variant={forecastView === 'table' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setForecastView('table')}
+                      className="h-8 px-3 gap-1.5"
+                    >
+                      <Database className="h-3.5 w-3.5" />
+                      Table
+                    </Button>
+                    <Button
+                      variant={forecastView === 'graph' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setForecastView('graph')}
+                      className="h-8 px-3 gap-1.5"
+                    >
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      Graph
+                    </Button>
+                  </div>
+
+                  {(forecastSector !== 'all' || forecastArea !== 'all') && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setForecastSector('all'); setForecastArea('all'); }}
+                      className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Reset
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportForecastCsv}
+                    disabled={forecastTable.areas.length === 0}
+                    className="h-9 gap-1.5"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Export CSV
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 space-y-6">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-purple-500/10 shadow-lg h-full relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent pointer-events-none" />
                     <CardContent className="pt-6 relative z-10">
-                      <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 rounded-xl bg-purple-500/20 flex items-center justify-center shadow-inner">
-                          <Brain className="h-7 w-7 text-purple-600 dark:text-purple-400" />
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                          <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Models Used</p>
-                          <p className="text-xl font-bold tracking-tight">Hybrid XGBoost + Prophet</p>
-                          <p className="text-xs text-muted-foreground">Sector-specific model selection</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground font-medium">Model</p>
+                          <p className="text-base font-bold tracking-tight truncate">XGBoost + Prophet</p>
+                          <p className="text-[11px] text-muted-foreground">Per-sector hybrid</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 </motion.div>
-                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300, delay: 0.05 }}>
-                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-blue-500/10 shadow-lg relative overflow-hidden h-full">
+
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.05 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-blue-500/10 shadow-lg h-full relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent pointer-events-none" />
                     <CardContent className="pt-6 relative z-10">
-                      <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 rounded-xl bg-blue-500/20 flex items-center justify-center shadow-inner">
-                          <TrendingUp className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                          <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Forecast Horizon</p>
-                          <p className="text-xl font-bold tracking-tight">12 Months</p>
-                          <p className="text-xs text-muted-foreground">Future predictions</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground font-medium">Areas Covered</p>
+                          <p className="text-xl font-bold tracking-tight">{forecastTable.areas.length}</p>
+                          <p className="text-[11px] text-muted-foreground">{forecastSector === 'all' ? 'All sectors' : sectorConfig[forecastSector as Sector]?.label}</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 </motion.div>
-                <motion.div whileHover={{ y: -4, scale: 1.02 }} transition={{ type: "spring", stiffness: 300, delay: 0.1 }}>
-                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-emerald-500/10 shadow-lg relative overflow-hidden h-full">
+
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-emerald-500/10 shadow-lg h-full relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none" />
                     <CardContent className="pt-6 relative z-10">
-                      <div className="flex items-center gap-4">
-                        <div className="h-14 w-14 rounded-xl bg-emerald-500/20 flex items-center justify-center shadow-inner">
-                          <Activity className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                          <Activity className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Accuracy</p>
-                          <p className="text-xl font-bold tracking-tight">~94%</p>
-                          <p className="text-xs text-muted-foreground">R² on validation data</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground font-medium">Total Forecast</p>
+                          <p className="text-xl font-bold tracking-tight">
+                            {(() => {
+                              if (forecastTable.areas.length === 0) return '—';
+                              const total = forecastTable.areas.reduce((s, a) => s + a.total, 0);
+                              if (total >= 1_000_000) return `${(total / 1_000_000).toFixed(2)}M`;
+                              if (total >= 1_000) return `${(total / 1_000).toFixed(1)}K`;
+                              return total.toLocaleString('en-US', { maximumFractionDigits: 0 });
+                            })()}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">tons CO₂e</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl border-amber-500/10 shadow-lg h-full relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent pointer-events-none" />
+                    <CardContent className="pt-6 relative z-10">
+                      <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                          <Calendar className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground font-medium">Horizon</p>
+                          <p className="text-xl font-bold tracking-tight">{forecastTable.periods.length}</p>
+                          <p className="text-[11px] text-muted-foreground">{forecastGroupBy === 'month' ? 'months forecasted' : 'years forecasted'}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -1188,73 +1855,112 @@ export default function Dashboard() {
                 </motion.div>
               </div>
 
-              {/* Combined Historical + Forecast Chart */}
-              <div className="mb-8">
-                <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
-                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border-black/5 dark:border-white/5 shadow-2xl overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/5 to-transparent pointer-events-none" />
+              {/* Empty state */}
+              {forecastTable.areas.length === 0 ? (
+                <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-lg">
+                  <CardContent className="py-16 text-center flex flex-col items-center">
+                    <motion.div
+                      animate={{ y: [0, -6, 0] }}
+                      transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                    >
+                      <Brain className="h-16 w-16 text-muted-foreground/30 mb-4" />
+                    </motion.div>
+                    <h3 className="text-lg font-semibold mb-1">No forecast data</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      No records match the current filters. Try clearing filters or selecting a different sector / area.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : forecastView === 'graph' ? (
+                /* Graph view */
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-2xl overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 pointer-events-none" />
                     <CardHeader className="relative z-10">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle>Historical vs Predicted Emissions</CardTitle>
-                          <CardDescription>
-                            Combined view showing actual data transitioning into 12-month forecasts
-                          </CardDescription>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-8 bg-blue-500 rounded" />
-                            <span className="text-sm text-muted-foreground font-medium">Historical</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-8 bg-amber-500 rounded border-2 border-dashed border-amber-600" />
-                            <span className="text-sm text-muted-foreground font-medium">Forecast</span>
-                          </div>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                        <CardTitle className="text-base">Forecast Emissions by {forecastGroupBy === 'month' ? 'Month' : 'Year'}</CardTitle>
                       </div>
+                      <CardDescription>
+                        {forecastArea === 'all'
+                          ? `Aggregate of ${forecastTable.areas.length} area${forecastTable.areas.length !== 1 ? 's' : ''}`
+                          : forecastAreaOptions.find(([id]) => id === forecastArea)?.[1]}
+                        {forecastSector !== 'all' && ` · ${sectorConfig[forecastSector as Sector]?.label}`}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="relative z-10">
-                      {selectedSectors.length === 0 ? (
-                        <div className="py-20 text-center flex flex-col items-center justify-center">
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
-                          >
-                            <Brain className="h-16 w-16 text-muted-foreground/30 mb-4" />
-                          </motion.div>
-                          <p className="text-muted-foreground font-medium">Select sectors from the Map View to see forecasts</p>
-                        </div>
-                      ) : (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {selectedSectors.map((sector) => {
-                          const data = sectorChartData[sector];
-                          if (!data || data.datasets.length === 0) return null;
-                          return (
-                            <div key={sector} className="h-[420px]">
-                              <EmissionChart
-                                titleNode={
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 relative mt-[-2px]">
-                                      <div className={`h-2.5 w-2.5 rounded-full`} style={{ backgroundColor: sectorConfig[sector].historical }} />
-                                      <span className="font-semibold text-sm tracking-tight text-foreground">{sectorConfig[sector].label}</span>
-                                    </div>
-                                    <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 backdrop-blur-md">
-                                      95% confidence
-                                    </Badge>
-                                  </div>
-                                }
-                                type="line"
-                                data={data}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
+                      <EmissionChart title="" type="bar" data={forecastChartData} />
+                    </CardContent>
                   </Card>
                 </motion.div>
-              </div>
+              ) : (
+                /* Table view */
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2 }}>
+                  <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-2xl overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 pointer-events-none" />
+                    <CardHeader className="relative z-10">
+                      <div className="flex items-center gap-2">
+                        <Database className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                        <CardTitle className="text-base">Forecast Emissions Table</CardTitle>
+                      </div>
+                      <CardDescription>
+                        Per-area predicted emissions by {forecastGroupBy === 'month' ? 'month' : 'year'} (tons CO₂e)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="relative z-10 p-0">
+                      <div className="overflow-x-auto max-h-[70vh]">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted/50 sticky top-0 backdrop-blur-md z-10">
+                            <tr>
+                              <th className="text-left font-semibold px-4 py-3 min-w-[180px]">Area</th>
+                              {forecastTable.periods.map(p => (
+                                <th key={p} className="text-right font-semibold px-3 py-3 whitespace-nowrap min-w-[100px]">
+                                  {p}
+                                </th>
+                              ))}
+                              <th className="text-right font-bold px-4 py-3 whitespace-nowrap border-l min-w-[120px] bg-purple-500/5">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {forecastTable.areas.map((area, i) => (
+                              <tr key={area.id} className={`border-t hover:bg-muted/30 ${i % 2 === 0 ? 'bg-muted/10' : ''}`}>
+                                <td className="px-4 py-2.5 font-medium truncate max-w-[280px]" title={area.name}>{area.name}</td>
+                                {forecastTable.periods.map(p => {
+                                  const v = area.periods.get(p) || 0;
+                                  return (
+                                    <td key={p} className="text-right px-3 py-2.5 tabular-nums text-muted-foreground">
+                                      {v > 0 ? v.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}
+                                    </td>
+                                  );
+                                })}
+                                <td className="text-right px-4 py-2.5 font-bold tabular-nums border-l bg-purple-500/5">
+                                  {area.total.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot className="bg-muted/50 sticky bottom-0 backdrop-blur-md">
+                            <tr className="border-t-2 font-bold">
+                              <td className="px-4 py-3">Total ({forecastTable.areas.length} area{forecastTable.areas.length !== 1 ? 's' : ''})</td>
+                              {forecastTable.periods.map(p => {
+                                const total = forecastTable.areas.reduce((s, a) => s + (a.periods.get(p) || 0), 0);
+                                return (
+                                  <td key={p} className="text-right px-3 py-3 tabular-nums">
+                                    {total.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                  </td>
+                                );
+                              })}
+                              <td className="text-right px-4 py-3 tabular-nums border-l bg-purple-500/10">
+                                {forecastTable.areas.reduce((s, a) => s + a.total, 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
               {/* How It Works Section */}
               <motion.div whileHover={{ y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
