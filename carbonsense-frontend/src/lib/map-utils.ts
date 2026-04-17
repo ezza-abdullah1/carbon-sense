@@ -65,11 +65,13 @@ export function getUCEmission(uc: UCSummary, sectors: Sector[]): number {
       total += uc.sectors.waste.display_t;
     }
   }
+  if (sectors.includes('industry') && uc.sectors.industry) {
+    if (typeof uc.sectors.industry === 'object') {
+      total += uc.sectors.industry.display_t;
+    }
+  }
   if (sectors.includes('energy') && typeof uc.sectors.energy === 'number') {
     total += uc.sectors.energy;
-  }
-  if (sectors.includes('industry') && typeof uc.sectors.industry === 'number') {
-    total += uc.sectors.industry;
   }
   return total;
 }

@@ -65,6 +65,7 @@ export function AreaDetailPanel({
   const transport = uc.sectors.transport;
   const buildings = uc.sectors.buildings;
   const waste = uc.sectors.waste && typeof uc.sectors.waste === 'object' ? uc.sectors.waste : null;
+  const industry = uc.sectors.industry && typeof uc.sectors.industry === 'object' ? uc.sectors.industry : null;
   const totalEmission = getUCEmission(uc, selectedSectors);
 
   const handleViewAnalysis = () => {
@@ -100,7 +101,7 @@ export function AreaDetailPanel({
     { key: "transport", label: "Transport", color: "hsl(25, 95%, 53%)", value: transport?.display_t ?? 0 },
     { key: "buildings", label: "Buildings", color: "hsl(338, 78%, 56%)", value: buildings?.display_t ?? 0 },
     { key: "energy", label: "Energy", color: "hsl(45, 93%, 47%)", value: typeof uc.sectors.energy === 'number' ? uc.sectors.energy : 0 },
-    { key: "industry", label: "Industry", color: "hsl(280, 67%, 55%)", value: typeof uc.sectors.industry === 'number' ? uc.sectors.industry : 0 },
+    { key: "industry", label: "Industry", color: "hsl(280, 67%, 55%)", value: industry?.display_t ?? 0 },
     { key: "waste", label: "Waste", color: "hsl(200, 80%, 50%)", value: waste?.display_t ?? 0 },
   ].filter(s => selectedSectors.includes(s.key as Sector));
 
@@ -318,9 +319,6 @@ export function AreaDetailPanel({
 
         {/* ---- Action Buttons ---- */}
         <div className="space-y-3 pt-1">
-          <Button className="w-full" onClick={handleViewAnalysis} data-testid="button-view-analysis">
-            View Full Analysis
-          </Button>
           <Button
             className="w-full"
             variant="outline"

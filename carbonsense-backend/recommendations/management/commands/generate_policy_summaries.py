@@ -16,8 +16,7 @@ import time
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
-import google.generativeai as genai
-from google.api_core.exceptions import ResourceExhausted
+from groq import Groq, RateLimitError
 
 from recommendations.policy_registry import POLICY_REGISTRY
 
@@ -92,16 +91,16 @@ class Command(BaseCommand):
         dry_run = options.get('dry_run', False)
         process_all = options.get('all', False)
 
-        # Configure Gemini
-        api_key = settings.GEMINI_API_KEY
-        if not api_key or api_key == 'your-gemini-api-key-here':
+        # Configure Groq
+        api_key = settings.GROQ_API_KEY
+        if not api_key or api_key == 'your-groq-api-key-here':
             self.stdout.write(self.style.ERROR(
-                'GEMINI_API_KEY is not configured. Set it in your .env file.'
+                'GROQ_API_KEY is not configured. Set it in your .env file.'
             ))
             return
 
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        client = Groq(api_key=api_key)
+        model = 'llama-3.3-70b-versatile'
 
         docs_dir = settings.POLICY_DOCUMENTS_DIR
         os.makedirs(docs_dir, exist_ok=True)
@@ -149,9 +148,9 @@ class Command(BaseCommand):
             summary = None
             for attempt in range(5):
                 try:
-                    summary = self._generate_summary(model, entry)
+                    summary = self._generate_summary(client, model, entry)
                     break  # Success
-                except ResourceExhausted as e:
+                except RateLimitError as e:
                     # Extract retry delay from error if available
                     wait_time = self._extract_retry_delay(str(e), default=60 * (attempt + 1))
                     self.stdout.write(self.style.WARNING(
@@ -237,8 +236,8 @@ class Command(BaseCommand):
             return int(match.group(1)) + 5
         return default
 
-    def _generate_summary(self, model, entry):
-        """Generate a detailed policy summary using Gemini."""
+    def _generate_summary(self, client, model, entry):
+        """Generate a detailed policy summary using Groq (Llama 3.3 70B)."""
         prompt = SUMMARY_PROMPT_TEMPLATE.format(
             title=entry.get('title', ''),
             country=entry.get('country', ''),
@@ -251,12 +250,11 @@ class Command(BaseCommand):
             source_organization=entry.get('source_organization', ''),
         )
 
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.3,  # Lower temp for factual content
-                max_output_tokens=4096,
-            ),
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=4096,
         )
 
-        return response.text
+        return response.choices[0].message.content

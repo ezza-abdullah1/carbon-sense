@@ -88,6 +88,18 @@ export interface WasteSectorData {
   risk_level: string;
 }
 
+export interface IndustrySectorData {
+  annual_t: number;
+  by_sector: Record<string, number>;
+  intensity_t_per_km2: number;
+  rank_in_district: number;
+  ci_lower_t: number;
+  ci_upper_t: number;
+  monthly_t: number[];
+  dominant_sector: string;
+  risk_flags: string[];
+}
+
 export interface UCSummary {
   uc_code: string;
   uc_name: string;
@@ -101,8 +113,8 @@ export interface UCSummary {
     transport?: (TransportSectorData & { display_t: number }) | null;
     buildings?: (BuildingsSectorData & { display_t: number }) | null;
     waste?: (WasteSectorData & { display_t: number }) | null;
+    industry?: (IndustrySectorData & { display_t: number }) | null;
     energy?: number;
-    industry?: number;
   };
   total_annual_t: number;
   available_months: string[];
