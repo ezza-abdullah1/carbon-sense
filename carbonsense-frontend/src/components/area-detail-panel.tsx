@@ -97,11 +97,11 @@ export function AreaDetailPanel({
 
   // ---- Sector breakdown for progress bars ----
   const sectorValues = [
-    { key: "transport", label: "Transport", color: "hsl(25, 95%, 53%)", value: transport?.annual_t ?? 0 },
-    { key: "buildings", label: "Buildings", color: "hsl(338, 78%, 56%)", value: buildings?.total_t ?? 0 },
+    { key: "transport", label: "Transport", color: "hsl(25, 95%, 53%)", value: transport?.display_t ?? 0 },
+    { key: "buildings", label: "Buildings", color: "hsl(338, 78%, 56%)", value: buildings?.display_t ?? 0 },
     { key: "energy", label: "Energy", color: "hsl(45, 93%, 47%)", value: typeof uc.sectors.energy === 'number' ? uc.sectors.energy : 0 },
     { key: "industry", label: "Industry", color: "hsl(280, 67%, 55%)", value: typeof uc.sectors.industry === 'number' ? uc.sectors.industry : 0 },
-    { key: "waste", label: "Waste", color: "hsl(200, 80%, 50%)", value: waste?.annual_t ?? (typeof uc.sectors.waste === 'number' ? uc.sectors.waste : 0) },
+    { key: "waste", label: "Waste", color: "hsl(200, 80%, 50%)", value: waste?.display_t ?? 0 },
   ].filter(s => selectedSectors.includes(s.key as Sector));
 
   const maxSectorVal = Math.max(...sectorValues.map(s => s.value), 1);
@@ -152,7 +152,12 @@ export function AreaDetailPanel({
         <div className="rounded-lg border border-border/50 overflow-hidden">
           <table className="w-full text-sm">
             <tbody className="divide-y divide-border/30">
-              <StatsRow label="Annual CO\u2082e" value={<b>{formatTonnes(totalEmission)}</b>} />
+              <StatsRow
+                label={uc.view_mode === 'monthly' && uc.month_label
+                  ? `CO\u2082e (${uc.month_label})`
+                  : 'Annual CO\u2082e'}
+                value={<b>{formatTonnes(totalEmission)}</b>}
+              />
               {transport && (
                 <>
                   <StatsRow label="Road share" value={<b>{transport.road_pct.toFixed(1)}%</b>} />

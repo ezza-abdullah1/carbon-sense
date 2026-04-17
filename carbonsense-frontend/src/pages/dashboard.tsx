@@ -47,6 +47,8 @@ export default function Dashboard() {
   const [dataType, setDataType] = useState<DataType>("historical");
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [selectedUCCode, setSelectedUCCode] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('yearly');
+  const [selectedMonth, setSelectedMonth] = useState<string>('2025-12');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
@@ -59,7 +61,17 @@ export default function Dashboard() {
 
   // UC-level data for choropleth map (supports historical + forecast toggle)
   const { data: ucBoundaries } = useUCBoundaries();
-  const { data: ucSummaries = [], isLoading: ucLoading } = useUCSummaries(dataType);
+  const { data: ucSummaries = [], isLoading: ucLoading } = useUCSummaries(
+    dataType,
+    viewMode,
+    viewMode === 'monthly' ? selectedMonth : undefined,
+  );
+
+  // Available months for dropdown (derived from first UC's response)
+  const availableMonths = useMemo(() => {
+    if (!ucSummaries || ucSummaries.length === 0) return [];
+    return ucSummaries[0]?.available_months ?? [];
+  }, [ucSummaries]);
 
   // Derive the selected UC summary
   const selectedUCSummary = useMemo(() => {
@@ -972,28 +984,83 @@ export default function Dashboard() {
                                 onClearAll={handleClearAllSectors}
                               />
                             </div>
-                            <div className="flex items-center space-x-3 pt-1">
-                              <div
-                                className={`flex-1 text-center py-1.5 text-xs font-medium rounded-md cursor-pointer transition-all ${
-                                  dataType === 'historical'
-                                    ? 'bg-white dark:bg-black/60 shadow-sm text-emerald-600 dark:text-emerald-400'
-                                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                                }`}
-                                onClick={() => setDataType('historical')}
-                              >
-                                Historical
-                              </div>
-                              <div
-                                className={`flex-1 text-center py-1.5 text-xs font-medium rounded-md cursor-pointer transition-all ${
-                                  dataType === 'forecast'
-                                    ? 'bg-white dark:bg-black/60 shadow-sm text-emerald-600 dark:text-emerald-400'
-                                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                                }`}
-                                onClick={() => setDataType('forecast')}
-                              >
-                                Forecast
+                            {/* Data type: Historical / Forecast */}
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">Data</label>
+                              <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-lg">
+                                {(['historical', 'forecast'] as const).map(dt => (
+                                  <div
+                                    key={dt}
+                                    className={`flex-1 text-center py-1.5 text-xs font-medium rounded-md cursor-pointer transition-all ${
+                                      dataType === dt
+                                        ? 'bg-white dark:bg-black/60 shadow-sm text-emerald-600 dark:text-emerald-400'
+                                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                    }`}
+                                    onClick={() => {
+                                      setDataType(dt);
+                                      setSelectedMonth(dt === 'forecast' ? '2026-12' : '2025-12');
+                                    }}
+                                  >
+                                    {dt === 'historical' ? 'Historical' : 'Forecast'}
+                                  </div>
+                                ))}
                               </div>
                             </div>
+
+                            {/* View mode: Monthly / Yearly */}
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">View</label>
+                              <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-lg">
+                                {(['monthly', 'yearly'] as const).map(vm => (
+                                  <div
+                                    key={vm}
+                                    className={`flex-1 text-center py-1.5 text-xs font-medium rounded-md cursor-pointer transition-all ${
+                                      viewMode === vm
+                                        ? 'bg-white dark:bg-black/60 shadow-sm text-emerald-600 dark:text-emerald-400'
+                                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                    }`}
+                                    onClick={() => setViewMode(vm)}
+                                  >
+                                    {vm === 'monthly' ? 'Monthly' : 'Yearly'}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Month/Year selectors (only in monthly mode) */}
+                            {viewMode === 'monthly' && availableMonths.length > 0 && (() => {
+                              const years = Array.from(new Set(availableMonths.map(m => m.slice(0, 4)))).sort();
+                              const selectedYear = selectedMonth.slice(0, 4);
+                              const monthsInYear = availableMonths
+                                .filter(m => m.startsWith(selectedYear))
+                                .sort();
+                              const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                              return (
+                                <div className="flex gap-2">
+                                  <select
+                                    className="flex-1 text-xs bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-md px-2 py-1.5 text-slate-700 dark:text-slate-300"
+                                    value={selectedYear}
+                                    onChange={e => {
+                                      const newYear = e.target.value;
+                                      const monthsForYear = availableMonths.filter(m => m.startsWith(newYear));
+                                      setSelectedMonth(monthsForYear[monthsForYear.length - 1] || `${newYear}-12`);
+                                    }}
+                                  >
+                                    {years.map(y => <option key={y} value={y}>{y}</option>)}
+                                  </select>
+                                  <select
+                                    className="flex-1 text-xs bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-md px-2 py-1.5 text-slate-700 dark:text-slate-300"
+                                    value={selectedMonth}
+                                    onChange={e => setSelectedMonth(e.target.value)}
+                                  >
+                                    {monthsInYear.map(m => {
+                                      const mi = parseInt(m.slice(5, 7), 10) - 1;
+                                      return <option key={m} value={m}>{monthNames[mi]} {m.slice(0, 4)}</option>;
+                                    })}
+                                  </select>
+                                </div>
+                              );
+                            })()}
                           </CardContent>
                         </Card>
                       </div>

@@ -7,6 +7,10 @@ const mockUCSummary: UCSummary = {
   area_km2: 99.254,
   centroid: [31.503418, 74.406132],
   data_type: 'forecast',
+  view_mode: 'yearly',
+  month_label: '',
+  display_t: 1879412,
+  available_months: ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'],
   sectors: {
     transport: {
       annual_t: 554311,
@@ -24,6 +28,7 @@ const mockUCSummary: UCSummary = {
       dominant_source: 'road',
       risk_flags: ['high_absolute', 'aviation_plume_proximity'],
       monthly_t: [43951, 39821, 43982, 45650, 49770, 48974, 49626, 49361, 47920, 47073, 43005, 45178],
+      display_t: 554311,
     },
     buildings: {
       residential_t: 1279346,
@@ -34,6 +39,7 @@ const mockUCSummary: UCSummary = {
       ci_upper_90_t: 1666251,
       rank_in_district: 1,
       risk: { RF1_intensity_hotspot: true, RF1_volume_hotspot: true },
+      display_t: 1303854,
     },
     energy: 12345.6,
     industry: 0,
@@ -45,6 +51,7 @@ const mockUCSummary: UCSummary = {
       wastewater_t: 901.2,
       point_pct: 67.4,
       risk_level: 'Moderate',
+      display_t: 8901.2,
     },
   },
   total_annual_t: 1879412,

@@ -94,14 +94,18 @@ export interface UCSummary {
   area_km2: number;
   centroid: [number, number];
   data_type: 'historical' | 'forecast';
+  view_mode: 'monthly' | 'yearly';
+  month_label: string;
+  display_t: number;
   sectors: {
-    transport?: TransportSectorData | null;
-    buildings?: BuildingsSectorData | null;
-    waste?: WasteSectorData | null;
+    transport?: (TransportSectorData & { display_t: number }) | null;
+    buildings?: (BuildingsSectorData & { display_t: number }) | null;
+    waste?: (WasteSectorData & { display_t: number }) | null;
     energy?: number;
     industry?: number;
   };
   total_annual_t: number;
+  available_months: string[];
 }
 
 export interface EmissionsQueryParams {
@@ -271,9 +275,15 @@ export async function fetchUCBoundaries(): Promise<GeoJSON.FeatureCollection> {
 // ---- UC Summaries (unified per-UC data) ----
 
 export async function fetchUCSummaries(
-  dataType: 'historical' | 'forecast' = 'forecast'
+  dataType: 'historical' | 'forecast' = 'forecast',
+  viewMode: 'monthly' | 'yearly' = 'yearly',
+  month?: string,
 ): Promise<UCSummary[]> {
-  const response = await fetch(`${API_BASE_URL}/uc-summary/?data_type=${dataType}`);
+  const params = new URLSearchParams({ data_type: dataType, view_mode: viewMode });
+  if (viewMode === 'monthly' && month) {
+    params.append('month', month);
+  }
+  const response = await fetch(`${API_BASE_URL}/uc-summary/?${params.toString()}`);
   if (!response.ok) {
     throw new Error('Failed to fetch UC summaries');
   }

@@ -76,10 +76,14 @@ export function useUCBoundaries() {
 }
 
 // Hook to fetch unified per-UC summaries from all sectors
-export function useUCSummaries(dataType: 'historical' | 'forecast' = 'forecast') {
+export function useUCSummaries(
+  dataType: 'historical' | 'forecast' = 'forecast',
+  viewMode: 'monthly' | 'yearly' = 'yearly',
+  month?: string,
+) {
   return useQuery({
-    queryKey: ['uc-summaries', dataType],
-    queryFn: () => fetchUCSummaries(dataType),
+    queryKey: ['uc-summaries', dataType, viewMode, month],
+    queryFn: () => fetchUCSummaries(dataType, viewMode, month),
     staleTime: 5 * 60 * 1000,
   });
 }

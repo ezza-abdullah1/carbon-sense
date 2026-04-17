@@ -531,19 +531,67 @@ def _build_point_source_totals(data_type):
     return totals
 
 
+def _get_monthly_dates(data_type):
+    """Return the list of date strings for each sector's monthly_t arrays."""
+    # Transport: historical has dates in monthly_series; forecast uses
+    # division_total.dates
+    t_data = _load_data_file('carbonsense_transport_v16.json')
+    if data_type == 'forecast':
+        t_dates = t_data.get('division_total', {}).get('dates', [])
+    else:
+        # Build from first UC's historical series
+        first_uc = t_data['uc_emissions'][0] if t_data.get('uc_emissions') else {}
+        series = first_uc.get('historical', {}).get('monthly_series', [])
+        t_dates = [m['date'] for m in series]
+
+    # Buildings: dates are embedded in each entry
+    b_data = _load_data_file('carbonsense_buildings_v15.json')
+    first_buc = b_data['uc_data'][0] if b_data.get('uc_data') else {}
+    b_series = first_buc.get(
+        'forecast' if data_type == 'forecast' else 'historical', []
+    )
+    b_dates = [row['date'] for row in b_series if isinstance(row, dict)]
+
+    # Waste: dates in historical or chart_data
+    w_data = _load_data_file('carbonsense_per_location_waste_v2_3.json')
+    alloc = w_data.get('aggregate_forecast', {}).get('uc_allocation', [])
+    first_wuc = alloc[0] if alloc else {}
+    if data_type == 'forecast':
+        w_series = first_wuc.get('chart_data', [])
+        w_dates = [row['date'] for row in w_series if isinstance(row, dict)]
+    else:
+        w_series = first_wuc.get('historical', [])
+        w_dates = [row['date'] for row in w_series if isinstance(row, dict)]
+
+    return {
+        'transport': t_dates,
+        'buildings': b_dates,
+        'waste': w_dates,
+    }
+
+
+def _find_month_index(dates, target_month):
+    """Find the index matching target_month (e.g. '2025-12') in a dates list.
+    Dates are like '2025-12-01'. Returns -1 if not found."""
+    prefix = target_month  # e.g. '2025-12'
+    for i, d in enumerate(dates):
+        if d.startswith(prefix):
+            return i
+    return -1
+
+
 class UCSummaryViewSet(viewsets.ViewSet):
     """
     Returns one entry per Union Council (151 total) with all sector data.
 
     Query params:
-        data_type: 'historical' or 'forecast' (default: 'forecast')
+        data_type:  'historical' or 'forecast' (default: 'forecast')
+        view_mode:  'monthly' or 'yearly' (default: 'yearly')
+        month:      'YYYY-MM' (only used when view_mode=monthly)
 
-    Data sources:
-        Transport — JSON (transport_new.json, forecast only, 151 UCs)
-        Buildings — JSON (carbonsense_buildings_v15.json, hist + forecast, 151 UCs)
-        Waste     — DB (UC-level with uc_code, forecast per UC)
-        Power     — DB point sources (no UC mapping, summed as district total)
-        Industry  — DB point sources (no UC mapping, summed as district total)
+    Each sector entry includes `display_t` — the value to color the
+    choropleth by (single month's value in monthly mode, annual sum in
+    yearly mode).
     """
     permission_classes = [AllowAny]
 
@@ -551,8 +599,12 @@ class UCSummaryViewSet(viewsets.ViewSet):
         data_type = request.query_params.get('data_type', 'forecast')
         if data_type not in ('historical', 'forecast'):
             data_type = 'forecast'
+        view_mode = request.query_params.get('view_mode', 'yearly')
+        if view_mode not in ('monthly', 'yearly'):
+            view_mode = 'yearly'
+        target_month = request.query_params.get('month', '')
 
-        cache_key = f'uc_summary_{data_type}'
+        cache_key = f'uc_summary_{data_type}_{view_mode}_{target_month}'
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
@@ -563,11 +615,21 @@ class UCSummaryViewSet(viewsets.ViewSet):
         waste_by_uc = _build_waste_by_uc(data_type)
         point_totals = _build_point_source_totals(data_type)
 
+        # --- Resolve month index for monthly mode ---
+        month_indices = {}  # sector -> index into monthly_t
+        month_label = ''
+        if view_mode == 'monthly' and target_month:
+            sector_dates = _get_monthly_dates(data_type)
+            for sector_key, dates in sector_dates.items():
+                month_indices[sector_key] = _find_month_index(
+                    dates, target_month
+                )
+            month_label = target_month
+
         # --- Assemble 151 UC entries ---
         buildings_data = _load_data_file('carbonsense_buildings_v15.json')
         transport_data = _load_data_file('carbonsense_transport_v16.json')
 
-        # Build quick lookup for UC metadata
         transport_meta = {
             uc['uc_code']: uc for uc in transport_data.get('uc_emissions', [])
         }
@@ -579,12 +641,33 @@ class UCSummaryViewSet(viewsets.ViewSet):
             set(transport_meta.keys()) | set(buildings_meta.keys())
         )
         n_ucs = len(all_codes) or 1
-        energy_share = point_totals['energy'] / n_ucs
-        industry_share = point_totals['industry'] / n_ucs
+
+        # For yearly mode, divide point-source totals across all UCs.
+        # For monthly mode, divide the monthly share (total / 12).
+        if view_mode == 'monthly':
+            n_months_energy = max(
+                len(_get_monthly_dates(data_type).get('buildings', [])), 1
+            )
+            energy_share = (point_totals['energy'] / n_months_energy) / n_ucs
+            industry_share = (
+                point_totals['industry'] / n_months_energy
+            ) / n_ucs
+        else:
+            energy_share = point_totals['energy'] / n_ucs
+            industry_share = point_totals['industry'] / n_ucs
+
+        # --- Available months list (for frontend dropdown) ---
+        sector_dates = _get_monthly_dates(data_type)
+        # Merge all sector dates into a sorted unique set
+        all_dates = sorted(set(
+            sector_dates.get('transport', [])
+            + sector_dates.get('buildings', [])
+            + sector_dates.get('waste', [])
+        ))
+        available_months = sorted(set(d[:7] for d in all_dates))
 
         results = []
         for uc_code in all_codes:
-            # Metadata: prefer transport (has centroid_lat/lon), fallback buildings
             tmeta = transport_meta.get(uc_code, {})
             bmeta = buildings_meta.get(uc_code, {})
             uc_name = tmeta.get('uc_name') or bmeta.get('uc_name', '')
@@ -604,11 +687,35 @@ class UCSummaryViewSet(viewsets.ViewSet):
             b_data = buildings_by_uc.get(uc_code)
             w_data = waste_by_uc.get(uc_code)
 
-            transport_annual = t_data['annual_t'] if t_data else 0.0
-            buildings_annual = b_data['total_t'] if b_data else 0.0
-            waste_annual = w_data['annual_t'] if w_data else 0.0
-            total = (transport_annual + buildings_annual + waste_annual
-                     + energy_share + industry_share)
+            # Compute display_t per sector
+            def _get_display(sector_data, sector_key, annual_key='annual_t'):
+                if not sector_data:
+                    return 0.0
+                if view_mode == 'yearly':
+                    return _safe_float(sector_data.get(annual_key))
+                # monthly
+                idx = month_indices.get(sector_key, -1)
+                mt = sector_data.get('monthly_t', [])
+                if 0 <= idx < len(mt):
+                    return _safe_float(mt[idx])
+                return 0.0
+
+            t_display = _get_display(t_data, 'transport')
+            b_display = _get_display(b_data, 'buildings', 'total_t')
+            w_display = _get_display(w_data, 'waste')
+
+            # Add display_t to each sector dict
+            if t_data:
+                t_data = {**t_data, 'display_t': round(t_display, 2)}
+            if b_data:
+                b_data = {**b_data, 'display_t': round(b_display, 2)}
+            if w_data:
+                w_data = {**w_data, 'display_t': round(w_display, 2)}
+
+            total_display = (
+                t_display + b_display + w_display
+                + energy_share + industry_share
+            )
 
             results.append({
                 'uc_code': uc_code,
@@ -616,6 +723,8 @@ class UCSummaryViewSet(viewsets.ViewSet):
                 'area_km2': area_km2,
                 'centroid': [lat, lon],
                 'data_type': data_type,
+                'view_mode': view_mode,
+                'month_label': month_label,
                 'sectors': {
                     'transport': t_data,
                     'buildings': b_data,
@@ -623,7 +732,16 @@ class UCSummaryViewSet(viewsets.ViewSet):
                     'energy': round(energy_share, 2),
                     'industry': round(industry_share, 2),
                 },
-                'total_annual_t': round(total, 2),
+                'display_t': round(total_display, 2),
+                'total_annual_t': round(
+                    (t_data['annual_t'] if t_data else 0)
+                    + (b_data['total_t'] if b_data else 0)
+                    + (w_data['annual_t'] if w_data else 0)
+                    + (point_totals['energy'] / n_ucs)
+                    + (point_totals['industry'] / n_ucs),
+                    2
+                ),
+                'available_months': available_months,
             })
 
         cache.set(cache_key, results, CACHE_TTL)

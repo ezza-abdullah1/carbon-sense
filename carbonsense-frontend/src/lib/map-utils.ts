@@ -50,18 +50,19 @@ export function formatTonnes(t: number): string {
 
 /**
  * Get the emission value for a UC given selected sectors.
+ * Uses display_t (monthly or annual depending on view_mode set by backend).
  */
 export function getUCEmission(uc: UCSummary, sectors: Sector[]): number {
   let total = 0;
   if (sectors.includes('transport') && uc.sectors.transport) {
-    total += uc.sectors.transport.annual_t;
+    total += uc.sectors.transport.display_t;
   }
   if (sectors.includes('buildings') && uc.sectors.buildings) {
-    total += uc.sectors.buildings.total_t;
+    total += uc.sectors.buildings.display_t;
   }
   if (sectors.includes('waste') && uc.sectors.waste) {
-    if (typeof uc.sectors.waste === 'object' && uc.sectors.waste.annual_t) {
-      total += uc.sectors.waste.annual_t;
+    if (typeof uc.sectors.waste === 'object') {
+      total += uc.sectors.waste.display_t;
     }
   }
   if (sectors.includes('energy') && typeof uc.sectors.energy === 'number') {
