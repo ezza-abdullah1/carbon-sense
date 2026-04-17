@@ -5,6 +5,8 @@ import {
   fetchLatestEmissionsByArea,
   fetchTimeSeriesData,
   fetchLeaderboard,
+  fetchUCBoundaries,
+  fetchUCSummaries,
   type EmissionsQueryParams,
   type Sector,
   type TimeInterval
@@ -60,6 +62,25 @@ export function useLeaderboard(
     queryKey: ['leaderboard', dataType, sectors, interval],
     queryFn: () => fetchLeaderboard(dataType, sectors, interval),
     staleTime: 1 * 60 * 1000,
+  });
+}
+
+// Hook to fetch UC polygon boundaries (static GeoJSON, cached forever)
+export function useUCBoundaries() {
+  return useQuery({
+    queryKey: ['uc-boundaries'],
+    queryFn: fetchUCBoundaries,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+}
+
+// Hook to fetch unified per-UC summaries from all sectors
+export function useUCSummaries(dataType: 'historical' | 'forecast' = 'forecast') {
+  return useQuery({
+    queryKey: ['uc-summaries', dataType],
+    queryFn: () => fetchUCSummaries(dataType),
+    staleTime: 5 * 60 * 1000,
   });
 }
 

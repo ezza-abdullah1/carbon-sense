@@ -44,6 +44,64 @@ export interface AreaInfo {
   coordinates: [number, number];
   bounds: [[number, number], [number, number]];
   subSectorData?: SubSectorData | null;
+  ucCode?: string;
+}
+
+// ---- UC Summary types (unified per-UC data from all sectors) ----
+
+export interface TransportSectorData {
+  annual_t: number;
+  road_annual_t: number;
+  dom_avi_annual_t: number;
+  intl_avi_annual_t: number;
+  rail_annual_t: number;
+  road_pct: number;
+  road_weight: number;
+  rail_weight: number;
+  intensity_t_per_km2: number;
+  rank_in_division: number;
+  ci_lower_annual_t: number;
+  ci_upper_annual_t: number;
+  dominant_source: string;
+  risk_flags: string[];
+  monthly_t: number[];
+}
+
+export interface BuildingsSectorData {
+  residential_t: number;
+  non_residential_t: number;
+  total_t: number;
+  intensity_t_km2: number;
+  ci_lower_90_t: number;
+  ci_upper_90_t: number;
+  rank_in_district: number;
+  risk: Record<string, boolean>;
+}
+
+export interface WasteSectorData {
+  annual_t: number;
+  monthly_t: number[];
+  point_source_t: number;
+  solid_waste_t: number;
+  wastewater_t: number;
+  point_pct: number;
+  risk_level: string;
+}
+
+export interface UCSummary {
+  uc_code: string;
+  uc_name: string;
+  area_km2: number;
+  centroid: [number, number];
+  data_type: 'historical' | 'forecast';
+  sectors: {
+    transport?: TransportSectorData | null;
+    buildings?: BuildingsSectorData | null;
+    waste?: WasteSectorData | null;
+    energy?: number;
+    industry?: number;
+  };
+  total_annual_t: number;
 }
 
 export interface EmissionsQueryParams {
@@ -198,4 +256,26 @@ export async function fetchLeaderboard(
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
   return leaderboard;
+}
+
+// ---- UC Boundaries (static GeoJSON) ----
+
+export async function fetchUCBoundaries(): Promise<GeoJSON.FeatureCollection> {
+  const response = await fetch('/geo/lahore-ucs.geojson');
+  if (!response.ok) {
+    throw new Error('Failed to fetch UC boundaries');
+  }
+  return response.json();
+}
+
+// ---- UC Summaries (unified per-UC data) ----
+
+export async function fetchUCSummaries(
+  dataType: 'historical' | 'forecast' = 'forecast'
+): Promise<UCSummary[]> {
+  const response = await fetch(`${API_BASE_URL}/uc-summary/?data_type=${dataType}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch UC summaries');
+  }
+  return response.json();
 }

@@ -7,7 +7,8 @@ from .views import (
     current_user_view,
     EmissionDataViewSet,
     AreaInfoViewSet,
-    LeaderboardViewSet
+    LeaderboardViewSet,
+    UCSummaryViewSet,
 )
 
 # Create a router for ViewSets
@@ -15,6 +16,7 @@ router = DefaultRouter()
 router.register(r'emissions', EmissionDataViewSet, basename='emission')
 router.register(r'areas', AreaInfoViewSet, basename='area')
 router.register(r'leaderboard', LeaderboardViewSet, basename='leaderboard')
+router.register(r'uc-summary', UCSummaryViewSet, basename='uc-summary')
 
 urlpatterns = [
     # Authentication endpoints

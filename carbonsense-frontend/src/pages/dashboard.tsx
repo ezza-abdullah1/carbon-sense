@@ -33,9 +33,10 @@ import {
   X
 } from "lucide-react";
 import type { Sector, DataType, LeaderboardEntry } from "@shared/schema";
-import type { TimeInterval } from "@/lib/api";
-import { useAreas, useLatestEmissions, useLeaderboard, useTimeSeriesData, useCombinedTimeSeriesData } from "@/hooks/use-emissions";
+import type { TimeInterval, UCSummary } from "@/lib/api";
+import { useAreas, useLatestEmissions, useLeaderboard, useTimeSeriesData, useCombinedTimeSeriesData, useUCBoundaries, useUCSummaries } from "@/hooks/use-emissions";
 import type { EmissionDataPoint, AreaInfo } from "@/lib/api";
+import { getUCEmission } from "@/lib/map-utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Dashboard() {
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const [timeInterval, setTimeInterval] = useState<TimeInterval>("monthly");
   const [dataType, setDataType] = useState<DataType>("historical");
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  const [selectedUCCode, setSelectedUCCode] = useState<string | null>(null);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
@@ -54,6 +56,43 @@ export default function Dashboard() {
   const { data: leaderboard = [], isLoading: leaderboardLoading } = useLeaderboard(dataType, selectedSectors, timeInterval);
   const { data: timeSeriesData = [] } = useTimeSeriesData(undefined, dataType);
   const { data: combinedData } = useCombinedTimeSeriesData(selectedAreaId || undefined);
+
+  // UC-level data for choropleth map (supports historical + forecast toggle)
+  const { data: ucBoundaries } = useUCBoundaries();
+  const { data: ucSummaries = [], isLoading: ucLoading } = useUCSummaries(dataType);
+
+  // Derive the selected UC summary
+  const selectedUCSummary = useMemo(() => {
+    if (!selectedUCCode || !ucSummaries) return null;
+    return ucSummaries.find((uc: UCSummary) => uc.uc_code === selectedUCCode) ?? null;
+  }, [selectedUCCode, ucSummaries]);
+
+  // UC-based leaderboard (151 UCs, not duplicated per sector)
+  const ucLeaderboard = useMemo((): LeaderboardEntry[] => {
+    if (!ucSummaries || ucSummaries.length === 0) return [];
+    return ucSummaries
+      .map((uc: UCSummary) => ({
+        rank: 0,
+        areaId: uc.uc_code,
+        areaName: uc.uc_name,
+        emissions: getUCEmission(uc, selectedSectors),
+        trend: 'stable' as const,
+        trendPercentage: 0,
+      }))
+      .filter(e => e.emissions > 0)
+      .sort((a, b) => b.emissions - a.emissions)
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
+  }, [ucSummaries, selectedSectors]);
+
+  // Min/max emissions for map legend
+  const [legendMin, legendMax] = useMemo(() => {
+    if (!ucSummaries || ucSummaries.length === 0) return [0, 0];
+    const values = ucSummaries
+      .map((uc: UCSummary) => getUCEmission(uc, selectedSectors))
+      .filter(v => v > 0);
+    if (values.length === 0) return [0, 0];
+    return [Math.min(...values), Math.max(...values)];
+  }, [ucSummaries, selectedSectors]);
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -313,7 +352,7 @@ export default function Dashboard() {
   const selectedArea = areas.find((a: AreaInfo) => a.id === selectedAreaId);
 
   // Loading state
-  if (areasLoading || emissionsLoading) {
+  if (areasLoading || emissionsLoading || ucLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none z-0">
@@ -877,11 +916,11 @@ export default function Dashboard() {
           <TabsContent value="map" className="h-full mt-0 p-0 relative">
             <div className="absolute inset-0 z-0">
               <EmissionMap
-                areas={areas}
-                selectedAreaId={selectedAreaId}
-                onAreaSelect={setSelectedAreaId}
-                emissionData={emissionData}
-                maxEmission={maxEmission}
+                ucBoundaries={ucBoundaries}
+                ucSummaries={ucSummaries}
+                selectedUCCode={selectedUCCode}
+                onUCSelect={setSelectedUCCode}
+                selectedSectors={selectedSectors}
               />
             </div>
 
@@ -933,12 +972,28 @@ export default function Dashboard() {
                                 onClearAll={handleClearAllSectors}
                               />
                             </div>
-                            <TimeControls
-                              interval={timeInterval}
-                              onIntervalChange={setTimeInterval}
-                              dataType={dataType}
-                              onDataTypeChange={setDataType}
-                            />
+                            <div className="flex items-center space-x-3 pt-1">
+                              <div
+                                className={`flex-1 text-center py-1.5 text-xs font-medium rounded-md cursor-pointer transition-all ${
+                                  dataType === 'historical'
+                                    ? 'bg-white dark:bg-black/60 shadow-sm text-emerald-600 dark:text-emerald-400'
+                                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                }`}
+                                onClick={() => setDataType('historical')}
+                              >
+                                Historical
+                              </div>
+                              <div
+                                className={`flex-1 text-center py-1.5 text-xs font-medium rounded-md cursor-pointer transition-all ${
+                                  dataType === 'forecast'
+                                    ? 'bg-white dark:bg-black/60 shadow-sm text-emerald-600 dark:text-emerald-400'
+                                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                }`}
+                                onClick={() => setDataType('forecast')}
+                              >
+                                Forecast
+                              </div>
+                            </div>
                           </CardContent>
                         </Card>
                       </div>
@@ -947,37 +1002,30 @@ export default function Dashboard() {
                 </AnimatePresence>
               </div>
 
-              {/* Legend back to left hand side */}
+              {/* Legend */}
               <div className="absolute bottom-4 left-4 pointer-events-auto z-[1000]">
-                <MapLegend />
+                <MapLegend minValue={legendMin} maxValue={legendMax} />
               </div>
 
               {/* Right Side: Area Details or Leaderboard */}
               <div className="absolute top-4 right-4 h-[calc(100%-2.5rem)] w-[380px] pointer-events-auto shadow-2xl rounded-2xl flex flex-col z-[1000]">
-                  {selectedAreaId && selectedArea ? (
+                  {selectedUCCode && selectedUCSummary ? (
                     <AreaDetailPanel
-                      areaId={selectedAreaId}
-                      areaName={selectedArea.name}
-                      totalEmissions={selectedAreaEmissions}
-                      trend="down"
-                      trendPercentage={2.1}
-                      sectorBreakdown={sectorBreakdown}
-                      onClose={() => setSelectedAreaId(null)}
-                      coordinates={selectedArea.coordinates}
+                      ucSummary={selectedUCSummary}
                       selectedSectors={selectedSectors}
-                      subSectorData={selectedArea.subSectorData}
+                      onClose={() => setSelectedUCCode(null)}
                     />
                   ) : (
                     <>
-                      {leaderboardLoading ? (
+                      {ucLoading ? (
                         <div className="flex items-center justify-center h-full">
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
                       ) : (
                         <Leaderboard
-                          entries={leaderboard}
-                          selectedAreaId={selectedAreaId}
-                          onAreaSelect={setSelectedAreaId}
+                          entries={ucLeaderboard}
+                          selectedAreaId={selectedUCCode}
+                          onAreaSelect={setSelectedUCCode}
                           sectorTotals={sectorTotals}
                         />
                       )}
