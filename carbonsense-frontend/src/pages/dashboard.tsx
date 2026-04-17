@@ -38,8 +38,17 @@ import {
   LineChart
 } from "lucide-react";
 import type { Sector, DataType, LeaderboardEntry } from "@shared/schema";
-import type { TimeInterval } from "@/lib/api";
-import { useAreas, useEmissions, useLatestEmissions, useLeaderboard, useTimeSeriesData, useCombinedTimeSeriesData } from "@/hooks/use-emissions";
+import type { TimeInterval, UCSummary } from "@/lib/api";
+import {
+  useAreas,
+  useEmissions,
+  useLatestEmissions,
+  useLeaderboard,
+  useTimeSeriesData,
+  useCombinedTimeSeriesData,
+  useUCBoundaries,
+  useUCSummaries,
+} from "@/hooks/use-emissions";
 import {
   Select,
   SelectContent,
@@ -48,6 +57,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { EmissionDataPoint, AreaInfo } from "@/lib/api";
+import { getUCEmission } from "@/lib/map-utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Dashboard() {
@@ -57,6 +67,9 @@ export default function Dashboard() {
   const [timeInterval, setTimeInterval] = useState<TimeInterval>("monthly");
   const [dataType, setDataType] = useState<DataType>("historical");
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  const [selectedUCCode, setSelectedUCCode] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('yearly');
+  const [selectedMonth, setSelectedMonth] = useState<string>('2025-12');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
@@ -78,6 +91,53 @@ export default function Dashboard() {
   const { data: leaderboard = [], isLoading: leaderboardLoading } = useLeaderboard(dataType, selectedSectors, timeInterval);
   const { data: timeSeriesData = [] } = useTimeSeriesData(undefined, dataType);
   const { data: combinedData } = useCombinedTimeSeriesData(selectedAreaId || undefined);
+
+  // UC-level data for choropleth map (supports historical + forecast toggle)
+  const { data: ucBoundaries } = useUCBoundaries();
+  const { data: ucSummaries = [], isLoading: ucLoading } = useUCSummaries(
+    dataType,
+    viewMode,
+    viewMode === 'monthly' ? selectedMonth : undefined,
+  );
+
+  // Available months for dropdown (derived from first UC's response)
+  const availableMonths = useMemo(() => {
+    if (!ucSummaries || ucSummaries.length === 0) return [];
+    return ucSummaries[0]?.available_months ?? [];
+  }, [ucSummaries]);
+
+  // Derive the selected UC summary
+  const selectedUCSummary = useMemo(() => {
+    if (!selectedUCCode || !ucSummaries) return null;
+    return ucSummaries.find((uc: UCSummary) => uc.uc_code === selectedUCCode) ?? null;
+  }, [selectedUCCode, ucSummaries]);
+
+  // UC-based leaderboard (151 UCs, not duplicated per sector)
+  const ucLeaderboard = useMemo((): LeaderboardEntry[] => {
+    if (!ucSummaries || ucSummaries.length === 0) return [];
+    return ucSummaries
+      .map((uc: UCSummary) => ({
+        rank: 0,
+        areaId: uc.uc_code,
+        areaName: uc.uc_name,
+        emissions: getUCEmission(uc, selectedSectors),
+        trend: 'stable' as const,
+        trendPercentage: 0,
+      }))
+      .filter(e => e.emissions > 0)
+      .sort((a, b) => b.emissions - a.emissions)
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
+  }, [ucSummaries, selectedSectors]);
+
+  // Min/max emissions for map legend
+  const [legendMin, legendMax] = useMemo(() => {
+    if (!ucSummaries || ucSummaries.length === 0) return [0, 0];
+    const values = ucSummaries
+      .map((uc: UCSummary) => getUCEmission(uc, selectedSectors))
+      .filter(v => v > 0);
+    if (values.length === 0) return [0, 0];
+    return [Math.min(...values), Math.max(...values)];
+  }, [ucSummaries, selectedSectors]);
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -750,7 +810,7 @@ export default function Dashboard() {
   };
 
   // Loading state
-  if (areasLoading || emissionsLoading) {
+  if (areasLoading || emissionsLoading || ucLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-[#fafafa] dark:bg-[#030303] relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none z-0">
@@ -1344,11 +1404,11 @@ export default function Dashboard() {
           <TabsContent value="map" className="h-full mt-0 p-0 relative">
             <div className="absolute inset-0 z-0">
               <EmissionMap
-                areas={areas}
-                selectedAreaId={selectedAreaId}
-                onAreaSelect={setSelectedAreaId}
-                emissionData={emissionData}
-                maxEmission={maxEmission}
+                ucBoundaries={ucBoundaries}
+                ucSummaries={ucSummaries}
+                selectedUCCode={selectedUCCode}
+                onUCSelect={setSelectedUCCode}
+                selectedSectors={selectedSectors}
               />
             </div>
 
@@ -1400,12 +1460,83 @@ export default function Dashboard() {
                                 onClearAll={handleClearAllSectors}
                               />
                             </div>
-                            <TimeControls
-                              interval={timeInterval}
-                              onIntervalChange={setTimeInterval}
-                              dataType={dataType}
-                              onDataTypeChange={setDataType}
-                            />
+                            {/* Data type: Historical / Forecast */}
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">Data</label>
+                              <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-lg">
+                                {(['historical', 'forecast'] as const).map(dt => (
+                                  <div
+                                    key={dt}
+                                    className={`flex-1 text-center py-1.5 text-xs font-medium rounded-md cursor-pointer transition-all ${
+                                      dataType === dt
+                                        ? 'bg-white dark:bg-black/60 shadow-sm text-emerald-600 dark:text-emerald-400'
+                                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                    }`}
+                                    onClick={() => {
+                                      setDataType(dt);
+                                      setSelectedMonth(dt === 'forecast' ? '2026-12' : '2025-12');
+                                    }}
+                                  >
+                                    {dt === 'historical' ? 'Historical' : 'Forecast'}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* View mode: Monthly / Yearly */}
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-medium text-muted-foreground">View</label>
+                              <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-lg">
+                                {(['monthly', 'yearly'] as const).map(vm => (
+                                  <div
+                                    key={vm}
+                                    className={`flex-1 text-center py-1.5 text-xs font-medium rounded-md cursor-pointer transition-all ${
+                                      viewMode === vm
+                                        ? 'bg-white dark:bg-black/60 shadow-sm text-emerald-600 dark:text-emerald-400'
+                                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                    }`}
+                                    onClick={() => setViewMode(vm)}
+                                  >
+                                    {vm === 'monthly' ? 'Monthly' : 'Yearly'}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Month/Year selectors (only in monthly mode) */}
+                            {viewMode === 'monthly' && availableMonths.length > 0 && (() => {
+                              const years = Array.from(new Set(availableMonths.map(m => m.slice(0, 4)))).sort();
+                              const selectedYear = selectedMonth.slice(0, 4);
+                              const monthsInYear = availableMonths
+                                .filter(m => m.startsWith(selectedYear))
+                                .sort();
+                              const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                              return (
+                                <div className="flex gap-2">
+                                  <select
+                                    className="flex-1 text-xs bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-md px-2 py-1.5 text-slate-700 dark:text-slate-300"
+                                    value={selectedYear}
+                                    onChange={e => {
+                                      const newYear = e.target.value;
+                                      const monthsForYear = availableMonths.filter(m => m.startsWith(newYear));
+                                      setSelectedMonth(monthsForYear[monthsForYear.length - 1] || `${newYear}-12`);
+                                    }}
+                                  >
+                                    {years.map(y => <option key={y} value={y}>{y}</option>)}
+                                  </select>
+                                  <select
+                                    className="flex-1 text-xs bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-md px-2 py-1.5 text-slate-700 dark:text-slate-300"
+                                    value={selectedMonth}
+                                    onChange={e => setSelectedMonth(e.target.value)}
+                                  >
+                                    {monthsInYear.map(m => {
+                                      const mi = parseInt(m.slice(5, 7), 10) - 1;
+                                      return <option key={m} value={m}>{monthNames[mi]} {m.slice(0, 4)}</option>;
+                                    })}
+                                  </select>
+                                </div>
+                              );
+                            })()}
                           </CardContent>
                         </Card>
                       </div>
@@ -1414,37 +1545,30 @@ export default function Dashboard() {
                 </AnimatePresence>
               </div>
 
-              {/* Legend back to left hand side */}
+              {/* Legend */}
               <div className="absolute bottom-4 left-4 pointer-events-auto z-[1000]">
-                <MapLegend />
+                <MapLegend minValue={legendMin} maxValue={legendMax} />
               </div>
 
               {/* Right Side: Area Details or Leaderboard */}
               <div className="absolute top-4 right-4 h-[calc(100%-2.5rem)] w-[380px] pointer-events-auto shadow-2xl rounded-2xl flex flex-col z-[1000]">
-                  {selectedAreaId && selectedArea ? (
+                  {selectedUCCode && selectedUCSummary ? (
                     <AreaDetailPanel
-                      areaId={selectedAreaId}
-                      areaName={selectedArea.name}
-                      totalEmissions={selectedAreaEmissions}
-                      trend="down"
-                      trendPercentage={2.1}
-                      sectorBreakdown={sectorBreakdown}
-                      onClose={() => setSelectedAreaId(null)}
-                      coordinates={selectedArea.coordinates}
+                      ucSummary={selectedUCSummary}
                       selectedSectors={selectedSectors}
-                      subSectorData={selectedArea.subSectorData}
+                      onClose={() => setSelectedUCCode(null)}
                     />
                   ) : (
                     <>
-                      {leaderboardLoading ? (
+                      {ucLoading ? (
                         <div className="flex items-center justify-center h-full">
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
                       ) : (
                         <Leaderboard
-                          entries={leaderboard}
-                          selectedAreaId={selectedAreaId}
-                          onAreaSelect={setSelectedAreaId}
+                          entries={ucLeaderboard}
+                          selectedAreaId={selectedUCCode}
+                          onAreaSelect={setSelectedUCCode}
                           sectorTotals={sectorTotals}
                         />
                       )}

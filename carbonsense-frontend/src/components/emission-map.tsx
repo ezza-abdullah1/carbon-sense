@@ -1,40 +1,124 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
-import type { AreaInfo } from "@/lib/api";
+import type { UCSummary, Sector } from "@/lib/api";
+import {
+  computeQuantileBreaks,
+  getYlOrRdColor,
+  formatTonnes,
+  getUCEmission,
+  RAILWAY_COORDS,
+  AIRPORT_COORDS,
+  CITY_CENTRE_COORDS,
+} from "@/lib/map-utils";
 import "leaflet/dist/leaflet.css";
 
 interface EmissionMapProps {
-  areas: AreaInfo[];
-  selectedAreaId: string | null;
-  onAreaSelect: (areaId: string) => void;
-  emissionData: Record<string, number>;
-  maxEmission: number;
+  ucBoundaries?: GeoJSON.FeatureCollection;
+  ucSummaries?: UCSummary[];
+  selectedUCCode: string | null;
+  onUCSelect: (ucCode: string) => void;
+  selectedSectors: Sector[];
 }
 
-export function EmissionMap({ areas, selectedAreaId, onAreaSelect, emissionData, maxEmission }: EmissionMapProps) {
+export function EmissionMap({
+  ucBoundaries,
+  ucSummaries,
+  selectedUCCode,
+  onUCSelect,
+  selectedSectors,
+}: EmissionMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const markersRef = useRef<Map<string, L.Circle>>(new Map());
-  const onAreaSelectRef = useRef(onAreaSelect);
+  const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
+  const overlaysRef = useRef<L.LayerGroup | null>(null);
+  const onUCSelectRef = useRef(onUCSelect);
 
   useEffect(() => {
-    onAreaSelectRef.current = onAreaSelect;
-  }, [onAreaSelect]);
+    onUCSelectRef.current = onUCSelect;
+  }, [onUCSelect]);
 
+  // Build lookup: uc_code -> UCSummary
+  const ucLookup = useMemo(() => {
+    const map = new Map<string, UCSummary>();
+    if (ucSummaries) {
+      for (const uc of ucSummaries) {
+        map.set(uc.uc_code, uc);
+      }
+    }
+    return map;
+  }, [ucSummaries]);
+
+  // Compute quantile breaks from current sector selection
+  const breaks = useMemo(() => {
+    if (!ucSummaries) return [];
+    const values = ucSummaries
+      .map(uc => getUCEmission(uc, selectedSectors))
+      .filter(v => v > 0)
+      .sort((a, b) => a - b);
+    return computeQuantileBreaks(values, 9);
+  }, [ucSummaries, selectedSectors]);
+
+  // Initialize map once
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: [31.5497, 74.3436],
-      zoom: 12,
+      center: [31.48, 74.33],
+      zoom: 11,
       zoomControl: true,
+      preferCanvas: false,
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 18,
-    }).addTo(map);
+    // CartoDB Positron — light basemap ideal for choropleths
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 20,
+      }
+    ).addTo(map);
 
+    // Add static overlays (railway, airport, city centre)
+    const overlayGroup = L.layerGroup();
+
+    // ML-1 Railway line
+    L.polyline(RAILWAY_COORDS, {
+      color: "#1a4fa0",
+      weight: 3,
+      opacity: 0.8,
+      dashArray: "10,6",
+    })
+      .bindTooltip("ML-1 Pakistan Railways", { sticky: true })
+      .addTo(overlayGroup);
+
+    // Airport marker
+    L.marker(AIRPORT_COORDS, {
+      icon: L.divIcon({
+        html: '<div style="font-size:20px;text-shadow:1px 1px 2px rgba(0,0,0,0.5)">&#9992;</div>',
+        className: "",
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      }),
+    })
+      .bindTooltip("Allama Iqbal International Airport", { sticky: true })
+      .addTo(overlayGroup);
+
+    // City centre marker
+    L.marker(CITY_CENTRE_COORDS, {
+      icon: L.divIcon({
+        html: '<div style="font-size:16px;text-shadow:1px 1px 2px rgba(0,0,0,0.5)">&#9899;</div>',
+        className: "",
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      }),
+    })
+      .bindTooltip("Lahore City Centre", { sticky: true })
+      .addTo(overlayGroup);
+
+    overlayGroup.addTo(map);
+    overlaysRef.current = overlayGroup;
     mapRef.current = map;
 
     return () => {
@@ -45,96 +129,91 @@ export function EmissionMap({ areas, selectedAreaId, onAreaSelect, emissionData,
     };
   }, []);
 
+  // Render/update choropleth layer
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !ucBoundaries || !ucSummaries) return;
 
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current.clear();
+    // Remove previous GeoJSON layer
+    if (geoJsonLayerRef.current) {
+      geoJsonLayerRef.current.remove();
+      geoJsonLayerRef.current = null;
+    }
 
     const map = mapRef.current;
 
-    areas.forEach(area => {
-      const emission = emissionData[area.id];
-      if (!emission) return; // skip areas not in selected sectors
+    const geoJsonLayer = L.geoJSON(ucBoundaries, {
+      style: (feature) => {
+        const ucCode = feature?.properties?.uc_code;
+        const uc = ucLookup.get(ucCode);
+        const emission = uc ? getUCEmission(uc, selectedSectors) : 0;
+        const fillColor = getYlOrRdColor(emission, breaks);
+        const isSelected = ucCode === selectedUCCode;
 
-      // Use absolute emission value for color (evidence-based thresholds)
-      const color = getEmissionColor(emission);
+        return {
+          fillColor,
+          fillOpacity: isSelected ? 0.85 : 0.75,
+          color: isSelected ? "#222" : "#444",
+          weight: isSelected ? 3 : 0.6,
+          opacity: isSelected ? 1 : 0.7,
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        const ucCode: string = feature.properties?.uc_code ?? "";
+        const ucName: string = feature.properties?.uc_name ?? "";
+        const uc = ucLookup.get(ucCode);
+        const emission = uc ? getUCEmission(uc, selectedSectors) : 0;
 
-      // Scale radius based on relative intensity for visual distinction
-      const intensity = maxEmission > 0 ? emission / maxEmission : 0;
-      const radius = 800 + (Math.min(intensity, 1) * 1200);
+        // Sticky tooltip on hover
+        layer.bindTooltip(
+          `<div style="font-family:Arial,sans-serif;font-size:13px">
+            <b>${ucName}</b><br/>${formatTonnes(emission)} CO\u2082e/yr
+          </div>`,
+          { sticky: true }
+        );
 
-      const circle = L.circle(area.coordinates, {
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.4,
-        radius: radius,
-        weight: selectedAreaId === area.id ? 3 : 1,
-      }).addTo(map);
+        // Click to select
+        layer.on("click", () => {
+          onUCSelectRef.current(ucCode);
+        });
 
-      // Tooltip on hover (brief info)
-      circle.bindTooltip(`
-        <div class="font-sans text-sm">
-          <strong>${area.name}</strong><br/>
-          ${emission.toLocaleString(undefined, { maximumFractionDigits: 0 })} tons CO₂e
-        </div>
-      `, {
-        permanent: false,
-        direction: 'top',
-        offset: [0, -10],
-        className: 'emission-tooltip'
-      });
+        // Hover highlight
+        layer.on("mouseover", () => {
+          (layer as L.Path).setStyle({ weight: 2.5, fillOpacity: 0.85 });
+          (layer as L.Path).bringToFront();
+        });
+        layer.on("mouseout", () => {
+          geoJsonLayer.resetStyle(layer);
+        });
+      },
+    }).addTo(map);
 
-      // Popup on click (detailed info)
-      circle.bindPopup(`
-        <div class="font-sans">
-          <h3 class="font-semibold text-base mb-1">${area.name}</h3>
-          <p class="text-sm text-muted-foreground">
-            Emissions: <span class="font-mono font-medium">${emission.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span> tons CO₂e
-          </p>
-          <p class="text-xs text-muted-foreground mt-1">Click "View Full Analysis" for details</p>
-        </div>
-      `);
+    geoJsonLayerRef.current = geoJsonLayer;
 
-      circle.on("click", () => {
-        onAreaSelectRef.current(area.id);
-      });
-
-      markersRef.current.set(area.id, circle);
-    });
-  }, [areas, emissionData, maxEmission, selectedAreaId]);
-
-  useEffect(() => {
-    if (!mapRef.current || !selectedAreaId) return;
-
-    const selectedArea = areas.find(a => a.id === selectedAreaId);
-    if (selectedArea) {
-      mapRef.current.flyTo(selectedArea.coordinates, 13, {
-        duration: 0.5,
+    // Bring overlays (railway, markers) to front
+    if (overlaysRef.current) {
+      overlaysRef.current.eachLayer((l) => {
+        if ((l as L.Path).bringToFront) {
+          (l as L.Path).bringToFront();
+        }
       });
     }
-  }, [selectedAreaId, areas]);
+  }, [ucBoundaries, ucSummaries, ucLookup, breaks, selectedSectors, selectedUCCode]);
+
+  // Fly to selected UC
+  useEffect(() => {
+    if (!mapRef.current || !selectedUCCode || !ucSummaries) return;
+
+    const uc = ucLookup.get(selectedUCCode);
+    if (uc) {
+      mapRef.current.flyTo(uc.centroid, 13, { duration: 0.5 });
+    }
+  }, [selectedUCCode, ucLookup, ucSummaries]);
 
   return (
-    <div 
-      ref={mapContainerRef} 
+    <div
+      ref={mapContainerRef}
       className="w-full h-full rounded-lg border border-border"
       data-testid="map-container"
     />
   );
-}
-
-/**
- * Get emission color based on absolute thresholds (tonnes CO₂e)
- * Based on climate science and Paris Agreement targets:
- * - Low: <20,000 tonnes (below EIB materiality threshold)
- * - Moderate: 20,000-100,000 tonnes (significant but manageable)
- * - High: 100,000-500,000 tonnes (major emitters requiring reduction plans)
- * - Very High: >500,000 tonnes (critical - immediate action required)
- */
-function getEmissionColor(emissionTonnes: number): string {
-  if (emissionTonnes < 20000) return "hsl(142, 65%, 45%)";   // Green - Low
-  if (emissionTonnes < 100000) return "hsl(45, 93%, 47%)";   // Yellow - Moderate
-  if (emissionTonnes < 500000) return "hsl(25, 95%, 53%)";   // Orange - High
-  return "hsl(0, 72%, 51%)";                                  // Red - Very High
 }
