@@ -314,13 +314,7 @@ export function AreaDetailPanel({
           );
         })()}
 
-        {/* ---- Monthly Forecast Sparkline (transport) ---- */}
-        {transport && transport.monthly_t.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Monthly Transport Forecast</h3>
-            <MonthlyBars values={transport.monthly_t} />
-          </div>
-        )}
+        {/* Monthly sparkline removed — monthly data now shown via map toggle */}
 
         {/* ---- Action Buttons ---- */}
         <div className="space-y-3 pt-1">
