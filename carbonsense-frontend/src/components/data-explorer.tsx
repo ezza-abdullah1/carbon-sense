@@ -58,18 +58,90 @@ export function DataExplorer() {
 
   // Combine and filter data
   const filteredData = useMemo(() => {
-    let data: EmissionDataPoint[] = [];
+    let raw: EmissionDataPoint[] = [];
 
     if (dataType === "historical" || dataType === "both") {
-      data = [...data, ...historicalData];
+      raw = [...raw, ...historicalData];
     }
     if (dataType === "forecast" || dataType === "both") {
-      data = [...data, ...forecastData];
+      raw = [...raw, ...forecastData];
     }
 
-    // Filter by area
+    // ── Build lookup: area_id → uc_code (from /api/areas/) + canonical name ──
+    // Different sectors use different names for the same UC (e.g. transport
+    // "Cantonment" vs waste "Aziz Bhatti UC-01") but share the same uc_code.
+    // Merge by uc_code when available, fall back to lowercased name.
+    const idToUcCode = new Map<string, string>();
+    const idToName = new Map<string, string>();
+    const ucCodeToName = new Map<string, string>();
+    areas.forEach((a: AreaInfo) => {
+      idToUcCode.set(a.id, a.ucCode || '');
+      idToName.set(a.id, a.name);
+      if (a.ucCode) {
+        // Prefer a "clean" name (no "UC-XX" suffix) as canonical
+        const existing = ucCodeToName.get(a.ucCode);
+        const isGeneric = /UC[-\s]?\d+/i.test(a.name);
+        if (!existing || (/UC[-\s]?\d+/i.test(existing) && !isGeneric)) {
+          ucCodeToName.set(a.ucCode, a.name);
+        }
+      }
+    });
+
+    const mergeKey = (d: EmissionDataPoint): string => {
+      const uc = idToUcCode.get(d.area_id);
+      const base = uc || d.area_name.trim().toLowerCase();
+      return `${base}|${d.date}|${d.type}`;
+    };
+
+    const displayNameFor = (d: EmissionDataPoint): string => {
+      const uc = idToUcCode.get(d.area_id);
+      if (uc && ucCodeToName.has(uc)) return ucCodeToName.get(uc)!;
+      return d.area_name;
+    };
+
+    const canonicalIdFor = (d: EmissionDataPoint): string => {
+      const uc = idToUcCode.get(d.area_id);
+      if (uc) return uc;  // use uc_code as canonical id when available
+      return d.area_name.toLowerCase().replace(/\s+/g, '_');
+    };
+
+    // ── Merge rows for the same (uc_code OR area_name, date, type) ──
+    const mergeMap = new Map<string, EmissionDataPoint>();
+    raw.forEach((d) => {
+      const key = mergeKey(d);
+      const existing = mergeMap.get(key);
+      if (existing) {
+        existing.transport += d.transport || 0;
+        existing.industry += d.industry || 0;
+        existing.energy += d.energy || 0;
+        existing.waste += d.waste || 0;
+        existing.buildings += d.buildings || 0;
+        existing.total += d.total || 0;
+      } else {
+        mergeMap.set(key, {
+          ...d,
+          area_id: canonicalIdFor(d),
+          area_name: displayNameFor(d),
+          transport: d.transport || 0,
+          industry: d.industry || 0,
+          energy: d.energy || 0,
+          waste: d.waste || 0,
+          buildings: d.buildings || 0,
+          total: d.total || 0,
+        });
+      }
+    });
+    let data = Array.from(mergeMap.values());
+
+    // Filter by area — match against canonical (uc_code) OR original area_id
     if (selectedArea !== "all") {
-      data = data.filter((d) => d.area_id === selectedArea);
+      data = data.filter((d) => {
+        if (d.area_id === selectedArea) return true;
+        // Check if selected area_id's uc_code matches this row's canonical id
+        const selectedUc = idToUcCode.get(selectedArea);
+        if (selectedUc && d.area_id === selectedUc) return true;
+        return false;
+      });
     }
 
     // Filter by search query
@@ -377,11 +449,24 @@ export function DataExplorer() {
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-black/5 dark:border-white/5 shadow-xl backdrop-blur-2xl bg-white/90 dark:bg-[#0a0a0a]/90">
                     <SelectItem value="all">All Areas</SelectItem>
-                    {areas.map((area: AreaInfo) => (
-                      <SelectItem key={area.id} value={area.id}>
-                        {area.name}
-                      </SelectItem>
-                    ))}
+                    {Array.from(
+                      areas.reduce((m: Map<string, { id: string; name: string }>, a: AreaInfo) => {
+                        // Dedupe by uc_code if available, else by name
+                        const key = a.ucCode || a.name.toLowerCase().replace(/\s+/g, '_');
+                        const existing = m.get(key);
+                        const isGeneric = /UC[-\s]?\d+/i.test(a.name);
+                        if (!existing || (/UC[-\s]?\d+/i.test(existing.name) && !isGeneric)) {
+                          m.set(key, { id: a.ucCode || a.id, name: a.name });
+                        }
+                        return m;
+                      }, new Map<string, { id: string; name: string }>()).values()
+                    )
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((entry) => (
+                        <SelectItem key={entry.id} value={entry.id}>
+                          {entry.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
