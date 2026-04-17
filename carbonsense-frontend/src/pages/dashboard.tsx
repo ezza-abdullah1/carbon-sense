@@ -557,9 +557,79 @@ export default function Dashboard() {
   // ── Forecast tab: fetch ALL forecast data ──
   const { data: allForecast = [] } = useEmissions({ data_type: 'forecast' });
 
-  // Filter forecast data
+  // ── Overview: real-time computed stats ──
+  const overviewStats = useMemo(() => {
+    // Unique sectors present in the data
+    const sectorsSet = new Set<string>();
+    allHistorical.forEach((d: EmissionDataPoint) => {
+      if (d.transport > 0) sectorsSet.add('transport');
+      if (d.industry > 0) sectorsSet.add('industry');
+      if (d.energy > 0) sectorsSet.add('energy');
+      if (d.waste > 0) sectorsSet.add('waste');
+      if (d.buildings > 0) sectorsSet.add('buildings');
+    });
+    allForecast.forEach((d: EmissionDataPoint) => {
+      if (d.transport > 0) sectorsSet.add('transport');
+      if (d.industry > 0) sectorsSet.add('industry');
+      if (d.energy > 0) sectorsSet.add('energy');
+      if (d.waste > 0) sectorsSet.add('waste');
+      if (d.buildings > 0) sectorsSet.add('buildings');
+    });
+
+    // Years span from historical data
+    const allDates = allHistorical.map((d: EmissionDataPoint) => d.date).sort();
+    const yearsOfData = allDates.length > 0
+      ? new Date(allDates[allDates.length - 1]).getFullYear() - new Date(allDates[0]).getFullYear() + 1
+      : 0;
+
+    // Total historical emissions
+    const totalHistorical = allHistorical.reduce((sum: number, d: EmissionDataPoint) => sum + d.total, 0);
+
+    // Total forecast emissions
+    const totalForecast = allForecast.reduce((sum: number, d: EmissionDataPoint) => sum + d.total, 0);
+
+    // Latest historical date
+    const latestDate = allDates.length > 0 ? allDates[allDates.length - 1] : null;
+    const earliestDate = allDates.length > 0 ? allDates[0] : null;
+
+    return {
+      sectorsCount: sectorsSet.size,
+      yearsOfData,
+      totalHistorical,
+      totalForecast,
+      historicalRecords: allHistorical.length,
+      forecastRecords: allForecast.length,
+      latestDate,
+      earliestDate,
+    };
+  }, [allHistorical, allForecast]);
+
+  // Smart number formatter
+  const formatEmissions = (v: number): string => {
+    if (v === 0) return '0';
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
+    if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+    return v.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  };
+
+  // Format relative time ago
+  const timeAgo = (dateStr: string | null): string => {
+    if (!dateStr) return '—';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays < 1) return 'Just now';
+    if (diffDays < 30) return `${diffDays}d ago`;
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths < 12) return `${diffMonths}mo ago`;
+    const diffYears = Math.floor(diffMonths / 12);
+    return `${diffYears}y ago`;
+  };
+
+  // Filter forecast data — only from Jan 2026 onwards
   const forecastFiltered = useMemo(() => {
-    let data = allForecast;
+    let data = allForecast.filter((d: EmissionDataPoint) => d.date >= '2026-01-01');
     if (forecastSector !== 'all') {
       data = data.filter((d: EmissionDataPoint) => (d as any)[forecastSector] > 0);
     }
@@ -569,9 +639,9 @@ export default function Dashboard() {
     return data;
   }, [allForecast, forecastSector, forecastArea]);
 
-  // Available areas for forecast filter
+  // Available areas for forecast filter — only from Jan 2026 onwards
   const forecastAreaOptions = useMemo(() => {
-    let data = allForecast;
+    let data = allForecast.filter((d: EmissionDataPoint) => d.date >= '2026-01-01');
     if (forecastSector !== 'all') {
       data = data.filter((d: EmissionDataPoint) => (d as any)[forecastSector] > 0);
     }
@@ -1010,7 +1080,7 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Sectors Tracked</p>
-                          <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-300">5</p>
+                          <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-300">{overviewStats.sectorsCount}</p>
                         </div>
                         <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/10 flex items-center justify-center border border-blue-500/20 shadow-inner">
                           <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -1026,7 +1096,7 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Years of Data</p>
-                          <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500 dark:from-purple-400 dark:to-pink-300">3+</p>
+                          <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-500 dark:from-purple-400 dark:to-pink-300">{overviewStats.yearsOfData || '—'}</p>
                         </div>
                         <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/10 flex items-center justify-center border border-purple-500/20 shadow-inner">
                           <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
@@ -1043,9 +1113,7 @@ export default function Dashboard() {
                         <div>
                           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Emissions</p>
                           <p className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-500 dark:from-amber-400 dark:to-orange-300 flex items-baseline gap-1">
-                            {leaderboard.length > 0
-                              ? `${(Math.round((leaderboard as LeaderboardEntry[]).reduce((sum: number, e: LeaderboardEntry) => sum + e.emissions, 0) / 1000000 * 10) / 10).toLocaleString()}M`
-                              : '—'}
+                            {overviewStats.totalHistorical > 0 ? formatEmissions(overviewStats.totalHistorical) : '—'}
                             <span className="text-xs font-normal text-slate-400 dark:text-slate-500">CO₂e tons</span>
                           </p>
                         </div>
@@ -1197,13 +1265,13 @@ export default function Dashboard() {
                       </Card>
                     </motion.div>
 
-                    {/* Live System Updates */}
+                    {/* Data Summary — real-time stats */}
                     <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.5 }}>
                       <Card className="bg-white/40 dark:bg-black/30 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group">
                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                         <CardHeader className="pb-3 flex flex-row items-center justify-between relative z-10">
                           <CardTitle className="text-sm font-semibold flex items-center gap-2 text-slate-800 dark:text-slate-200">
-                            <Activity className="h-4 w-4 text-indigo-500" /> System Updates
+                            <Activity className="h-4 w-4 text-indigo-500" /> Data Summary
                           </CardTitle>
                           <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -1213,10 +1281,42 @@ export default function Dashboard() {
                         <CardContent className="relative z-10 p-5 md:p-6 pt-2">
                           <div className="space-y-6 md:space-y-7">
                             {[
-                              { title: "Anomaly Detected", desc: "Spike in Gulberg energy usage", time: "Just now", icon: Zap, color: "text-amber-500", bg: "bg-amber-500/10" },
-                              { title: "Model Deployed", desc: "ML Forecast updated to v2.1", time: "2h ago", icon: Brain, color: "text-purple-500", bg: "bg-purple-500/10" },
-                              { title: "Data Sync Complete", desc: "Climate Trace API synchronized", time: "5h ago", icon: Database, color: "text-blue-500", bg: "bg-blue-500/10" },
-                              { title: "New Route Parsed", desc: "Transport tracking optimized", time: "1d ago", icon: Activity, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                              {
+                                title: "Historical Records",
+                                desc: overviewStats.earliestDate && overviewStats.latestDate
+                                  ? `${new Date(overviewStats.earliestDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} – ${new Date(overviewStats.latestDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`
+                                  : 'Building dataset…',
+                                value: overviewStats.historicalRecords.toLocaleString(),
+                                icon: Database,
+                                color: "text-blue-500",
+                                bg: "bg-blue-500/10"
+                              },
+                              {
+                                title: "Forecast Records",
+                                desc: `${overviewStats.sectorsCount} sector${overviewStats.sectorsCount !== 1 ? 's' : ''} modeled`,
+                                value: overviewStats.forecastRecords.toLocaleString(),
+                                icon: Brain,
+                                color: "text-purple-500",
+                                bg: "bg-purple-500/10"
+                              },
+                              {
+                                title: "Total Forecast",
+                                desc: "Projected CO₂e emissions",
+                                value: overviewStats.totalForecast > 0 ? `${formatEmissions(overviewStats.totalForecast)} t` : '—',
+                                icon: TrendingUp,
+                                color: "text-emerald-500",
+                                bg: "bg-emerald-500/10"
+                              },
+                              {
+                                title: "Latest Data",
+                                desc: overviewStats.latestDate
+                                  ? new Date(overviewStats.latestDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                                  : 'Syncing…',
+                                value: timeAgo(overviewStats.latestDate),
+                                icon: Zap,
+                                color: "text-amber-500",
+                                bg: "bg-amber-500/10"
+                              },
                             ].map((update, idx) => (
                               <div key={idx} className="flex gap-4 group/item items-start">
                                 <div className={`flex-shrink-0 h-10 w-10 rounded-full ${update.bg} flex items-center justify-center mt-0.5 group-hover/item:scale-110 transition-transform`}>
@@ -1225,7 +1325,7 @@ export default function Dashboard() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex justify-between items-center mb-1">
                                     <h4 className="text-[15px] font-semibold text-slate-800 dark:text-slate-200 truncate">{update.title}</h4>
-                                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap ml-2 flex-shrink-0">{update.time}</span>
+                                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap ml-2 flex-shrink-0 tabular-nums">{update.value}</span>
                                   </div>
                                   <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{update.desc}</p>
                                 </div>
