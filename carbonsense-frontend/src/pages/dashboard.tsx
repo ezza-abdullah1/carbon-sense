@@ -629,7 +629,7 @@ export default function Dashboard() {
 
   // Filter forecast data — only from Jan 2026 onwards
   const forecastFiltered = useMemo(() => {
-    let data = allForecast.filter((d: EmissionDataPoint) => d.date >= '2026-01-01');
+    let data = allForecast.filter((d: EmissionDataPoint) => d.date >= '2026-02-01');
     if (forecastSector !== 'all') {
       data = data.filter((d: EmissionDataPoint) => (d as any)[forecastSector] > 0);
     }
@@ -641,7 +641,7 @@ export default function Dashboard() {
 
   // Available areas for forecast filter — only from Jan 2026 onwards
   const forecastAreaOptions = useMemo(() => {
-    let data = allForecast.filter((d: EmissionDataPoint) => d.date >= '2026-01-01');
+    let data = allForecast.filter((d: EmissionDataPoint) => d.date >= '2026-02-01');
     if (forecastSector !== 'all') {
       data = data.filter((d: EmissionDataPoint) => (d as any)[forecastSector] > 0);
     }
