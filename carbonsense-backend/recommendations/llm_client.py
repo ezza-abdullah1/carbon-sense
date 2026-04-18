@@ -1,28 +1,29 @@
 """
-Google Gemini LLM client — used ONLY for optional summary enhancement.
-
-The template builder generates 95% of the response.  Gemini polishes the
-summary with ~150 output tokens.  If Gemini is down or quota is hit, the
-template summary is used as-is.
+Groq LLM client — uses Llama 3.3 70B via Groq for recommendation generation
+and optional summary enhancement.
 """
 
+import json
 import logging
 
-import google.generativeai as genai
+from groq import Groq
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+GROQ_MODEL = 'llama-3.3-70b-versatile'
+
 
 class GeminiClient:
-    """Wraps the Google Generative AI SDK for lightweight Gemini calls."""
+    """Wraps the Groq SDK (Llama 3.3 70B). Class name kept for compatibility."""
 
     def __init__(self):
-        api_key = getattr(settings, 'GEMINI_API_KEY', '')
-        if not api_key or api_key == 'your-gemini-api-key-here':
+        api_key = getattr(settings, 'GROQ_API_KEY', '')
+        if not api_key or api_key == 'your-groq-api-key-here':
             self._configured = False
+            self._client = None
             return
-        genai.configure(api_key=api_key)
+        self._client = Groq(api_key=api_key)
         self._configured = True
 
     @property
@@ -30,16 +31,11 @@ class GeminiClient:
         return self._configured
 
     # ------------------------------------------------------------------ #
-    # Lightweight summary enhancer  (~200 input + 150 output tokens)
+    # Lightweight summary enhancer
     # ------------------------------------------------------------------ #
 
     def enhance_summary(self, template_summary, area_name, sector):
         """Enhance a template-generated summary with LLM polish.
-
-        Args:
-            template_summary: The data-driven summary from the template builder.
-            area_name: Name of the area.
-            sector: Primary sector.
 
         Returns:
             Enhanced summary string, or None on any failure.
@@ -48,56 +44,48 @@ class GeminiClient:
             return None
 
         try:
-            model = genai.GenerativeModel('gemini-2.0-flash')
-
-            prompt = (
-                f"Improve this environmental summary for {area_name} ({sector}) "
-                f"in Lahore, Pakistan. Make it more natural and insightful. "
-                f"Keep under 4 sentences. Return ONLY the improved text.\n\n"
-                f"{template_summary}"
+            response = self._client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=[
+                    {"role": "user", "content": (
+                        f"Improve this environmental summary for {area_name} ({sector}) "
+                        f"in Lahore, Pakistan. Make it more natural and insightful. "
+                        f"Keep under 4 sentences. Return ONLY the improved text.\n\n"
+                        f"{template_summary}"
+                    )},
+                ],
+                temperature=0.5,
+                max_tokens=150,
             )
 
-            response = model.generate_content(
-                contents=[{"role": "user", "parts": [{"text": prompt}]}],
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.5,
-                    max_output_tokens=150,
-                ),
-            )
-
-            text = response.text.strip()
+            text = response.choices[0].message.content.strip()
             if len(text) > 20:
                 return text
             return None
 
         except Exception as e:
-            logger.warning(f"Gemini enhance_summary failed (will use template): {e}")
+            logger.warning(f"Groq enhance_summary failed (will use template): {e}")
             return None
 
     # ------------------------------------------------------------------ #
-    # Full generation (legacy — kept for compatibility)
+    # Full generation
     # ------------------------------------------------------------------ #
 
     def generate(self, system_prompt, user_prompt):
-        """Generate a full response from Gemini (legacy path)."""
+        """Generate a full response from Groq (Llama 3.3 70B)."""
         if not self._configured:
-            raise RuntimeError("Gemini API key is not configured.")
+            raise RuntimeError("Groq API key is not configured.")
 
-        model = genai.GenerativeModel(
-            'gemini-2.0-flash',
-            system_instruction=system_prompt,
-        )
-
-        response = model.generate_content(
-            contents=[
-                {"role": "user", "parts": [{"text": user_prompt}]},
+        response = self._client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
             ],
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.7,
-                top_p=0.9,
-                max_output_tokens=2048,
-                response_mime_type="application/json",
-            ),
+            temperature=0.7,
+            top_p=0.9,
+            max_tokens=2048,
+            response_format={"type": "json_object"},
         )
 
-        return response.text
+        return response.choices[0].message.content

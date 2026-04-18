@@ -161,7 +161,7 @@ AUTH_USER_MODEL = 'api.User'
 
 # Session settings
 # Recommendations / RAG settings
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 CHROMA_PERSIST_DIR = str(BASE_DIR / 'chroma_data')
 EMBEDDING_MODEL = 'all-MiniLM-L6-v2'
 RECOMMENDATION_CACHE_TTL_HOURS = int(os.environ.get('RECOMMENDATION_CACHE_TTL_HOURS', '24'))

@@ -1510,11 +1510,11 @@ export default function Dashboard() {
                               const monthsInYear = availableMonths
                                 .filter(m => m.startsWith(selectedYear))
                                 .sort();
-                              const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                              const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
                               return (
                                 <div className="flex gap-2">
                                   <select
-                                    className="flex-1 text-xs bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-md px-2 py-1.5 text-slate-700 dark:text-slate-300"
+                                    className="flex-1 text-xs bg-white dark:bg-[#1a1a1a] border border-slate-300 dark:border-slate-600 rounded-md px-2 py-1.5 text-slate-800 dark:text-slate-200"
                                     value={selectedYear}
                                     onChange={e => {
                                       const newYear = e.target.value;
@@ -1525,13 +1525,13 @@ export default function Dashboard() {
                                     {years.map(y => <option key={y} value={y}>{y}</option>)}
                                   </select>
                                   <select
-                                    className="flex-1 text-xs bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-md px-2 py-1.5 text-slate-700 dark:text-slate-300"
+                                    className="flex-1 text-xs bg-white dark:bg-[#1a1a1a] border border-slate-300 dark:border-slate-600 rounded-md px-2 py-1.5 text-slate-800 dark:text-slate-200"
                                     value={selectedMonth}
                                     onChange={e => setSelectedMonth(e.target.value)}
                                   >
                                     {monthsInYear.map(m => {
                                       const mi = parseInt(m.slice(5, 7), 10) - 1;
-                                      return <option key={m} value={m}>{monthNames[mi]} {m.slice(0, 4)}</option>;
+                                      return <option key={m} value={m}>{monthNames[mi]}</option>;
                                     })}
                                   </select>
                                 </div>

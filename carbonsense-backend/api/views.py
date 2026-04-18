@@ -492,14 +492,95 @@ def _build_waste_by_uc(data_type):
     return waste_by_uc
 
 
-def _build_point_source_totals(data_type):
-    """Power + Industry: point sources from DB (no UC mapping).
-    Falls back to JSON if DB has no data for the requested type."""
-    totals = {'energy': 0.0, 'industry': 0.0}
+def _build_industry_uc_mapping():
+    """Build UC_XXXX -> PB-LAH-UCYYY mapping via centroid matching (cached)."""
+    cache_key = '_industry_uc_mapping'
+    if cache_key in _json_cache:
+        return _json_cache[cache_key]
+
+    import math
+    spatial = _load_data_file('carbonsense_lahore_spatial_v1.2.json')
+    geo_path = os.path.join(DATA_DIR, 'lahore_ucs.geojson')
+    with open(geo_path, encoding='utf-8') as f:
+        geo = json.load(f)
+
+    def _dist(lat1, lon1, lat2, lon2):
+        return math.sqrt((lat1 - lat2) ** 2 + (lon1 - lon2) ** 2)
+
+    mapping = {}
+    for suc in spatial.get('uc_emissions', []):
+        sc = suc['centroid']
+        best_dist = 999
+        best_code = ''
+        for gf in geo['features']:
+            gp = gf['properties']
+            d = _dist(sc[0], sc[1], gp['centroid_lat'], gp['centroid_lon'])
+            if d < best_dist:
+                best_dist = d
+                best_code = f"PB-LAH-UC{gp['uc_id']:03d}"
+        mapping[suc['uc_id']] = best_code
+
+    _json_cache[cache_key] = mapping
+    return mapping
+
+
+def _build_industry_by_uc(data_type):
+    """Industry/Manufacturing: 151 UCs from carbonsense_lahore_spatial_v1.2.json.
+    Supports historical (48 months) and forecast (12 months)."""
+    data = _load_data_file('carbonsense_lahore_spatial_v1.2.json')
+    uc_mapping = _build_industry_uc_mapping()
+    result = {}
+
+    for suc in data.get('uc_emissions', []):
+        uc_code = uc_mapping.get(suc['uc_id'], '')
+        if not uc_code:
+            continue
+
+        if data_type == 'forecast':
+            fc = suc.get('forecast', {})
+            series = fc.get('monthly_series', [])
+            monthly = [_safe_float(m.get('total_t')) for m in series]
+            result[uc_code] = {
+                'annual_t': _safe_float(fc.get('annual_total_t')),
+                'by_sector': fc.get('by_sector_annual', {}),
+                'intensity_t_per_km2': _safe_float(fc.get('intensity_t_per_km2')),
+                'rank_in_district': fc.get('rank_in_district', 0),
+                'ci_lower_t': _safe_float(fc.get('annual_ci_lo')),
+                'ci_upper_t': _safe_float(fc.get('annual_ci_hi')),
+                'monthly_t': monthly,
+                'dominant_sector': suc.get('dominant_sector', ''),
+                'risk_flags': suc.get('risk_flags', []),
+            }
+        else:
+            hist = suc.get('historical', {})
+            series = hist.get('monthly_series', [])
+            monthly = [_safe_float(m.get('total_t')) for m in series]
+            last12 = monthly[-12:] if len(monthly) >= 12 else monthly
+            annual = sum(last12)
+            result[uc_code] = {
+                'annual_t': round(annual, 2),
+                'by_sector': hist.get('by_sector_total', {}),
+                'intensity_t_per_km2': round(
+                    annual / max(_safe_float(suc.get('area_km2')), 0.01), 1
+                ),
+                'rank_in_district': 0,
+                'ci_lower_t': 0.0,
+                'ci_upper_t': 0.0,
+                'monthly_t': monthly,
+                'dominant_sector': suc.get('dominant_sector', ''),
+                'risk_flags': suc.get('risk_flags', []),
+            }
+    return result
+
+
+def _build_energy_totals(data_type):
+    """Power/Energy: point sources from DB (no UC mapping).
+    Returns district total to be evenly distributed across UCs."""
+    total = 0.0
     runs = _get_active_runs()
     for run in runs:
         sector = _sector_field(run)
-        if sector not in totals:
+        if sector != 'energy':
             continue
         locs = Location.objects.filter(forecast_run=run)
         for loc in locs:
@@ -507,28 +588,19 @@ def _build_point_source_totals(data_type):
                 location=loc, point_type=data_type
             )
             for p in pts:
-                totals[sector] += _safe_float(p.emissions)
+                total += _safe_float(p.emissions)
 
-    # Fallback: if DB had zero for a sector, try JSON
-    if totals['energy'] == 0.0:
+    # Fallback to JSON
+    if total == 0.0:
         try:
             pdata = _load_data_file('power_new.json')
             for loc in pdata.get('locations', []):
                 for cd in loc.get('chart_data', []):
                     if isinstance(cd, dict) and cd.get('type') == data_type:
-                        totals['energy'] += _safe_float(cd.get('value'))
+                        total += _safe_float(cd.get('value'))
         except Exception:
             pass
-    if totals['industry'] == 0.0:
-        try:
-            idata = _load_data_file('industry.json')
-            for loc in idata.get('locations', []):
-                for cd in loc.get('chart_data', []):
-                    if isinstance(cd, dict) and cd.get('type') == data_type:
-                        totals['industry'] += _safe_float(cd.get('value'))
-        except Exception:
-            pass
-    return totals
+    return total
 
 
 def _get_monthly_dates(data_type):
@@ -563,10 +635,20 @@ def _get_monthly_dates(data_type):
         w_series = first_wuc.get('historical', [])
         w_dates = [row['date'] for row in w_series if isinstance(row, dict)]
 
+    # Industry/Manufacturing: dates from monthly_series
+    i_data = _load_data_file('carbonsense_lahore_spatial_v1.2.json')
+    first_iuc = i_data['uc_emissions'][0] if i_data.get('uc_emissions') else {}
+    if data_type == 'forecast':
+        i_series = first_iuc.get('forecast', {}).get('monthly_series', [])
+    else:
+        i_series = first_iuc.get('historical', {}).get('monthly_series', [])
+    i_dates = [m['date'] for m in i_series if isinstance(m, dict)]
+
     return {
         'transport': t_dates,
         'buildings': b_dates,
         'waste': w_dates,
+        'industry': i_dates,
     }
 
 
@@ -613,7 +695,8 @@ class UCSummaryViewSet(viewsets.ViewSet):
         transport_by_uc = _build_transport_by_uc(data_type)
         buildings_by_uc = _build_buildings_by_uc(data_type)
         waste_by_uc = _build_waste_by_uc(data_type)
-        point_totals = _build_point_source_totals(data_type)
+        industry_by_uc = _build_industry_by_uc(data_type)
+        energy_total = _build_energy_totals(data_type)
 
         # --- Resolve month index for monthly mode ---
         month_indices = {}  # sector -> index into monthly_t
@@ -642,27 +725,22 @@ class UCSummaryViewSet(viewsets.ViewSet):
         )
         n_ucs = len(all_codes) or 1
 
-        # For yearly mode, divide point-source totals across all UCs.
-        # For monthly mode, divide the monthly share (total / 12).
+        # Energy: still point-source only, distribute evenly
         if view_mode == 'monthly':
             n_months_energy = max(
                 len(_get_monthly_dates(data_type).get('buildings', [])), 1
             )
-            energy_share = (point_totals['energy'] / n_months_energy) / n_ucs
-            industry_share = (
-                point_totals['industry'] / n_months_energy
-            ) / n_ucs
+            energy_share = (energy_total / n_months_energy) / n_ucs
         else:
-            energy_share = point_totals['energy'] / n_ucs
-            industry_share = point_totals['industry'] / n_ucs
+            energy_share = energy_total / n_ucs
 
         # --- Available months list (for frontend dropdown) ---
         sector_dates = _get_monthly_dates(data_type)
-        # Merge all sector dates into a sorted unique set
         all_dates = sorted(set(
             sector_dates.get('transport', [])
             + sector_dates.get('buildings', [])
             + sector_dates.get('waste', [])
+            + sector_dates.get('industry', [])
         ))
         available_months = sorted(set(d[:7] for d in all_dates))
 
@@ -686,6 +764,7 @@ class UCSummaryViewSet(viewsets.ViewSet):
             t_data = transport_by_uc.get(uc_code)
             b_data = buildings_by_uc.get(uc_code)
             w_data = waste_by_uc.get(uc_code)
+            i_data = industry_by_uc.get(uc_code)
 
             # Compute display_t per sector
             def _get_display(sector_data, sector_key, annual_key='annual_t'):
@@ -703,6 +782,7 @@ class UCSummaryViewSet(viewsets.ViewSet):
             t_display = _get_display(t_data, 'transport')
             b_display = _get_display(b_data, 'buildings', 'total_t')
             w_display = _get_display(w_data, 'waste')
+            i_display = _get_display(i_data, 'industry')
 
             # Add display_t to each sector dict
             if t_data:
@@ -711,10 +791,12 @@ class UCSummaryViewSet(viewsets.ViewSet):
                 b_data = {**b_data, 'display_t': round(b_display, 2)}
             if w_data:
                 w_data = {**w_data, 'display_t': round(w_display, 2)}
+            if i_data:
+                i_data = {**i_data, 'display_t': round(i_display, 2)}
 
             total_display = (
-                t_display + b_display + w_display
-                + energy_share + industry_share
+                t_display + b_display + w_display + i_display
+                + energy_share
             )
 
             results.append({
@@ -729,16 +811,16 @@ class UCSummaryViewSet(viewsets.ViewSet):
                     'transport': t_data,
                     'buildings': b_data,
                     'waste': w_data,
+                    'industry': i_data,
                     'energy': round(energy_share, 2),
-                    'industry': round(industry_share, 2),
                 },
                 'display_t': round(total_display, 2),
                 'total_annual_t': round(
                     (t_data['annual_t'] if t_data else 0)
                     + (b_data['total_t'] if b_data else 0)
                     + (w_data['annual_t'] if w_data else 0)
-                    + (point_totals['energy'] / n_ucs)
-                    + (point_totals['industry'] / n_ucs),
+                    + (i_data['annual_t'] if i_data else 0)
+                    + (energy_total / n_ucs),
                     2
                 ),
                 'available_months': available_months,

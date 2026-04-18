@@ -95,32 +95,26 @@ export function Leaderboard({ entries, selectedAreaId, onAreaSelect, sectorTotal
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    {entry.trend === "up" && (
-                      <div className="flex items-center bg-destructive/10 px-2 py-1 rounded-full">
-                        <TrendingUp className="h-3 w-3 text-destructive mr-1" />
-                        <span className="font-mono text-[11px] font-medium text-destructive whitespace-nowrap">
-                          +{Number(entry.trendPercentage).toFixed(1)}%
-                        </span>
-                      </div>
-                    )}
-                    {entry.trend === "down" && (
-                      <div className="flex items-center bg-emerald-500/10 px-2 py-1 rounded-full">
-                        <TrendingDown className="h-3 w-3 text-emerald-600 dark:text-emerald-400 mr-1" />
-                        <span className="font-mono text-[11px] font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                          -{Number(entry.trendPercentage).toFixed(1)}%
-                        </span>
-                      </div>
-                    )}
-                    {entry.trend === "stable" && (
-                      <div className="flex items-center bg-slate-500/10 px-2 py-1 rounded-full">
-                        <Minus className="h-3 w-3 text-slate-500 mr-1" />
-                        <span className="font-mono text-[11px] font-medium text-slate-500 whitespace-nowrap">
-                          {Number(entry.trendPercentage).toFixed(1)}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  {entry.trendPercentage > 0 && (
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {entry.trend === "up" && (
+                        <div className="flex items-center bg-destructive/10 px-2 py-1 rounded-full">
+                          <TrendingUp className="h-3 w-3 text-destructive mr-1" />
+                          <span className="font-mono text-[11px] font-medium text-destructive whitespace-nowrap">
+                            +{Number(entry.trendPercentage).toFixed(1)}%
+                          </span>
+                        </div>
+                      )}
+                      {entry.trend === "down" && (
+                        <div className="flex items-center bg-emerald-500/10 px-2 py-1 rounded-full">
+                          <TrendingDown className="h-3 w-3 text-emerald-600 dark:text-emerald-400 mr-1" />
+                          <span className="font-mono text-[11px] font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            -{Number(entry.trendPercentage).toFixed(1)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
