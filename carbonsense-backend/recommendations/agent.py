@@ -174,36 +174,91 @@ def _build_gemini_prompt(uc_data, sector):
 
     data_block = "\n".join(data_lines)
 
-    prompt = f"""You are an expert climate policy advisor for Pakistan's urban areas. Based on the following REAL emission data for {area} Union Council in Lahore, generate actionable recommendations for government officials and policymakers.
+    # Build area-specific context bullets
+    context_bullets = []
+    if t:
+        if t['rank_in_division'] <= 10:
+            context_bullets.append(
+                f"{area} is a TOP-10 transport emitter (rank #{t['rank_in_division']}/151) — "
+                f"aggressive intervention is justified"
+            )
+        if 'aviation_plume_proximity' in (t.get('risk_flags') or []):
+            context_bullets.append(
+                f"{area} is near Allama Iqbal International Airport — "
+                f"aviation contributes {t['intl_avi_annual_t']:,.0f}t/yr, "
+                f"ground-level air quality is compounded by LTO cycles"
+            )
+        if 'winter_smog_zone' in (t.get('risk_flags') or []):
+            context_bullets.append(
+                f"{area} falls in Lahore's winter smog zone — "
+                f"seasonal emission spikes worsen PM2.5 during Nov-Feb"
+            )
+        if 'rail_corridor' in (t.get('risk_flags') or []):
+            context_bullets.append(
+                f"{area} is on the ML-1 railway corridor — "
+                f"rail electrification would directly reduce local emissions"
+            )
+        if t['road_pct'] > 85:
+            context_bullets.append(
+                f"Road transport dominates at {t['road_pct']:.0f}% — "
+                f"interventions must target vehicular traffic specifically"
+            )
+        if t['intensity_t_per_km2'] > 10000:
+            context_bullets.append(
+                f"Extremely high emission density ({t['intensity_t_per_km2']:,.0f} t/km²) — "
+                f"this is a congestion hotspot requiring traffic demand management"
+            )
+    if b:
+        if b['rank_in_district'] <= 10:
+            context_bullets.append(
+                f"Building emissions rank #{b['rank_in_district']}/151 — "
+                f"residential heating/cooling is a major driver "
+                f"({b['residential_t']:,.0f}t residential vs {b['non_residential_t']:,.0f}t commercial)"
+            )
+    if w:
+        if w.get('risk_level') in ('Critical', 'High'):
+            context_bullets.append(
+                f"Waste risk level is {w['risk_level']} — "
+                f"point sources contribute {w['point_pct']:.0f}% of waste emissions"
+            )
 
+    context_block = "\n".join(f"• {b}" for b in context_bullets) if context_bullets else "No special risk flags."
+
+    prompt = f"""You are a senior climate policy advisor hired by the Government of Punjab to write a site-specific emission reduction action plan for {area} Union Council in Lahore District.
+
+EMISSION DATA FOR {area.upper()}:
 {data_block}
 
-Generate a JSON response with EXACTLY this structure:
+AREA-SPECIFIC CONTEXT:
+{context_block}
+
+Based on this data, generate a JSON response with EXACTLY this structure. Every recommendation MUST reference the specific numbers above (e.g. "{t['forecast_annual_t']:,.0f}t annual transport emissions" or "rank #{t['rank_in_division']}" or specific risk flags). Do NOT write generic advice that could apply to any city.
+
 {{
-  "summary": "A 3-4 sentence executive summary of the emission situation and key priorities for this UC",
+  "summary": "3-4 sentences. Start with: '{area} UC emits [total] tonnes CO2e annually, ranking #[rank]/151 in Lahore District.' Then describe the dominant emission source, key risk, and what makes this UC different from others. Use actual numbers from the data.",
+
   "immediate_actions": [
-    "4-5 specific, implementable actions with **Bold Title** - [Expected Impact]: X% reduction - [Estimated Cost Range]: PKR X Million - [Implementation Priority]: High/Medium/Low"
+    "5 actions. Each MUST: (1) name {area} specifically, (2) reference the actual emission breakdown (e.g. 'road transport at {t['road_pct'] if t else 0:.0f}%'), (3) propose an intervention sized to the area's km² and emission intensity. Format: **Bold Title targeting {area}** - [Expected Impact]: X% reduction of the {t['forecast_annual_t'] if t else 0:,.0f}t - [Estimated Cost Range]: PKR X Million - [Implementation Priority]: High/Medium/Low"
   ],
+
   "long_term_strategies": [
-    "3-4 strategies with **Bold Title** - [Timeline]: X years - [Expected Reduction]: X% - [Key Milestones]: Year 1: ... Year 2: ..."
+    "3-4 strategies. Each MUST reference {area}'s specific rank, risk flags, or emission profile. Format: **Bold Title** - [Timeline]: X years - [Expected Reduction]: X% of {area}'s [sector] emissions - [Key Milestones]: Year 1: ... Year 2: ..."
   ],
+
   "policy_recommendations": [
-    "3-4 policy recommendations referencing real Pakistan/Punjab regulations such as: Punjab Environmental Protection Act 1997, Pakistan Climate Change Act 2017, National Electric Vehicle Policy 2019, Punjab Clean Air Action Plan, PEPA Motor Vehicle Emission Standards, National Energy Efficiency & Conservation Act 2016, Pakistan NDC commitments under Paris Agreement. Each should cite the specific regulation."
+    "3-4 recommendations. Each MUST cite a REAL Pakistan/Punjab law or regulation (e.g. 'Under Section 11 of Punjab Environmental Protection Act 1997' or 'Pakistan Climate Change Act 2017, Section 4(2)' or 'National Electric Vehicle Policy 2019, Para 7.3' or 'PEPA Motor Vehicle Emission Standards SRO 72(I)/2009' or 'Pakistan NDC 2021, target 50% by 2030'). Explain how the cited law applies to {area}'s specific situation."
   ],
+
   "monitoring_metrics": [
-    "3-4 specific measurable metrics relevant to {area} with description of how to track them"
+    "3-4 metrics. Each must be measurable at the {area} UC level, not city-wide. Include baseline values from the data above where possible."
   ],
+
   "risk_factors": [
-    "3-4 risks specific to implementing these recommendations in {area}, Lahore"
+    "3-4 risks specific to {area}'s geography, demographics, or emission profile. Reference the risk flags ({', '.join(t.get('risk_flags', []) if t else [])}) and explain why they matter for implementation."
   ]
 }}
 
-IMPORTANT RULES:
-- Focus on the {sector} sector primarily but consider cross-sector impacts
-- All cost estimates should be in PKR (Pakistani Rupees)
-- Reference REAL Pakistani/Punjab policies and regulations, not generic ones
-- Make recommendations specific to {area}'s emission profile (rank, intensity, risk flags)
-- Return ONLY valid JSON, no markdown code fences or explanations"""
+Return ONLY valid JSON. No markdown, no code fences, no explanations outside the JSON."""
 
     return prompt
 
