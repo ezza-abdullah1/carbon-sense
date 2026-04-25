@@ -301,3 +301,181 @@ export async function fetchUCSummaries(
   }
   return response.json();
 }
+
+// ---- Agentic RAG Recommendations ----
+
+export type RecommendationSection =
+  | 'summary'
+  | 'immediate_actions'
+  | 'long_term_strategies'
+  | 'policy_recommendations'
+  | 'monitoring_metrics'
+  | 'risk_factors'
+  | 'overall';
+
+export interface RecommendationContent {
+  summary: string;
+  immediate_actions: string[];
+  long_term_strategies: string[];
+  policy_recommendations: string[];
+  monitoring_metrics: string[];
+  risk_factors: string[];
+}
+
+export interface RecommendationConfidence {
+  overall: number;
+  evidence_strength: number;
+  data_completeness: number;
+  geographic_relevance: number;
+}
+
+export interface PipelineTraceStep {
+  step: number;
+  name: string;
+  status: string;
+  duration_ms: number;
+  data: Record<string, unknown>;
+  error?: string;
+}
+
+export interface PipelineTrace {
+  total_duration_ms: number;
+  steps: PipelineTraceStep[];
+  step_count: number;
+}
+
+export interface RecommendationResponse {
+  success: boolean;
+  recommendation_id: string;
+  query: {
+    area_name: string;
+    area_id: string;
+    sector: string;
+    coordinates: { lat: number; lng: number };
+  };
+  recommendations: RecommendationContent;
+  confidence: RecommendationConfidence;
+  retrieved_context?: {
+    policy_titles?: (string | null)[];
+    news_titles?: (string | null)[];
+    web_titles?: (string | null)[];
+  };
+  critic?: Record<string, unknown>;
+  pipeline_trace?: PipelineTrace;
+  generated_at: string;
+  from_cache: boolean;
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  ts: string;
+  extra_context_count?: number;
+}
+
+export interface ChatTurnResponse {
+  recommendation_id: string;
+  reply: string;
+  history: ChatMessage[];
+  used_extra_lookup: boolean;
+}
+
+export interface FeedbackResponse {
+  ok: boolean;
+  feedback_id: string;
+  recommendation_id: string;
+  section: RecommendationSection;
+  rating: 1 | -1;
+}
+
+export interface GenerateRecommendationsPayload {
+  coordinates: { lat: number; lng: number };
+  sector: 'transport' | 'industry' | 'energy' | 'waste' | 'buildings';
+  area_name: string;
+  area_id: string;
+}
+
+export async function generateRecommendations(
+  payload: GenerateRecommendationsPayload,
+): Promise<RecommendationResponse> {
+  const response = await fetch(`${API_BASE_URL}/recommendations/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Failed to generate recommendations: ${response.status} ${text}`);
+  }
+  return response.json();
+}
+
+export async function chatRecommendation(
+  recommendationId: string,
+  message: string,
+): Promise<ChatTurnResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/recommendations/${recommendationId}/chat`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    },
+  );
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Chat failed: ${response.status} ${text}`);
+  }
+  return response.json();
+}
+
+export async function fetchChatHistory(
+  recommendationId: string,
+): Promise<{ recommendation_id: string; messages: ChatMessage[] }> {
+  const response = await fetch(
+    `${API_BASE_URL}/recommendations/${recommendationId}/chat/history`,
+  );
+  if (!response.ok) {
+    throw new Error('Failed to load chat history');
+  }
+  return response.json();
+}
+
+export async function submitRecommendationFeedback(
+  recommendationId: string,
+  section: RecommendationSection,
+  rating: 1 | -1,
+  comment?: string,
+): Promise<FeedbackResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/recommendations/${recommendationId}/feedback`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ section, rating, comment: comment ?? '' }),
+    },
+  );
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Feedback failed: ${response.status} ${text}`);
+  }
+  return response.json();
+}
+
+export async function getRecommendation(recommendationId: string): Promise<{
+  id: string;
+  area_id: string;
+  area_name: string;
+  sector: string;
+  content_json: RecommendationContent;
+  retrieved_context: Record<string, unknown>;
+  generated_at: string;
+}> {
+  const response = await fetch(
+    `${API_BASE_URL}/recommendations/${recommendationId}`,
+  );
+  if (!response.ok) {
+    throw new Error('Failed to load recommendation');
+  }
+  return response.json();
+}

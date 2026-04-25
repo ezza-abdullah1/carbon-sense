@@ -125,3 +125,89 @@ class ScrapedArticle(models.Model):
 
     def __str__(self):
         return f"[{self.source}] {self.title[:80]}"
+
+
+class Recommendation(models.Model):
+    """Persistent record of a generated recommendation.
+
+    Each successful generation creates one row so the chat and feedback
+    endpoints can reference it by UUID.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    area_id = models.CharField(max_length=255)
+    area_name = models.CharField(max_length=255)
+    sector = models.CharField(max_length=50)
+    coordinates = models.JSONField(default=dict)
+    content_json = models.JSONField()
+    retrieved_context = models.JSONField(default=dict)
+    model_used = models.CharField(max_length=120, blank=True, default='')
+    provider = models.CharField(max_length=30, blank=True, default='')
+    generation_ms = models.IntegerField(default=0)
+    generated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'recommendations'
+        ordering = ['-generated_at']
+        indexes = [
+            models.Index(fields=['area_id', 'sector']),
+            models.Index(fields=['-generated_at']),
+        ]
+
+    def __str__(self):
+        return f"Recommendation {self.area_name}/{self.sector} @ {self.generated_at:%Y-%m-%d %H:%M}"
+
+
+class RecommendationConversation(models.Model):
+    """Multi-turn chat thread attached to a Recommendation."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    recommendation = models.ForeignKey(
+        Recommendation, on_delete=models.CASCADE, related_name='conversations'
+    )
+    messages = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'recommendation_conversations'
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"Conv {self.recommendation_id} ({len(self.messages)} turns)"
+
+
+class RecommendationFeedback(models.Model):
+    """User thumbs up/down on a section of a Recommendation."""
+
+    SECTION_CHOICES = [
+        ('summary', 'Summary'),
+        ('immediate_actions', 'Immediate Actions'),
+        ('long_term_strategies', 'Long-term Strategies'),
+        ('policy_recommendations', 'Policy Recommendations'),
+        ('monitoring_metrics', 'Monitoring Metrics'),
+        ('risk_factors', 'Risk Factors'),
+        ('overall', 'Overall'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    recommendation = models.ForeignKey(
+        Recommendation, on_delete=models.CASCADE, related_name='feedback'
+    )
+    section = models.CharField(max_length=40, choices=SECTION_CHOICES)
+    rating = models.SmallIntegerField()  # +1 thumbs up, -1 thumbs down
+    comment = models.TextField(blank=True, default='')
+    used_in_prompt = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'recommendation_feedback'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['rating', '-created_at']),
+            models.Index(fields=['recommendation', 'section']),
+        ]
+
+    def __str__(self):
+        sign = '+' if self.rating >= 0 else '-'
+        return f"FB {sign} {self.section} on {self.recommendation_id}"

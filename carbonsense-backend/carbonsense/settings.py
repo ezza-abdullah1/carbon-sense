@@ -9,8 +9,10 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load .env file
-load_dotenv(BASE_DIR / '.env')
+# Load .env file. override=True so values in .env always win over any
+# stale shell-level environment variables (e.g. a previous
+# `$env:LLM_PROVIDER='gemini'` that lingered in the PowerShell session).
+load_dotenv(BASE_DIR / '.env', override=True)
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -162,9 +164,24 @@ AUTH_USER_MODEL = 'api.User'
 # Session settings
 # Recommendations / RAG settings
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash')
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY', '')
+OPENROUTER_MODEL = os.environ.get('OPENROUTER_MODEL', 'deepseek/deepseek-chat:free')
+
+LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'openrouter')  # openrouter | gemini | groq
+LLM_CRITIC_PROVIDER = os.environ.get('LLM_CRITIC_PROVIDER', 'openrouter')
+
+TAVILY_API_KEY = os.environ.get('TAVILY_API_KEY', '')
+WEB_SEARCH_PROVIDER = os.environ.get('WEB_SEARCH_PROVIDER', 'tavily')  # tavily | ddg
+
 CHROMA_PERSIST_DIR = str(BASE_DIR / 'chroma_data')
 EMBEDDING_MODEL = 'all-MiniLM-L6-v2'
 RECOMMENDATION_CACHE_TTL_HOURS = int(os.environ.get('RECOMMENDATION_CACHE_TTL_HOURS', '24'))
+RECOMMENDATION_CHAT_HISTORY_TURNS = int(os.environ.get('RECOMMENDATION_CHAT_HISTORY_TURNS', '6'))
+RECOMMENDATION_CRITIC_ENABLED = os.environ.get('RECOMMENDATION_CRITIC_ENABLED', 'True') == 'True'
+RECOMMENDATION_RECENT_NEWS_COLLECTION = 'recent_news'
+RECOMMENDATION_FEW_SHOT_PATH = str(BASE_DIR / 'recommendations' / 'few_shot_examples.json')
 POLICY_DOCUMENTS_DIR = str(BASE_DIR / 'policy_documents')
 
 SESSION_COOKIE_HTTPONLY = True

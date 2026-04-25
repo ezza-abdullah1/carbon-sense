@@ -1,346 +1,350 @@
 """
-RecommendationAgent — generates actionable emission reduction recommendations
-using Groq (Llama 3.3 70B) with real UC-level emission data.
+Agentic RAG recommendation pipeline.
 
-Flow:
-  1. Fetch UC emission data from JSON files (transport, buildings, waste)
-  2. Build a structured prompt with the actual data + area context
-  3. Send to Groq (Llama 3.3 70B) for generation
-  4. Parse response into the expected format
-  5. Fall back to templates if LLM is unavailable
-
-Uses the cheapest Gemini model (2.0 Flash) to minimize token usage.
+Six-step loop driven by PipelineTracer:
+  1. Build place context (UC JSON + coordinates).
+  2. Plan tool calls with the LLM (JSON).
+  3. Execute tools: PolicyRetriever, NewsRetriever, WebSearch.
+  4. Synthesize the structured 6-section recommendation, optionally injecting
+     thumbs-up few-shot examples for (sector, country).
+  5. Critic pass — if the draft is too generic or contradicts the place data,
+     run one re-synthesis turn.
+  6. Persist a Recommendation row so chat / feedback can reference it.
 """
+
+from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+import time
+from datetime import datetime, timezone
+from typing import Any, Dict, List
 
-from recommendations.llm_client import GeminiClient
-from recommendations.tools.response_formatter import ResponseFormatter
+from django.conf import settings
+
+from recommendations.feedback import FeedbackService
+from recommendations.llm_client import LLMClient
+from recommendations.models import Recommendation
 from recommendations.pipeline_tracer import PipelineTracer
+from recommendations.tools.emission_context import (
+    build_place_context,
+    summarize_for_prompt,
+)
+from recommendations.tools.policy_retriever import NewsRetriever, PolicyRetriever
+from recommendations.tools.web_search import WebSearch
 
 logger = logging.getLogger(__name__)
 
 
-def _load_uc_data(area_name, sector, coordinates):
-    """Load real UC emission data from JSON files for the given area."""
-    import os
-    from django.conf import settings
+# ---------------------------------------------------------------------- #
+# Prompts
+# ---------------------------------------------------------------------- #
 
-    data_dir = os.path.join(settings.BASE_DIR, 'data')
-    uc_data = {
-        'area_name': area_name,
-        'sector': sector,
-        'coordinates': coordinates,
-    }
-
-    def _safe(val, default=0.0):
-        if val is None:
-            return default
-        if isinstance(val, float) and (val != val or val == float('inf')):
-            return default
-        return val
-
-    # Match by area_name (case-insensitive)
-    name_lower = area_name.lower().strip()
-
-    # Transport
-    try:
-        with open(os.path.join(data_dir, 'carbonsense_transport_v16.json'), encoding='utf-8') as f:
-            t = json.load(f)
-        for uc in t.get('uc_emissions', []):
-            if uc.get('uc_name', '').lower().strip() == name_lower:
-                fc = uc.get('forecast', {})
-                hist = uc.get('historical', {})
-                uc_data['transport'] = {
-                    'uc_code': uc.get('uc_code', ''),
-                    'area_km2': _safe(uc.get('area_km2')),
-                    'forecast_annual_t': _safe(fc.get('annual_t')),
-                    'road_annual_t': _safe(fc.get('road_annual_t')),
-                    'dom_avi_annual_t': _safe(fc.get('dom_avi_annual_t')),
-                    'intl_avi_annual_t': _safe(fc.get('intl_avi_annual_t')),
-                    'rail_annual_t': _safe(fc.get('rail_annual_t')),
-                    'road_pct': _safe(fc.get('road_pct')),
-                    'intensity_t_per_km2': _safe(fc.get('intensity_t_per_km2')),
-                    'rank_in_division': fc.get('rank_in_division', 0),
-                    'historical_total_t': _safe(hist.get('total_t')),
-                    'historical_period': hist.get('period', ''),
-                    'dominant_source': uc.get('dominant_source', ''),
-                    'risk_flags': uc.get('risk_flags', []),
-                }
-                break
-    except Exception as e:
-        logger.warning(f"Could not load transport data: {e}")
-
-    # Buildings
-    try:
-        with open(os.path.join(data_dir, 'carbonsense_buildings_v15.json'), encoding='utf-8') as f:
-            b = json.load(f)
-        for uc in b.get('uc_data', []):
-            if uc.get('uc_name', '').lower().strip() == name_lower:
-                ae = uc.get('annual_emissions', {})
-                risk = uc.get('risk', {})
-                uc_data['buildings'] = {
-                    'uc_code': uc.get('uc_code', ''),
-                    'forecast_total_t': _safe(ae.get('total_t')),
-                    'residential_t': _safe(ae.get('residential_t')),
-                    'non_residential_t': _safe(ae.get('non_residential_t')),
-                    'intensity_t_km2': _safe(ae.get('intensity_t_km2')),
-                    'rank_in_district': ae.get('rank_in_district', 0),
-                    'risk_flags': [k for k, v in risk.items() if v is True],
-                }
-                break
-    except Exception as e:
-        logger.warning(f"Could not load buildings data: {e}")
-
-    # Waste
-    try:
-        with open(os.path.join(data_dir, 'carbonsense_per_location_waste_v2_3.json'), encoding='utf-8') as f:
-            w = json.load(f)
-        for uc in w.get('aggregate_forecast', {}).get('uc_allocation', []):
-            if uc.get('uc_name', '').lower().strip() == name_lower:
-                em = uc.get('emissions', {})
-                uc_data['waste'] = {
-                    'uc_code': uc.get('uc_code', ''),
-                    'forecast_annual_t': _safe(em.get('total_annual_t')),
-                    'point_source_t': _safe(em.get('point_source_t')),
-                    'area_sw_t': _safe(em.get('area_sw_t')),
-                    'area_ww_t': _safe(em.get('area_ww_t')),
-                    'point_pct': _safe(em.get('point_pct')),
-                    'risk_level': em.get('risk_level', ''),
-                }
-                break
-    except Exception as e:
-        logger.warning(f"Could not load waste data: {e}")
-
-    return uc_data
+PLANNER_SYSTEM = (
+    "You decide which retrieval tools to invoke for an emission-reduction "
+    "recommendation request. Reply with strict JSON only."
+)
 
 
-def _build_gemini_prompt(uc_data, sector):
-    """Build a structured prompt for Gemini with real emission data."""
-    area = uc_data.get('area_name', 'Unknown')
-    coords = uc_data.get('coordinates', {})
+def _planner_prompt(ctx: Dict[str, Any]) -> str:
+    return (
+        "Given this place context, decide which search queries to issue.\n"
+        f"PLACE CONTEXT:\n{summarize_for_prompt(ctx)}\n\n"
+        "Return JSON with this exact schema:\n"
+        "{\n"
+        "  \"policy_query\": \"short string focused on long-lived policy\",\n"
+        "  \"news_query\": \"short string focused on 2025-2026 news / pilots\",\n"
+        "  \"web_query\": \"short string for current global references\"\n"
+        "}\n"
+        "Each query must mention the dominant emitter and at least one risk flag if any."
+    )
 
-    # Build data summary
-    data_lines = [
-        f"Union Council: {area}",
-        f"Location: Lahore District, Punjab, Pakistan ({coords.get('lat', '')}, {coords.get('lng', '')})",
-        f"Primary sector for analysis: {sector}",
-        "",
-    ]
 
-    t = uc_data.get('transport')
-    if t:
-        data_lines += [
-            "--- TRANSPORT EMISSIONS ---",
-            f"Forecast annual: {t['forecast_annual_t']:,.0f} tonnes CO2e",
-            f"  Road: {t['road_annual_t']:,.0f} t ({t['road_pct']:.1f}%)",
-            f"  Dom. Aviation: {t['dom_avi_annual_t']:,.0f} t",
-            f"  Intl. Aviation: {t['intl_avi_annual_t']:,.0f} t",
-            f"  Railways: {t['rail_annual_t']:,.0f} t",
-            f"Intensity: {t['intensity_t_per_km2']:,.0f} t/km2",
-            f"District rank: #{t['rank_in_division']}/151",
-            f"Historical total ({t['historical_period']}): {t['historical_total_t']:,.0f} t",
-            f"Dominant source: {t['dominant_source']}",
-            f"Risk flags: {', '.join(t['risk_flags']) if t['risk_flags'] else 'none'}",
-            "",
-        ]
+SYNTH_SYSTEM = (
+    "You are a senior climate policy advisor for the Government of Punjab. "
+    "Produce site-specific, IMPLEMENTABLE emission-reduction recommendations "
+    "for the named Union Council. Every action must reference real numbers "
+    "from the data block. Cite policies that actually appear in the retrieved "
+    "context. Reply with valid JSON only — no markdown, no explanations."
+)
 
-    b = uc_data.get('buildings')
-    if b:
-        data_lines += [
-            "--- BUILDINGS EMISSIONS ---",
-            f"Forecast annual: {b['forecast_total_t']:,.0f} tonnes CO2e",
-            f"  Residential: {b['residential_t']:,.0f} t",
-            f"  Non-residential: {b['non_residential_t']:,.0f} t",
-            f"Intensity: {b['intensity_t_km2']:,.0f} t/km2",
-            f"District rank: #{b['rank_in_district']}/151",
-            f"Risk flags: {', '.join(b['risk_flags']) if b['risk_flags'] else 'none'}",
-            "",
-        ]
 
-    w = uc_data.get('waste')
-    if w:
-        data_lines += [
-            "--- WASTE EMISSIONS ---",
-            f"Forecast annual: {w['forecast_annual_t']:,.0f} tonnes CO2e",
-            f"  Point sources: {w['point_source_t']:,.0f} t ({w['point_pct']:.1f}%)",
-            f"  Solid waste: {w['area_sw_t']:,.0f} t",
-            f"  Wastewater: {w['area_ww_t']:,.0f} t",
-            f"Risk level: {w['risk_level']}",
-            "",
-        ]
+def _synth_prompt(ctx: Dict[str, Any], policies_block: str, news_block: str,
+                  web_block: str, examples: List[dict]) -> str:
+    area = ctx.get('area_name') or 'this UC'
+    sector = ctx.get('sector') or 'transport'
+    transport = ctx.get('transport') or {}
+    forecast_total = transport.get('forecast_annual_t', 0)
+    rank = transport.get('rank_in_division', 0)
 
-    data_block = "\n".join(data_lines)
+    examples_block = ''
+    if examples:
+        examples_block += (
+            "\n\nFor calibration, here are previously high-rated outputs for "
+            f"similar contexts ({sector}). MATCH this quality bar; do NOT copy specifics:\n"
+        )
+        for ex in examples[:2]:
+            examples_block += f"- Section: {ex.get('section')}\n  {json.dumps(ex.get('content'))[:500]}\n"
 
-    # Build area-specific context bullets
-    context_bullets = []
-    if t:
-        if t['rank_in_division'] <= 10:
-            context_bullets.append(
-                f"{area} is a TOP-10 transport emitter (rank #{t['rank_in_division']}/151) — "
-                f"aggressive intervention is justified"
-            )
-        if 'aviation_plume_proximity' in (t.get('risk_flags') or []):
-            context_bullets.append(
-                f"{area} is near Allama Iqbal International Airport — "
-                f"aviation contributes {t['intl_avi_annual_t']:,.0f}t/yr, "
-                f"ground-level air quality is compounded by LTO cycles"
-            )
-        if 'winter_smog_zone' in (t.get('risk_flags') or []):
-            context_bullets.append(
-                f"{area} falls in Lahore's winter smog zone — "
-                f"seasonal emission spikes worsen PM2.5 during Nov-Feb"
-            )
-        if 'rail_corridor' in (t.get('risk_flags') or []):
-            context_bullets.append(
-                f"{area} is on the ML-1 railway corridor — "
-                f"rail electrification would directly reduce local emissions"
-            )
-        if t['road_pct'] > 85:
-            context_bullets.append(
-                f"Road transport dominates at {t['road_pct']:.0f}% — "
-                f"interventions must target vehicular traffic specifically"
-            )
-        if t['intensity_t_per_km2'] > 10000:
-            context_bullets.append(
-                f"Extremely high emission density ({t['intensity_t_per_km2']:,.0f} t/km²) — "
-                f"this is a congestion hotspot requiring traffic demand management"
-            )
-    if b:
-        if b['rank_in_district'] <= 10:
-            context_bullets.append(
-                f"Building emissions rank #{b['rank_in_district']}/151 — "
-                f"residential heating/cooling is a major driver "
-                f"({b['residential_t']:,.0f}t residential vs {b['non_residential_t']:,.0f}t commercial)"
-            )
-    if w:
-        if w.get('risk_level') in ('Critical', 'High'):
-            context_bullets.append(
-                f"Waste risk level is {w['risk_level']} — "
-                f"point sources contribute {w['point_pct']:.0f}% of waste emissions"
-            )
+    return (
+        f"AREA: {area}\nSECTOR: {sector}\n\n"
+        f"PLACE CONTEXT:\n{summarize_for_prompt(ctx)}\n\n"
+        f"RETRIEVED POLICIES:\n{policies_block}\n\n"
+        f"RECENT NEWS / PILOTS:\n{news_block}\n\n"
+        f"GLOBAL WEB REFERENCES (2025/2026):\n{web_block}\n"
+        f"{examples_block}\n"
+        "Return JSON exactly in this schema. Every recommendation MUST name "
+        f"{area} specifically and reference numeric data above:\n"
+        "{\n"
+        f"  \"summary\": \"3-4 sentences. Start with: '{area} UC emits [total] tonnes CO2e annually, ranking #[rank]/151 in Lahore District.' Use exact numbers from the data ({forecast_total:,.0f} t, rank #{rank}).\",\n"
+        "  \"immediate_actions\": [\n"
+        "    \"5 actions. Format: **Bold Title** - [Expected Impact]: X% reduction of [N tonnes] - [Estimated Cost Range]: PKR X Million - [Implementation Priority]: High/Medium/Low. Each must reference a specific number from the place context.\"\n"
+        "  ],\n"
+        "  \"long_term_strategies\": [\n"
+        "    \"3-4 strategies. Format: **Bold Title** - [Timeline]: X years - [Expected Reduction]: X% - [Key Milestones]: Year 1: ... Year 2: ...\"\n"
+        "  ],\n"
+        "  \"policy_recommendations\": [\n"
+        "    \"3-4 items. Each MUST cite either a real Pakistan/Punjab law (e.g. 'Punjab Environmental Protection Act 1997 Sec 11', 'Pakistan Climate Change Act 2017', 'NEV Policy 2019') OR a global policy that appeared in the retrieved context. Explain how it applies to this UC.\"\n"
+        "  ],\n"
+        "  \"monitoring_metrics\": [\n"
+        "    \"3-4 KPIs measurable at the UC level with baseline values from the data above.\"\n"
+        "  ],\n"
+        "  \"risk_factors\": [\n"
+        "    \"3-4 risks specific to this UC's geography or risk flags (cite them).\"\n"
+        "  ]\n"
+        "}\n"
+        "Return ONLY valid JSON."
+    )
 
-    context_block = "\n".join(f"• {b}" for b in context_bullets) if context_bullets else "No special risk flags."
 
-    prompt = f"""You are a senior climate policy advisor hired by the Government of Punjab to write a site-specific emission reduction action plan for {area} Union Council in Lahore District.
+CRITIC_SYSTEM = (
+    "You audit a draft recommendation JSON. Judge whether it is place-specific, "
+    "uses the actual numbers from the data block, cites real policies, and "
+    "stays current (2025-2026). Reply with strict JSON."
+)
 
-EMISSION DATA FOR {area.upper()}:
-{data_block}
 
-AREA-SPECIFIC CONTEXT:
-{context_block}
+def _critic_prompt(ctx: Dict[str, Any], draft: dict) -> str:
+    return (
+        "Evaluate this draft. Look for these failure modes:\n"
+        " - generic advice that could apply to any city,\n"
+        " - missing or wrong numbers,\n"
+        " - made-up policies / laws not present in the retrieved context,\n"
+        " - outdated references.\n\n"
+        f"PLACE CONTEXT:\n{summarize_for_prompt(ctx)}\n\n"
+        f"DRAFT:\n{json.dumps(draft, indent=2)[:6000]}\n\n"
+        "Return JSON: {\n"
+        "  \"needs_revision\": bool,\n"
+        "  \"issues\": [string, ...],\n"
+        "  \"score\": int 1-10\n"
+        "}"
+    )
 
-Based on this data, generate a JSON response with EXACTLY this structure. Every recommendation MUST reference the specific numbers above (e.g. "{t['forecast_annual_t']:,.0f}t annual transport emissions" or "rank #{t['rank_in_division']}" or specific risk flags). Do NOT write generic advice that could apply to any city.
 
-{{
-  "summary": "3-4 sentences. Start with: '{area} UC emits [total] tonnes CO2e annually, ranking #[rank]/151 in Lahore District.' Then describe the dominant emission source, key risk, and what makes this UC different from others. Use actual numbers from the data.",
+def _resynth_prompt(draft: dict, issues: List[str], synth_user_prompt: str) -> str:
+    return (
+        "Your previous draft had these issues. Fix them while keeping the same JSON schema:\n"
+        + "\n".join(f"- {i}" for i in issues)
+        + "\n\nORIGINAL DRAFT:\n"
+        + json.dumps(draft, indent=2)[:4000]
+        + "\n\nORIGINAL CONTEXT (re-read):\n"
+        + synth_user_prompt[:3000]
+        + "\n\nReturn ONLY the corrected JSON."
+    )
 
-  "immediate_actions": [
-    "5 actions. Each MUST: (1) name {area} specifically, (2) reference the actual emission breakdown (e.g. 'road transport at {t['road_pct'] if t else 0:.0f}%'), (3) propose an intervention sized to the area's km² and emission intensity. Format: **Bold Title targeting {area}** - [Expected Impact]: X% reduction of the {t['forecast_annual_t'] if t else 0:,.0f}t - [Estimated Cost Range]: PKR X Million - [Implementation Priority]: High/Medium/Low"
-  ],
 
-  "long_term_strategies": [
-    "3-4 strategies. Each MUST reference {area}'s specific rank, risk flags, or emission profile. Format: **Bold Title** - [Timeline]: X years - [Expected Reduction]: X% of {area}'s [sector] emissions - [Key Milestones]: Year 1: ... Year 2: ..."
-  ],
+# ---------------------------------------------------------------------- #
+# Helpers
+# ---------------------------------------------------------------------- #
 
-  "policy_recommendations": [
-    "3-4 recommendations. Each MUST cite a REAL Pakistan/Punjab law or regulation (e.g. 'Under Section 11 of Punjab Environmental Protection Act 1997' or 'Pakistan Climate Change Act 2017, Section 4(2)' or 'National Electric Vehicle Policy 2019, Para 7.3' or 'PEPA Motor Vehicle Emission Standards SRO 72(I)/2009' or 'Pakistan NDC 2021, target 50% by 2030'). Explain how the cited law applies to {area}'s specific situation."
-  ],
+def _parse_json(raw: str) -> dict:
+    cleaned = (raw or '').strip()
+    if cleaned.startswith('```'):
+        cleaned = cleaned.split('\n', 1)[-1]
+        cleaned = cleaned.rsplit('```', 1)[0]
+    parsed = json.loads(cleaned)
+    # Some free-tier LLMs wrap their reply as a single-element array even
+    # when the schema asks for an object. Unwrap so callers can treat it
+    # as a dict uniformly.
+    if isinstance(parsed, list):
+        parsed = parsed[0] if parsed else {}
+    if not isinstance(parsed, dict):
+        return {}
+    return parsed
 
-  "monitoring_metrics": [
-    "3-4 metrics. Each must be measurable at the {area} UC level, not city-wide. Include baseline values from the data above where possible."
-  ],
 
-  "risk_factors": [
-    "3-4 risks specific to {area}'s geography, demographics, or emission profile. Reference the risk flags ({', '.join(t.get('risk_flags', []) if t else [])}) and explain why they matter for implementation."
-  ]
-}}
+def _format_results_block(items: List[dict]) -> str:
+    if not items:
+        return "(none)"
+    lines = []
+    for i, item in enumerate(items, 1):
+        meta = item.get('metadata') or {}
+        title = meta.get('document_title', '?')
+        year = meta.get('year', '')
+        country = meta.get('country', '')
+        text = (item.get('text') or '')[:240].strip()
+        lines.append(f"[{i}] {title} ({year}, {country}): {text}")
+    return "\n".join(lines)
 
-Return ONLY valid JSON. No markdown, no code fences, no explanations outside the JSON."""
 
-    return prompt
-
+# ---------------------------------------------------------------------- #
+# Agent
+# ---------------------------------------------------------------------- #
 
 class RecommendationAgent:
-    """Generates recommendations using Gemini with real UC emission data."""
+    """Six-step agentic RAG recommendation generator."""
 
     def __init__(self):
-        self.llm = GeminiClient()
-        self.formatter = ResponseFormatter()
+        self.llm = LLMClient()
+        self.critic = LLMClient(provider=getattr(settings, 'LLM_CRITIC_PROVIDER', None))
+        self.policy_retriever = PolicyRetriever()
+        self.news_retriever = NewsRetriever()
+        self.web = WebSearch()
 
-    def generate(self, area_id, area_name, sector, coordinates, trace=True):
+    # ------------------------------------------------------------------ #
+    # Public API
+    # ------------------------------------------------------------------ #
+
+    def generate(self, area_id: str, area_name: str, sector: str,
+                 coordinates: Dict[str, Any], trace: bool = True) -> Dict[str, Any]:
         tracer = PipelineTracer()
+        started = time.time()
 
-        # ── Step 1: Load real UC emission data ──────────────────────────
-        with tracer.step(1, "Loading UC emission data from JSON files") as t:
-            uc_data = _load_uc_data(area_name, sector, coordinates)
+        # Step 1 — place context
+        with tracer.step(1, "Build place context") as t:
+            ctx = build_place_context(area_name, sector, coordinates)
             t.add_data({
-                'has_transport': 'transport' in uc_data,
-                'has_buildings': 'buildings' in uc_data,
-                'has_waste': 'waste' in uc_data,
+                'has_transport': ctx['transport'] is not None,
+                'has_buildings': ctx['buildings'] is not None,
+                'has_waste': ctx['waste'] is not None,
+                'risk_flags': ctx.get('risk_flags', []),
+                'top_emitters': ctx.get('top_emitters', []),
+                'rank_in_division': ctx.get('rank_in_division'),
             })
 
-        # ── Step 2: Generate via Gemini ─────────────────────────────────
-        with tracer.step(2, "Generating recommendations via Gemini") as t:
-            gemini_result = None
+        # Step 2 — planner
+        with tracer.step(2, "Plan tool calls") as t:
+            plan = self._plan(ctx)
+            t.add_data({
+                'provider': self.llm.provider_name,
+                'model': self.llm.model_name,
+                'plan': plan,
+            })
 
-            if self.llm.available:
-                prompt = _build_gemini_prompt(uc_data, sector)
-                t.add_data({
-                    'model': 'llama-3.3-70b-versatile',
-                    'prompt_length': len(prompt),
-                })
+        # Step 3 — tools
+        with tracer.step(3, "Retrieve policies, news, web") as t:
+            policies = self._safe(lambda: self.policy_retriever.retrieve(ctx, n_results=5)) or []
+            news = self._safe(lambda: self.news_retriever.retrieve(ctx, n_results=3)) or []
+            web_results = self._safe(
+                lambda: self.web.search(plan.get('web_query') or self._fallback_web_query(ctx),
+                                       max_results=4, days=365)
+            ) or []
+            t.add_data({
+                'policy_count': len(policies),
+                'news_count': len(news),
+                'web_count': len(web_results),
+                'top_policy_titles': [
+                    (p.get('metadata') or {}).get('document_title') for p in policies[:5]
+                ],
+            })
 
+        # Step 4 — synthesize
+        with tracer.step(4, "Synthesize recommendation") as t:
+            country = (ctx.get('country') or 'Pakistan')
+            examples = FeedbackService.get_examples_for(sector, country, max_examples=2)
+            synth_user = _synth_prompt(
+                ctx,
+                self.policy_retriever.format_for_prompt(policies),
+                _format_results_block(news),
+                _format_results_block(web_results),
+                examples,
+            )
+            try:
+                draft_text = self.llm.generate(SYNTH_SYSTEM, synth_user,
+                                               json_mode=True, max_tokens=2200,
+                                               temperature=0.55)
+                draft = _parse_json(draft_text)
+            except Exception as exc:
+                t.add_data({'status': 'error', 'error': str(exc)})
+                raise
+            t.add_data({
+                'examples_injected': len(examples),
+                'draft_keys': list(draft.keys()),
+                'synth_prompt_preview': synth_user[:1500],
+            })
+
+        # Step 5 — critic
+        critic_payload: Dict[str, Any] = {'enabled': False}
+        if getattr(settings, 'RECOMMENDATION_CRITIC_ENABLED', True):
+            with tracer.step(5, "Critique and (optionally) revise") as t:
                 try:
-                    raw_text = self.llm.generate(
-                        system_prompt=(
-                            "You are a climate policy expert specializing in "
-                            "Pakistan's urban emission reduction strategies. "
-                            "Always respond with valid JSON only."
-                        ),
-                        user_prompt=prompt,
+                    critique_text = self.critic.generate(
+                        CRITIC_SYSTEM,
+                        _critic_prompt(ctx, draft),
+                        json_mode=True,
+                        max_tokens=600,
+                        temperature=0.2,
                     )
+                    critique = _parse_json(critique_text)
+                except Exception as exc:
+                    logger.warning("Critic failed: %s", exc)
+                    critique = {'needs_revision': False, 'issues': [], 'score': 7}
 
-                    # Parse the JSON response
-                    cleaned = raw_text.strip()
-                    if cleaned.startswith('```'):
-                        cleaned = cleaned.split('\n', 1)[-1]
-                        cleaned = cleaned.rsplit('```', 1)[0]
-
-                    gemini_result = json.loads(cleaned)
-                    t.add_data({'status': 'success'})
-
-                except json.JSONDecodeError as e:
-                    logger.warning(f"Gemini returned invalid JSON: {e}")
-                    t.add_data({'status': 'json_parse_error', 'error': str(e)})
-                except Exception as e:
-                    logger.warning(f"Gemini generation failed: {e}")
-                    t.add_data({'status': 'error', 'error': str(e)})
-            else:
-                t.add_data({'status': 'gemini_unavailable'})
-
-        # ── Step 3: Build final response ────────────────────────────────
-        with tracer.step(3, "Formatting final response") as t:
-            if gemini_result:
-                # Use Gemini's response
-                recommendations = {
-                    'summary': gemini_result.get('summary', ''),
-                    'immediate_actions': gemini_result.get('immediate_actions', []),
-                    'long_term_strategies': gemini_result.get('long_term_strategies', []),
-                    'policy_recommendations': gemini_result.get('policy_recommendations', []),
-                    'monitoring_metrics': gemini_result.get('monitoring_metrics', []),
-                    'risk_factors': gemini_result.get('risk_factors', []),
+                critic_payload = {
+                    'enabled': True,
+                    'provider': self.critic.provider_name,
+                    'critique': critique,
                 }
-                t.add_data({'source': 'gemini'})
-            else:
-                # No fallback — raise error so we know Gemini failed
-                raise RuntimeError("Gemini generation failed — no fallback enabled for testing")
 
-        # ── Assemble response ───────────────────────────────────────────
+                if critique.get('needs_revision') and critique.get('issues'):
+                    try:
+                        revised_text = self.llm.generate(
+                            SYNTH_SYSTEM,
+                            _resynth_prompt(draft, critique['issues'], synth_user),
+                            json_mode=True,
+                            max_tokens=2200,
+                            temperature=0.45,
+                        )
+                        revised = _parse_json(revised_text)
+                        if isinstance(revised, dict) and revised:
+                            draft = revised
+                            critic_payload['revised'] = True
+                    except Exception as exc:
+                        logger.warning("Re-synthesis failed: %s", exc)
+                t.add_data(critic_payload)
+
+        # Step 6 — persist
+        elapsed_ms = int((time.time() - started) * 1000)
+        with tracer.step(6, "Persist Recommendation") as t:
+            recommendations = {
+                'summary': draft.get('summary', ''),
+                'immediate_actions': draft.get('immediate_actions', []),
+                'long_term_strategies': draft.get('long_term_strategies', []),
+                'policy_recommendations': draft.get('policy_recommendations', []),
+                'monitoring_metrics': draft.get('monitoring_metrics', []),
+                'risk_factors': draft.get('risk_factors', []),
+            }
+            retrieved_context = {
+                'policies': policies,
+                'news': news,
+                'web': web_results,
+            }
+            rec = Recommendation.objects.create(
+                area_id=area_id,
+                area_name=area_name,
+                sector=sector,
+                coordinates=coordinates or {},
+                content_json=recommendations,
+                retrieved_context=retrieved_context,
+                model_used=self.llm.model_name,
+                provider=self.llm.provider_name,
+                generation_ms=elapsed_ms,
+            )
+            t.add_data({'recommendation_id': str(rec.id), 'generation_ms': elapsed_ms})
+
         result = {
             'success': True,
+            'recommendation_id': str(rec.id),
             'query': {
                 'area_name': area_name,
                 'area_id': area_id,
@@ -348,21 +352,82 @@ class RecommendationAgent:
                 'coordinates': coordinates,
             },
             'recommendations': recommendations,
-            'confidence': {
-                'overall': 0.85 if gemini_result else 0.6,
-                'evidence_strength': 0.9,
-                'data_completeness': min(1.0, sum([
-                    0.4 if 'transport' in uc_data else 0,
-                    0.3 if 'buildings' in uc_data else 0,
-                    0.3 if 'waste' in uc_data else 0,
-                ])),
-                'geographic_relevance': 0.95,
+            'confidence': self._confidence(ctx, critic_payload, len(policies)),
+            'retrieved_context': {
+                'policy_titles': [
+                    (p.get('metadata') or {}).get('document_title') for p in policies
+                ],
+                'news_titles': [
+                    (n.get('metadata') or {}).get('document_title') for n in news
+                ],
+                'web_titles': [
+                    (w.get('metadata') or {}).get('document_title') for w in web_results
+                ],
             },
-            'raw_response': json.dumps(gemini_result) if gemini_result else '',
-            'generated_at': datetime.now().isoformat(),
+            'critic': critic_payload,
+            'generated_at': datetime.now(timezone.utc).isoformat(),
         }
-
         if trace:
             result['pipeline_trace'] = tracer.get_trace()
-
         return result
+
+    # ------------------------------------------------------------------ #
+    # Internals
+    # ------------------------------------------------------------------ #
+
+    def _plan(self, ctx: Dict[str, Any]) -> Dict[str, str]:
+        try:
+            text = self.llm.generate(
+                PLANNER_SYSTEM,
+                _planner_prompt(ctx),
+                json_mode=True,
+                max_tokens=400,
+                temperature=0.2,
+            )
+            data = _parse_json(text)
+            return {
+                'policy_query': data.get('policy_query') or '',
+                'news_query': data.get('news_query') or '',
+                'web_query': data.get('web_query') or self._fallback_web_query(ctx),
+            }
+        except Exception as exc:
+            logger.warning("Planner LLM call failed, using fallback: %s", exc)
+            return {
+                'policy_query': '',
+                'news_query': '',
+                'web_query': self._fallback_web_query(ctx),
+            }
+
+    def _fallback_web_query(self, ctx: Dict[str, Any]) -> str:
+        sector = ctx.get('sector') or ''
+        risks = ' '.join((ctx.get('risk_flags') or [])[:2])
+        return f"{ctx.get('area_name', '')} Lahore Pakistan {sector} emission reduction 2026 {risks}".strip()
+
+    def _safe(self, fn):
+        try:
+            return fn()
+        except Exception as exc:
+            logger.warning("Tool call failed: %s", exc)
+            return None
+
+    def _confidence(self, ctx: Dict[str, Any], critic_payload: Dict[str, Any],
+                    policy_count: int) -> Dict[str, float]:
+        sectors_present = sum([
+            bool(ctx.get('transport')),
+            bool(ctx.get('buildings')),
+            bool(ctx.get('waste')),
+        ])
+        data_completeness = min(1.0, sectors_present / 3.0)
+        evidence_strength = 0.5 + min(0.5, policy_count * 0.1)
+        critic_score = critic_payload.get('critique', {}).get('score') if critic_payload.get('enabled') else 8
+        try:
+            critic_score = int(critic_score)
+        except (TypeError, ValueError):
+            critic_score = 7
+        overall = 0.6 * (critic_score / 10.0) + 0.2 * evidence_strength + 0.2 * data_completeness
+        return {
+            'overall': round(min(0.99, max(0.3, overall)), 2),
+            'evidence_strength': round(evidence_strength, 2),
+            'data_completeness': round(data_completeness, 2),
+            'geographic_relevance': 0.95,
+        }

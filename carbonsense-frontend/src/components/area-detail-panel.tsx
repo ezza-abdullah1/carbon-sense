@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { X, Sparkles, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { RecommendationsModal } from "@/components/recommendations-modal";
-import type { UCSummary, Sector } from "@/lib/api";
+import type { UCSummary, Sector, RecommendationResponse } from "@/lib/api";
+import { generateRecommendations } from "@/lib/api";
 import { formatTonnes, getUCEmission } from "@/lib/map-utils";
 
 // ---- Risk flag color mapping ----
@@ -19,31 +20,7 @@ const FLAG_COLORS: Record<string, string> = {
   road_dominant: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400",
 };
 
-interface RecommendationsResponse {
-  success: boolean;
-  query: {
-    area_name: string;
-    area_id: string;
-    sector: string;
-    coordinates: { lat: number; lng: number };
-  };
-  recommendations: {
-    summary: string;
-    immediate_actions: string[];
-    long_term_strategies: string[];
-    policy_recommendations: string[];
-    monitoring_metrics: string[];
-    risk_factors: string[];
-  };
-  confidence?: {
-    overall: number;
-    evidence_strength: number;
-    data_completeness: number;
-    geographic_relevance: number;
-  };
-  raw_response: string;
-  generated_at: string;
-}
+type RecommendationsResponse = RecommendationResponse;
 
 interface AreaDetailPanelProps {
   ucSummary: UCSummary;
@@ -75,19 +52,13 @@ export function AreaDetailPanel({
   const handleGenerateRecommendations = async () => {
     setIsLoadingRecommendations(true);
     try {
-      const response = await fetch("/api/recommendations/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          coordinates: { lat: uc.centroid[0], lng: uc.centroid[1] },
-          sector: selectedSectors[0] || "transport",
-          area_name: uc.uc_name,
-          area_id: uc.uc_code,
-        }),
+      const data = await generateRecommendations({
+        coordinates: { lat: uc.centroid[0], lng: uc.centroid[1] },
+        sector: (selectedSectors[0] as Sector) || "transport",
+        area_name: uc.uc_name,
+        area_id: uc.uc_code,
       });
-      if (!response.ok) throw new Error("Failed to fetch recommendations");
-      const data = await response.json();
-      setRecommendationsData(Array.isArray(data) ? data[0] : data);
+      setRecommendationsData(data);
       setIsModalOpen(true);
     } catch (error) {
       console.error("Error fetching recommendations:", error);
