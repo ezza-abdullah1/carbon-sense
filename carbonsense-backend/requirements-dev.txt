@@ -1,0 +1,14 @@
+# Development & test dependencies.
+# Install with: pip install -r requirements.txt -r requirements-dev.txt
+
+-r requirements.txt
+
+# Test framework
+pytest>=7.4,<8.0
+pytest-django>=4.7,<4.8
+
+# Django dev utilities (shell_plus, runserver_plus, etc.)
+django-extensions>=3.2,<3.3
+
+# Linting / formatting
+ruff>=0.6,<1.0

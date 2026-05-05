@@ -166,7 +166,7 @@ Use Gunicorn or uWSGI:
 
 ```bash
 pip install gunicorn
-gunicorn carbonsense.wsgi:application
+DJANGO_SETTINGS_MODULE=config.settings.prod gunicorn config.wsgi:application
 ```
 
 ## Database Migration to PostgreSQL

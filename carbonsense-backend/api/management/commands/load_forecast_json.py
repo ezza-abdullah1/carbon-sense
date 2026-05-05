@@ -1,42 +1,39 @@
 """
-Generic loader: insert any CarbonSense forecast JSON into Supabase.
+Load a CarbonSense forecast JSON file into the configured Postgres database.
 
 Usage:
-    python load_supabase.py data/power_new.json
-    python load_supabase.py data/transport.json
-    python load_supabase.py data/waste.json
-    python load_supabase.py data/transport_new.json
+    python manage.py load_forecast_json data/power_new.json
+    python manage.py load_forecast_json data/transport.json
+    python manage.py load_forecast_json data/waste.json
+    python manage.py load_forecast_json data/transport_new.json
 
 - Deletes any existing forecast_run for the same sector+region (cascade)
 - Inserts forecast_run, aggregate points, locations, model info, summaries, emission points
 - Marks the new run as active
 - Handles v1 (LSTM), v2 (XGBoost+Prophet), v3 (waste), and v5 (transport_new) JSON formats
 
-NOTE: Before loading transport_new.json for the first time, run in Supabase SQL editor:
+NOTE: Before loading transport_new.json for the first time, run in your DB:
     ALTER TABLE location_summaries ADD COLUMN IF NOT EXISTS sub_sector_data jsonb;
     ALTER TABLE locations ADD COLUMN IF NOT EXISTS uc_code text;
 """
 
 import json
 import os
-import sys
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
+
 import psycopg2
+from dateutil.relativedelta import relativedelta
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from psycopg2.extras import execute_values
-from dotenv import load_dotenv
-
-load_dotenv()
-
-DB_URL = os.getenv("SUPABASE_DB_URL")
 
 
-def load_json(filepath):
+def _load_json(filepath):
     with open(filepath, encoding="utf-8") as f:
         return json.load(f)
 
 
-def normalize_transport_new_format(data):
+def _normalize_transport_new_format(data):
     """
     Normalize transport_new.json (v1.5 format with uc_emissions + division_total)
     into the standard format expected by the rest of the loader.
@@ -44,9 +41,8 @@ def normalize_transport_new_format(data):
     meta = data["metadata"]
     div_total = data["division_total"]
     uc_list = data["uc_emissions"]
-    dates = div_total["dates"]  # 12 forecast date strings
+    dates = div_total["dates"]
 
-    # --- Normalize metadata ---
     forecast_period = meta.get("forecast_period", "")
     fp_parts = [p.strip() for p in forecast_period.split(" to ")] if forecast_period else []
     if len(fp_parts) == 2:
@@ -66,7 +62,6 @@ def normalize_transport_new_format(data):
         meta.get("champion_model") or meta.get("production_model", "Prophet"),
     )
 
-    # --- Normalize aggregate: division_total → aggregate_forecast ---
     agg = {
         "dates": dates,
         "values": div_total["total_t"],
@@ -75,16 +70,13 @@ def normalize_transport_new_format(data):
         "weather": [{} for _ in dates],
     }
 
-    # CI scale for road (dominant sub-sector) used to derive per-UC monthly CI
     road_ci = meta.get("sub_sector_ci_scales", {}).get("road", 0.04)
-
-    # --- Normalize each UC → location ---
-    locations = []
     yoy_pct = meta.get("yoy_pct", 0)
     trend = "increasing" if yoy_pct > 0 else ("declining" if yoy_pct < 0 else "stable")
 
+    locations = []
     for uc in uc_list:
-        monthly_t = uc["monthly_t"]  # 12 forecast values aligned with dates
+        monthly_t = uc["monthly_t"]
         annual_t = uc.get("annual_t", sum(monthly_t))
 
         forecast_pts = []
@@ -98,18 +90,12 @@ def normalize_transport_new_format(data):
                 "upper_bound": round(val * (1 + road_ci), 2),
             })
 
-        loc = {
+        locations.append({
             "source": uc["uc_name"],
             "uc_code": uc.get("uc_code", ""),
             "type": "union_council",
-            "coordinates": {
-                "lat": uc["centroid_lat"],
-                "lng": uc["centroid_lon"],
-            },
-            "chart_data": {
-                "historical": [],
-                "forecast": forecast_pts,
-            },
+            "coordinates": {"lat": uc["centroid_lat"], "lng": uc["centroid_lon"]},
+            "chart_data": {"historical": [], "forecast": forecast_pts},
             "summary": {
                 "last_historical_date": "",
                 "last_historical_emissions": 0,
@@ -132,23 +118,16 @@ def normalize_transport_new_format(data):
                 "risk_flags": uc.get("risk_flags", []),
                 "rank_in_division": uc.get("rank_in_division"),
             },
-        }
-        locations.append(loc)
+        })
 
-    return {
-        "metadata": meta,
-        "aggregate_forecast": agg,
-        "locations": locations,
-    }
+    return {"metadata": meta, "aggregate_forecast": agg, "locations": locations}
 
 
-def insert_forecast_run(cur, meta):
-    """Insert forecast_run row, return its id."""
+def _insert_forecast_run(cur, meta):
     hist_parts = meta["historical_period"].split(" to ")
     hist_start = hist_parts[0] + "-01"
     hist_end = hist_parts[1] + "-01"
 
-    # forecast_window may not exist — derive from historical_end + horizon
     if "forecast_window" in meta:
         fc_parts = meta["forecast_window"].split(" to ")
         fc_start = fc_parts[0] + "-01"
@@ -160,7 +139,6 @@ def insert_forecast_run(cur, meta):
         fc_start = fc_s.strftime("%Y-%m-%d")
         fc_end = fc_e.strftime("%Y-%m-%d")
 
-    # Handle all metadata field variations
     model_arch = (
         meta.get("model_architecture")
         or ", ".join(meta.get("models", meta.get("models_used", [])))
@@ -210,12 +188,9 @@ def insert_forecast_run(cur, meta):
     return cur.fetchone()[0]
 
 
-def insert_aggregate_points(cur, run_id, agg):
-    """Insert aggregate forecast points. Handles v1 (values/lower/upper) and v2 (xgb_values/prophet_values)."""
+def _insert_aggregate_points(cur, run_id, agg):
     rows = []
     dates = agg["dates"]
-
-    # v2 format: use xgb_values as primary, fall back to v1 "values"
     values = agg.get("xgb_values") or agg.get("values", [])
     lower = agg.get("xgb_lower") or agg.get("lower", [])
     upper = agg.get("xgb_upper") or agg.get("upper", [])
@@ -239,8 +214,7 @@ def insert_aggregate_points(cur, run_id, agg):
     return len(rows)
 
 
-def insert_location(cur, run_id, loc):
-    """Insert a location row, return its id."""
+def _insert_location(cur, run_id, loc):
     coords = loc.get("coordinates") or {}
     source = loc.get("source") or loc.get("source_name") or "unknown"
     lat = coords.get("lat") or loc.get("lat") or 0.0
@@ -263,17 +237,13 @@ def insert_location(cur, run_id, loc):
     return cur.fetchone()[0]
 
 
-def insert_model_info(cur, location_id, loc):
-    """Insert model info. Handles all JSON format variations."""
-    # v2 format: loc["models"] with xgboost/prophet sub-dicts
+def _insert_model_info(cur, location_id, loc):
     if "models" in loc and isinstance(loc["models"], dict):
         winner = loc.get("winner", "xgboost")
         mi = loc["models"].get(winner) or loc["models"].get("xgboost") or loc["models"].get("prophet") or {}
-    # v3/waste format: loc["model_info"] with selected_model + all_models_tested
     elif "model_info" in loc:
         mi_raw = loc["model_info"]
         if "all_models_tested" in mi_raw:
-            # Flatten: pick the selected model's metrics
             selected = mi_raw.get("selected_model", "")
             tested = mi_raw.get("all_models_tested", {})
             best = tested.get(selected) or next(iter(tested.values()), {})
@@ -333,8 +303,7 @@ def insert_model_info(cur, location_id, loc):
     ))
 
 
-def insert_summary(cur, location_id, loc):
-    """Insert location summary. Handles all format variations."""
+def _insert_summary(cur, location_id, loc):
     s = loc.get("summary", {})
     if not s:
         return
@@ -387,14 +356,12 @@ def insert_summary(cur, location_id, loc):
         ))
 
 
-def insert_emission_points(cur, location_id, loc):
-    """Insert emission points (historical + forecast + test). Handles v1 and v2."""
+def _insert_emission_points(cur, location_id, loc):
     rows = []
     chart = loc.get("chart_data", {})
     if not chart:
         return 0
 
-    # Historical points
     for pt in chart.get("historical", []):
         emissions = pt.get("emissions") or pt.get("value") or 0
         rows.append((
@@ -405,7 +372,6 @@ def insert_emission_points(cur, location_id, loc):
             None, None, None,
         ))
 
-    # Forecast points
     for pt in chart.get("forecast", []):
         emissions = (
             pt.get("emissions")
@@ -426,7 +392,6 @@ def insert_emission_points(cur, location_id, loc):
             None, None, None,
         ))
 
-    # Test predictions: v1=test_predictions, v2=test_overlay
     test_pts = chart.get("test_predictions", []) or chart.get("test_overlay", [])
     for pt in test_pts:
         predicted = pt.get("predicted") or pt.get("xgb_predicted") or pt.get("prophet_predicted") or 0
@@ -455,85 +420,86 @@ def insert_emission_points(cur, location_id, loc):
     return len(rows)
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python load_supabase.py <json_file>")
-        print("  e.g: python load_supabase.py data/power_new.json")
-        sys.exit(1)
+class Command(BaseCommand):
+    help = "Load a CarbonSense forecast JSON file into the database."
 
-    filepath = sys.argv[1]
-    if not os.path.exists(filepath):
-        print(f"[ERROR] File not found: {filepath}")
-        sys.exit(1)
-
-    data = load_json(filepath)
-
-    # Detect and normalize transport_new format (v1.5: uc_emissions + division_total)
-    if "uc_emissions" in data:
-        print(f"[FORMAT] Detected transport_new (v1.5) format — normalizing...")
-        data = normalize_transport_new_format(data)
-
-    meta = data["metadata"]
-    agg = data.get("aggregate_forecast")
-    locations = data["locations"]
-
-    print(f"Loading: {filepath}")
-    print(f"  Sector: {meta['sector']}")
-    print(f"  Region: {meta.get('region', meta.get('location', ''))}")
-    print(f"  Locations: {len(locations)}")
-    print()
-
-    conn = psycopg2.connect(DB_URL, sslmode="require")
-    cur = conn.cursor()
-
-    try:
-        # Delete previous runs for same sector+region
-        cur.execute(
-            "DELETE FROM forecast_runs WHERE sector = %s AND region = %s",
-            (meta["sector"], meta["region"]),
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "json_file",
+            help="Path to a forecast JSON file (e.g. data/power_new.json)",
         )
-        if cur.rowcount:
-            print(f"[CLEANUP] Deleted {cur.rowcount} previous run(s) for {meta['sector']}/{meta['region']}")
 
-        # Insert forecast run
-        run_id = insert_forecast_run(cur, meta)
-        print(f"[OK] forecast_run inserted (id={run_id})")
+    def handle(self, *args, **options):
+        filepath = options["json_file"]
+        if not os.path.exists(filepath):
+            raise CommandError(f"File not found: {filepath}")
 
-        # Insert aggregate points (optional — some sectors don't have them)
-        agg_count = 0
-        if agg:
-            agg_count = insert_aggregate_points(cur, run_id, agg)
-            print(f"[OK] {agg_count} aggregate_forecast_points inserted")
-        else:
-            print("[SKIP] No aggregate_forecast in JSON")
+        # The loader uses raw psycopg2 against SUPABASE_DB_URL because the schema
+        # contains tables Django doesn't manage (forecast_runs, locations, etc.).
+        db_url = os.environ.get("SUPABASE_DB_URL") or settings.DATABASES["default"].get("NAME")
+        if not db_url or not db_url.startswith(("postgres://", "postgresql://")):
+            raise CommandError(
+                "SUPABASE_DB_URL must be set to a Postgres URL for this command "
+                "(SQLite is not supported by the forecast schema)."
+            )
 
-        # Insert locations + related data
-        total_ep = 0
-        for loc in locations:
-            loc_id = insert_location(cur, run_id, loc)
-            insert_model_info(cur, loc_id, loc)
-            insert_summary(cur, loc_id, loc)
-            ep_count = insert_emission_points(cur, loc_id, loc)
-            total_ep += ep_count
-            status = loc.get("status", "ok")
-            name = loc.get("source") or loc.get("source_name") or "unknown"
-            print(f"  [OK] {name} ({status}): {ep_count} emission_points")
+        data = _load_json(filepath)
 
-        conn.commit()
-        print(f"\n=== DONE ===")
-        print(f"  forecast_run:  {run_id}")
-        print(f"  aggregate:     {agg_count} points")
-        print(f"  locations:     {len(locations)}")
-        print(f"  emission_pts:  {total_ep}")
+        if "uc_emissions" in data:
+            self.stdout.write("[FORMAT] Detected transport_new (v1.5) format — normalizing...")
+            data = _normalize_transport_new_format(data)
 
-    except Exception as e:
-        conn.rollback()
-        print(f"\n[ERROR] {e}")
-        raise
-    finally:
-        cur.close()
-        conn.close()
+        meta = data["metadata"]
+        agg = data.get("aggregate_forecast")
+        locations = data["locations"]
 
+        self.stdout.write(f"Loading: {filepath}")
+        self.stdout.write(f"  Sector: {meta['sector']}")
+        self.stdout.write(f"  Region: {meta.get('region', meta.get('location', ''))}")
+        self.stdout.write(f"  Locations: {len(locations)}")
 
-if __name__ == "__main__":
-    main()
+        conn = psycopg2.connect(db_url, sslmode="require")
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                "DELETE FROM forecast_runs WHERE sector = %s AND region = %s",
+                (meta["sector"], meta["region"]),
+            )
+            if cur.rowcount:
+                self.stdout.write(
+                    f"[CLEANUP] Deleted {cur.rowcount} previous run(s) for "
+                    f"{meta['sector']}/{meta['region']}"
+                )
+
+            run_id = _insert_forecast_run(cur, meta)
+            self.stdout.write(f"[OK] forecast_run inserted (id={run_id})")
+
+            agg_count = 0
+            if agg:
+                agg_count = _insert_aggregate_points(cur, run_id, agg)
+                self.stdout.write(f"[OK] {agg_count} aggregate_forecast_points inserted")
+            else:
+                self.stdout.write("[SKIP] No aggregate_forecast in JSON")
+
+            total_ep = 0
+            for loc in locations:
+                loc_id = _insert_location(cur, run_id, loc)
+                _insert_model_info(cur, loc_id, loc)
+                _insert_summary(cur, loc_id, loc)
+                ep_count = _insert_emission_points(cur, loc_id, loc)
+                total_ep += ep_count
+                status = loc.get("status", "ok")
+                name = loc.get("source") or loc.get("source_name") or "unknown"
+                self.stdout.write(f"  [OK] {name} ({status}): {ep_count} emission_points")
+
+            conn.commit()
+            self.stdout.write(self.style.SUCCESS(
+                f"\nDONE — run={run_id}, aggregate={agg_count}, "
+                f"locations={len(locations)}, emission_points={total_ep}"
+            ))
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+            conn.close()

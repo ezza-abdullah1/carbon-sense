@@ -1,0 +1,35 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    "migrations",
+    "venv",
+    ".venv",
+    "chroma_data",
+    "data",
+    "policy_documents",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "DJ",   # flake8-django
+]
+ignore = [
+    "E501",  # line too long (line-length covers it)
+    "B008",  # function calls in default args (common in DRF)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/settings/*.py" = ["F401", "F403", "F405"]  # star imports between settings modules
+"**/migrations/*.py" = ["E", "W", "F", "I", "UP"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+python_files = ["test_*.py", "*_test.py", "tests.py"]
+addopts = "-ra"
