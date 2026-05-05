@@ -392,10 +392,11 @@ export default function Dashboard() {
 
   // ── Analytics tab: fetch ALL historical data once, only when the tab
   //    is actually open (otherwise this query would fire 25k rows on every
-  //    dashboard mount). ──
+  //    dashboard mount). The tab's internal value is "analytics", not
+  //    "trends" — the label "Historical Trends" is a UI string. ──
   const { data: allHistorical = [] } = useEmissions(
     { data_type: 'historical' },
-    activeTab === 'trends',
+    activeTab === 'analytics',
   );
 
   // Filter historical data by selected sector & area
