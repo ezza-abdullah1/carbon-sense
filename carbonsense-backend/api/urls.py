@@ -9,6 +9,9 @@ from .views import (
     AreaInfoViewSet,
     LeaderboardViewSet,
     UCSummaryViewSet,
+    stats_view,
+    latest_emissions_by_area,
+    emissions_timeline,
 )
 
 # Create a router for ViewSets
@@ -24,6 +27,13 @@ urlpatterns = [
     path('auth/login', login_view, name='login'),
     path('auth/logout', logout_view, name='logout'),
     path('auth/me', current_user_view, name='current-user'),
+
+    # Aggregate stats for dashboard KPI cards (no row-level fetch needed)
+    path('stats/', stats_view, name='stats'),
+
+    # Pre-aggregated emission shapes — keep raw `/emissions/` for actual row queries.
+    path('emissions/latest-by-area/', latest_emissions_by_area, name='latest-by-area'),
+    path('emissions/timeline/', emissions_timeline, name='emissions-timeline'),
 
     # Include router URLs
     path('', include(router.urls)),

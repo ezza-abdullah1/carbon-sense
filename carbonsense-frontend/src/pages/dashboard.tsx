@@ -44,8 +44,8 @@ import {
   useEmissions,
   useLatestEmissions,
   useLeaderboard,
-  useTimeSeriesData,
   useCombinedTimeSeriesData,
+  useStats,
   useUCBoundaries,
   useUCSummaries,
 } from "@/hooks/use-emissions";
@@ -87,9 +87,9 @@ export default function Dashboard() {
 
   // Fetch real data using hooks (pass selectedSectors and timeInterval for filtering)
   const { data: areas = [], isLoading: areasLoading } = useAreas();
+  const { data: stats } = useStats();
   const { data: emissionData = {}, isLoading: emissionsLoading } = useLatestEmissions(dataType, selectedSectors, timeInterval);
   const { data: leaderboard = [], isLoading: leaderboardLoading } = useLeaderboard(dataType, selectedSectors, timeInterval);
-  const { data: timeSeriesData = [] } = useTimeSeriesData(undefined, dataType);
   const { data: combinedData } = useCombinedTimeSeriesData(selectedAreaId || undefined);
 
   // UC-level data for choropleth map (supports historical + forecast toggle)
@@ -172,25 +172,19 @@ export default function Dashboard() {
   }, [emissionData]);
 
   // Calculate sector totals across all time series data
-  const sectorTotals = useMemo(() => {
-    const totals = {
-      transport: 0,
-      industry: 0,
-      energy: 0,
-      waste: 0,
-      buildings: 0
-    };
-
-    timeSeriesData.forEach((item: EmissionDataPoint) => {
-      totals.transport += item.transport;
-      totals.industry += item.industry;
-      totals.energy += item.energy;
-      totals.waste += item.waste;
-      totals.buildings += item.buildings;
-    });
-
-    return totals;
-  }, [timeSeriesData]);
+  // Sector totals come straight from /api/stats/ (one tiny aggregate query
+  // on the server) instead of summing thousands of row-level points.
+  const sectorTotals = useMemo(
+    () =>
+      stats?.sector_totals ?? {
+        transport: 0,
+        industry: 0,
+        energy: 0,
+        waste: 0,
+        buildings: 0,
+      },
+    [stats],
+  );
 
   // Sector breakdown pie chart
   const sectorPieData = useMemo(() => {
@@ -396,8 +390,13 @@ export default function Dashboard() {
 
   const selectedArea = areas.find((a: AreaInfo) => a.id === selectedAreaId);
 
-  // ── Analytics tab: fetch ALL historical data once ──
-  const { data: allHistorical = [] } = useEmissions({ data_type: 'historical' });
+  // ── Analytics tab: fetch ALL historical data once, only when the tab
+  //    is actually open (otherwise this query would fire 25k rows on every
+  //    dashboard mount). ──
+  const { data: allHistorical = [] } = useEmissions(
+    { data_type: 'historical' },
+    activeTab === 'trends',
+  );
 
   // Filter historical data by selected sector & area
   const trendsFiltered = useMemo(() => {
@@ -614,55 +613,37 @@ export default function Dashboard() {
     return { peakMonth, yoyPct, topEmitter, topEmitterPct, dataSpan, months: uniqueMonths };
   }, [trendsFiltered, trendsSector]);
 
-  // ── Forecast tab: fetch ALL forecast data ──
-  const { data: allForecast = [] } = useEmissions({ data_type: 'forecast' });
+  // ── Forecast tab: fetch ALL forecast data, gated on tab visibility ──
+  const { data: allForecast = [] } = useEmissions(
+    { data_type: 'forecast' },
+    activeTab === 'forecast',
+  );
 
-  // ── Overview: real-time computed stats ──
+  // ── Overview: aggregate stats served by /api/stats/ (one tiny call). ──
   const overviewStats = useMemo(() => {
-    // Unique sectors present in the data
-    const sectorsSet = new Set<string>();
-    allHistorical.forEach((d: EmissionDataPoint) => {
-      if (d.transport > 0) sectorsSet.add('transport');
-      if (d.industry > 0) sectorsSet.add('industry');
-      if (d.energy > 0) sectorsSet.add('energy');
-      if (d.waste > 0) sectorsSet.add('waste');
-      if (d.buildings > 0) sectorsSet.add('buildings');
-    });
-    allForecast.forEach((d: EmissionDataPoint) => {
-      if (d.transport > 0) sectorsSet.add('transport');
-      if (d.industry > 0) sectorsSet.add('industry');
-      if (d.energy > 0) sectorsSet.add('energy');
-      if (d.waste > 0) sectorsSet.add('waste');
-      if (d.buildings > 0) sectorsSet.add('buildings');
-    });
-
-    // Years span from historical data
-    const allDates = allHistorical.map((d: EmissionDataPoint) => d.date).sort();
-    const yearsOfData = allDates.length > 0
-      ? new Date(allDates[allDates.length - 1]).getFullYear() - new Date(allDates[0]).getFullYear() + 1
-      : 0;
-
-    // Total historical emissions
-    const totalHistorical = allHistorical.reduce((sum: number, d: EmissionDataPoint) => sum + d.total, 0);
-
-    // Total forecast emissions
-    const totalForecast = allForecast.reduce((sum: number, d: EmissionDataPoint) => sum + d.total, 0);
-
-    // Latest historical date
-    const latestDate = allDates.length > 0 ? allDates[allDates.length - 1] : null;
-    const earliestDate = allDates.length > 0 ? allDates[0] : null;
-
+    if (!stats) {
+      return {
+        sectorsCount: 0,
+        yearsOfData: 0,
+        totalHistorical: 0,
+        totalForecast: 0,
+        historicalRecords: 0,
+        forecastRecords: 0,
+        latestDate: null as string | null,
+        earliestDate: null as string | null,
+      };
+    }
     return {
-      sectorsCount: sectorsSet.size,
-      yearsOfData,
-      totalHistorical,
-      totalForecast,
-      historicalRecords: allHistorical.length,
-      forecastRecords: allForecast.length,
-      latestDate,
-      earliestDate,
+      sectorsCount: stats.sectors_tracked,
+      yearsOfData: stats.years_of_data,
+      totalHistorical: stats.historical.total_emissions,
+      totalForecast: stats.forecast.total_emissions,
+      historicalRecords: 0,
+      forecastRecords: 0,
+      latestDate: null,
+      earliestDate: null,
     };
-  }, [allHistorical, allForecast]);
+  }, [stats]);
 
   // Smart number formatter
   const formatEmissions = (v: number): string => {
@@ -870,8 +851,15 @@ export default function Dashboard() {
     ? emissionData[selectedAreaId]
     : 0;
 
-  // findLast: timeSeriesData is sorted ascending, so the last match is the latest data point
-  const selectedAreaData = [...timeSeriesData].reverse().find((d: EmissionDataPoint) => d.area_id === selectedAreaId);
+  // combinedData is already filtered to `selectedAreaId` and sorted
+  // ascending; the last point is the latest. Picks historical or forecast
+  // based on the active toggle.
+  const selectedAreaSeries = combinedData
+    ? dataType === 'historical'
+      ? combinedData.historical
+      : combinedData.forecast
+    : [];
+  const selectedAreaData = selectedAreaSeries[selectedAreaSeries.length - 1];
   const sectorBreakdown = selectedAreaData ? {
     transport: selectedSectors.includes('transport') ? selectedAreaData.transport : 0,
     industry: selectedSectors.includes('industry') ? selectedAreaData.industry : 0,

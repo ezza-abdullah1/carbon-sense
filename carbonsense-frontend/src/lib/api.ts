@@ -159,79 +159,31 @@ export async function fetchEmissions(params?: EmissionsQueryParams): Promise<Emi
 // Sector type
 export type Sector = 'transport' | 'industry' | 'energy' | 'waste' | 'buildings';
 
-// Calculate sector sum for an emission data point
-function calculateSectorSum(emission: EmissionDataPoint, sectors: Sector[]): number {
-  let sum = 0;
-  if (sectors.includes('transport')) sum += emission.transport;
-  if (sectors.includes('industry')) sum += emission.industry;
-  if (sectors.includes('energy')) sum += emission.energy;
-  if (sectors.includes('waste')) sum += emission.waste;
-  if (sectors.includes('buildings')) sum += emission.buildings;
-  return sum;
-}
-
-// Time interval type
+// Time interval type — kept for the public API of the hooks; sector/interval
+// filtering used to happen on the client over thousands of rows, but those
+// concerns now live in the backend (or in the consumer using stats/leaderboard).
 export type TimeInterval = 'monthly' | 'yearly';
 
-// Filter emissions by time interval (last N months or years)
-function filterByTimeInterval(emissions: EmissionDataPoint[], interval: TimeInterval): EmissionDataPoint[] {
-  if (emissions.length === 0) return emissions;
-
-  // Find the latest date in the data
-  const latestDate = emissions.reduce((max, e) => e.date > max ? e.date : max, emissions[0].date);
-  const latest = new Date(latestDate);
-
-  let cutoffDate: Date;
-  if (interval === 'monthly') {
-    // Last 12 months
-    cutoffDate = new Date(latest);
-    cutoffDate.setMonth(cutoffDate.getMonth() - 12);
-  } else {
-    // Last 3 years
-    cutoffDate = new Date(latest);
-    cutoffDate.setFullYear(cutoffDate.getFullYear() - 3);
-  }
-
-  const cutoffStr = cutoffDate.toISOString().split('T')[0];
-  return emissions.filter(e => e.date >= cutoffStr);
-}
-
-// Get latest emissions for each area (for map visualization)
+// Latest emission value per area, computed in the database. Single tiny call;
+// the old implementation fetched ~54k rows just to derive this dictionary.
+//
+// `sectors` and `interval` are accepted for backward compatibility with
+// existing call sites but are now unused — the backend returns the latest
+// value across all data, and sector filtering should be done at the consumer
+// (or moved into the backend if it becomes hot).
 export async function fetchLatestEmissionsByArea(
   dataType: 'historical' | 'forecast' = 'historical',
-  sectors?: Sector[],
-  interval: TimeInterval = 'monthly'
+  _sectors?: Sector[],
+  _interval: TimeInterval = 'monthly'
 ): Promise<Record<string, number>> {
-  const allEmissions = await fetchEmissions({ data_type: dataType });
-  const emissions = filterByTimeInterval(allEmissions, interval);
-
-  // Group by area and get latest date
-  const areaEmissions: Record<string, { date: string; total: number }> = {};
-
-  emissions.forEach(emission => {
-    // Calculate value based on selected sectors or use total
-    const value = sectors && sectors.length > 0
-      ? calculateSectorSum(emission, sectors)
-      : emission.total;
-
-    // Skip if value is 0 when filtering by sectors
-    if (sectors && sectors.length > 0 && value === 0) return;
-
-    if (!areaEmissions[emission.area_id] || emission.date > areaEmissions[emission.area_id].date) {
-      areaEmissions[emission.area_id] = {
-        date: emission.date,
-        total: value
-      };
-    }
-  });
-
-  // Convert to simple Record<string, number>
-  const result: Record<string, number> = {};
-  Object.keys(areaEmissions).forEach(areaId => {
-    result[areaId] = areaEmissions[areaId].total;
-  });
-
-  return result;
+  const params = new URLSearchParams({ data_type: dataType });
+  const response = await fetch(
+    `${API_BASE_URL}/emissions/latest-by-area/?${params.toString()}`,
+  );
+  if (!response.ok) {
+    throw new Error('Failed to fetch latest emissions by area');
+  }
+  return response.json();
 }
 
 // Get time series data for charts
@@ -246,32 +198,86 @@ export async function fetchTimeSeriesData(
   return emissions.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-// Calculate leaderboard from emissions data
+// Leaderboard — backed by the real `/api/leaderboard/` endpoint, which
+// returns rows with real trend data (the previous client-side version
+// invented `trend`/`trendPercentage` with `Math.random()`).
+//
+// `dataType`, `sectors`, `interval` are accepted to preserve the existing
+// hook signature; the backend currently ranks by 12-month forecast average
+// across all sectors. If sector-aware leaderboards are needed later, push
+// the filter into the backend rather than recomputing on the client.
+import type { LeaderboardEntry } from '@shared/schema';
+
+interface LeaderboardRowAPI {
+  rank: number;
+  area_id: string;
+  area_name: string;
+  emissions: number;
+  trend: 'up' | 'down' | 'stable';
+  trend_percentage: number;
+}
+
 export async function fetchLeaderboard(
+  _dataType: 'historical' | 'forecast' = 'historical',
+  _sectors?: Sector[],
+  _interval: TimeInterval = 'monthly'
+): Promise<LeaderboardEntry[]> {
+  const response = await fetch(`${API_BASE_URL}/leaderboard/`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch leaderboard');
+  }
+  const rows: LeaderboardRowAPI[] = await response.json();
+  return rows.map((r) => ({
+    rank: r.rank,
+    areaId: r.area_id,
+    areaName: r.area_name,
+    emissions: r.emissions,
+    trend: r.trend,
+    trendPercentage: r.trend_percentage,
+  }));
+}
+
+// ---- Aggregate stats for dashboard KPI cards ----
+
+export interface Stats {
+  total_sources: number;
+  sectors_tracked: number;
+  // Top-level fields default to historical data (matches the original KPI
+  // intent). For forecast-only or combined values, read from the nested
+  // breakdowns below.
+  years_of_data: number;
+  total_emissions: number;
+  sector_totals: Record<Sector, number>;
+  historical: { years_of_data: number; total_emissions: number };
+  forecast: { years_of_data: number; total_emissions: number };
+}
+
+export async function fetchStats(): Promise<Stats> {
+  const response = await fetch(`${API_BASE_URL}/stats/`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch stats');
+  }
+  return response.json();
+}
+
+// ---- Pre-aggregated emissions timeline (monthly totals across all areas) ----
+
+export interface EmissionTimelinePoint {
+  date: string;
+  total: number;
+}
+
+export async function fetchEmissionsTimeline(
   dataType: 'historical' | 'forecast' = 'historical',
-  sectors?: Sector[],
-  interval: TimeInterval = 'monthly'
-) {
-  const latestEmissions = await fetchLatestEmissionsByArea(dataType, sectors, interval);
-  const areas = await fetchAreas();
-
-  // Calculate trend (mock for now - would need historical comparison)
-  const leaderboard = Object.entries(latestEmissions)
-    .map(([areaId, emissions]) => {
-      const area = areas.find(a => a.id === areaId);
-      return {
-        rank: 0, // Will be set after sorting
-        areaId,
-        areaName: area?.name || areaId,
-        emissions,
-        trend: Math.random() > 0.5 ? 'up' : 'down' as 'up' | 'down' | 'stable',
-        trendPercentage: Math.random() * 10
-      };
-    })
-    .sort((a, b) => b.emissions - a.emissions)
-    .map((entry, index) => ({ ...entry, rank: index + 1 }));
-
-  return leaderboard;
+): Promise<EmissionTimelinePoint[]> {
+  const params = new URLSearchParams({ data_type: dataType });
+  const response = await fetch(
+    `${API_BASE_URL}/emissions/timeline/?${params.toString()}`,
+  );
+  if (!response.ok) {
+    throw new Error('Failed to fetch emissions timeline');
+  }
+  return response.json();
 }
 
 // ---- UC Boundaries (static GeoJSON) ----

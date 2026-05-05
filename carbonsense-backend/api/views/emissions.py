@@ -9,12 +9,13 @@ from api.models import EmissionPoint, Location, make_area_id
 from api.services.runs import CACHE_TTL, get_active_runs, sector_field
 
 
-# Pagination guardrails. The endpoint previously returned every point across
-# every active run (~54k rows) — slow JSON, slow client. Default to 500 per
-# page; clamp the upper bound so a malicious / careless client can't request
-# the entire table in one call.
-DEFAULT_LIMIT = 500
-MAX_LIMIT = 5000
+# Pagination is opt-in: callers that pass `?limit=N` get a page (with an
+# `X-Total-Count` header so they know the full size); callers that don't pass
+# a limit get the full result set (legacy behavior — the dashboard relies on
+# this for its KPI aggregates). The cap below applies only to the explicit-
+# limit path so a careless `?limit=1000000` can't drag everything into memory.
+PAGINATED_DEFAULT_LIMIT = 500
+PAGINATED_MAX_LIMIT = 5000
 
 
 def _empty_emission_row():
@@ -124,18 +125,22 @@ class EmissionDataViewSet(viewsets.ViewSet):
 
         queryset = queryset.order_by("-date")
 
-        # Pagination — default 500/page, clamp at 5000 so no client can request
-        # the whole table.
-        limit = _parse_int(
-            request.query_params.get("limit"),
-            default=DEFAULT_LIMIT,
-            lo=1,
-            hi=MAX_LIMIT,
-        )
-        offset = _parse_int(request.query_params.get("offset"), default=0, lo=0)
+        # Opt-in pagination: only slice when `?limit=` is explicitly provided.
+        limit_raw = request.query_params.get("limit")
+        if limit_raw is not None:
+            limit = _parse_int(
+                limit_raw,
+                default=PAGINATED_DEFAULT_LIMIT,
+                lo=1,
+                hi=PAGINATED_MAX_LIMIT,
+            )
+            offset = _parse_int(request.query_params.get("offset"), default=0, lo=0)
+            total = queryset.count()
+            page = queryset[offset : offset + limit]
+        else:
+            page = list(queryset)
+            total = len(page)
 
-        total = queryset.count()
-        page = queryset[offset : offset + limit]
         results = [_serialize(ep, run_sector) for ep in page]
 
         cache.set(cache_key, (results, total), CACHE_TTL)

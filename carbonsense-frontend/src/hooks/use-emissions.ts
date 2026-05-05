@@ -2,9 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import {
   fetchAreas,
   fetchEmissions,
+  fetchEmissionsTimeline,
   fetchLatestEmissionsByArea,
   fetchTimeSeriesData,
   fetchLeaderboard,
+  fetchStats,
   fetchUCBoundaries,
   fetchUCSummaries,
   type EmissionsQueryParams,
@@ -21,12 +23,39 @@ export function useAreas() {
   });
 }
 
-// Hook to fetch emissions with filters
-export function useEmissions(params?: EmissionsQueryParams) {
+// Aggregate stats for dashboard KPI cards. Tiny payload, cached on the
+// backend — safe to fire on every page load.
+export function useStats() {
+  return useQuery({
+    queryKey: ['stats'],
+    queryFn: fetchStats,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Pre-aggregated timeline (one row per date, totals across all areas).
+// Use this instead of `useEmissions()` whenever you only need a sum-by-date
+// chart — it returns ~72 rows instead of ~25,000.
+export function useEmissionsTimeline(
+  dataType: 'historical' | 'forecast' = 'historical',
+) {
+  return useQuery({
+    queryKey: ['emissions-timeline', dataType],
+    queryFn: () => fetchEmissionsTimeline(dataType),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Raw emission rows. Heavy — only call this when the user is on a tab that
+// genuinely needs to slice/pivot the underlying data (Trends, Forecast,
+// Data Explorer). Pass `enabled: false` (or a tab-active boolean) when the
+// caller is the dashboard's overview tab.
+export function useEmissions(params?: EmissionsQueryParams, enabled = true) {
   return useQuery({
     queryKey: ['emissions', params],
     queryFn: () => fetchEmissions(params),
-    staleTime: 1 * 60 * 1000, // 1 minute
+    staleTime: 5 * 60 * 1000,
+    enabled,
   });
 }
 
@@ -88,7 +117,10 @@ export function useUCSummaries(
   });
 }
 
-// Hook to fetch combined time series data (historical + forecast for trend comparison)
+// Combined historical + forecast time series for a single area.
+// Disabled when `areaId` is missing — without an areaId the underlying
+// fetcher would pull every emission point twice (once per data_type), which
+// is exactly what we're trying to avoid.
 export function useCombinedTimeSeriesData(areaId?: string) {
   return useQuery({
     queryKey: ['combined-timeseries', areaId],
@@ -99,6 +131,7 @@ export function useCombinedTimeSeriesData(areaId?: string) {
       ]);
       return { historical, forecast };
     },
-    staleTime: 1 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    enabled: !!areaId,
   });
 }
