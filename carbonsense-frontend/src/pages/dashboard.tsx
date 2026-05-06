@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { EmissionMap } from "@/components/emission-map";
 import { Leaderboard } from "@/components/leaderboard";
@@ -207,7 +207,7 @@ export default function Dashboard() {
       datasets: [
         {
           label: "Emissions by Sector",
-          data: Object.values(sectorTotals).map(v => Math.round(v / 1000)), // Convert to thousands
+          data: Object.values(sectorTotals).map(v => Math.round(v / 100) / 10), // kt CO₂e, 1 decimal
           backgroundColor: [
             "hsl(217, 91%, 60%)",
             "hsl(280, 67%, 55%)",
@@ -228,7 +228,7 @@ export default function Dashboard() {
       datasets: [
         {
           label: "Total Emissions (thousands tons CO₂e)",
-          data: topAreas.map((e: LeaderboardEntry) => Math.round(e.emissions / 1000)),
+          data: topAreas.map((e: LeaderboardEntry) => Math.round(e.emissions / 100) / 10),
           backgroundColor: "hsl(142, 60%, 50%)",
         },
       ],
@@ -289,7 +289,7 @@ export default function Dashboard() {
       // Determine if we need to scale values (only for large values > 1000)
       const allValues = [...historicalMap.values(), ...forecastMap.values()];
       const maxValue = allValues.length > 0 ? Math.max(...allValues) : 0;
-      const shouldScale = maxValue > 1000;
+      const shouldScale = maxValue > 10000;
 
       // Historical line (solid blue-ish color)
       if (historicalMap.size > 0) {
@@ -298,7 +298,7 @@ export default function Dashboard() {
           data: sortedLabels.map(label => {
             const val = historicalMap.get(label);
             if (!val) return null;
-            return shouldScale ? Math.round(val / 1000) : Math.round(val * 10) / 10;
+            return shouldScale ? Math.round(val / 100) / 10 : Math.round(val * 10) / 10;
           }),
           backgroundColor: "rgba(59, 130, 246, 0.2)",
           borderColor: "hsl(217, 91%, 60%)", // Blue for historical
@@ -313,7 +313,7 @@ export default function Dashboard() {
           data: sortedLabels.map(label => {
             const val = forecastMap.get(label);
             if (!val) return null;
-            return shouldScale ? Math.round(val / 1000) : Math.round(val * 10) / 10;
+            return shouldScale ? Math.round(val / 100) / 10 : Math.round(val * 10) / 10;
           }),
           backgroundColor: "rgba(245, 158, 11, 0.2)",
           borderColor: "hsl(45, 93%, 47%)", // Orange/Amber for forecast
@@ -369,14 +369,14 @@ export default function Dashboard() {
       // Determine if we need to scale (only for large values)
       const allValues = Array.from(sectorMap.values());
       const maxValue = allValues.length > 0 ? Math.max(...allValues) : 0;
-      const shouldScale = maxValue > 1000;
+      const shouldScale = maxValue > 10000;
 
       return {
         label: sectorConfig[sector].label,
         data: months.map(m => {
           const val = sectorMap.get(m);
           if (!val) return 0;
-          return shouldScale ? Math.round(val / 1000) : Math.round(val * 10) / 10;
+          return shouldScale ? Math.round(val / 100) / 10 : Math.round(val * 10) / 10;
         }),
         backgroundColor: sectorConfig[sector].historical,
       };
@@ -394,32 +394,56 @@ export default function Dashboard() {
   //    is actually open (otherwise this query would fire 25k rows on every
   //    dashboard mount). The tab's internal value is "analytics", not
   //    "trends" — the label "Historical Trends" is a UI string. ──
-  const { data: allHistorical = [] } = useEmissions(
+  const { data: allHistorical = [], isLoading: historicalLoading } = useEmissions(
     { data_type: 'historical' },
     activeTab === 'analytics',
   );
 
-  // Filter historical data by selected sector & area
+  // The dropdown identifier scheme (area_id vs area_name) flips when the
+  // sector filter changes, so reset the area selection to keep state valid.
+  useEffect(() => {
+    setTrendsArea("all");
+  }, [trendsSector]);
+  useEffect(() => {
+    setForecastArea("all");
+  }, [forecastSector]);
+
+  // Filter historical data by selected sector & area.
+  //
+  // When `trendsSector` is "all", the dropdown stores the *area name* (so a
+  // single physical UC isn't listed once per sector). The filter therefore
+  // matches by `area_name`, which lets the chart sum across every sector
+  // for that UC. When a sector is fixed, the dropdown stores the
+  // sector-suffixed `area_id` as before.
   const trendsFiltered = useMemo(() => {
     let data = allHistorical;
     if (trendsSector !== 'all') {
       data = data.filter((d: EmissionDataPoint) => (d as any)[trendsSector] > 0);
-    }
-    if (trendsArea !== 'all') {
-      data = data.filter((d: EmissionDataPoint) => d.area_id === trendsArea);
+      if (trendsArea !== 'all') {
+        data = data.filter((d: EmissionDataPoint) => d.area_id === trendsArea);
+      }
+    } else if (trendsArea !== 'all') {
+      data = data.filter((d: EmissionDataPoint) => d.area_name === trendsArea);
     }
     return data;
   }, [allHistorical, trendsSector, trendsArea]);
 
-  // Areas available for the selected sector
+  // Available areas for the dropdown. With a sector picked we dedup by
+  // `area_id` (one entry per UC for that sector); with no sector picked we
+  // dedup by `area_name` (one entry per physical UC, sectors merged).
   const trendsAreaOptions = useMemo(() => {
     let data = allHistorical;
     if (trendsSector !== 'all') {
       data = data.filter((d: EmissionDataPoint) => (d as any)[trendsSector] > 0);
+      const unique = new Map<string, string>();
+      data.forEach((d: EmissionDataPoint) => unique.set(d.area_id, d.area_name));
+      return Array.from(unique.entries()).sort((a, b) => a[1].localeCompare(b[1]));
     }
-    const unique = new Map<string, string>();
-    data.forEach((d: EmissionDataPoint) => unique.set(d.area_id, d.area_name));
-    return Array.from(unique.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+    const names = new Set<string>();
+    data.forEach((d: EmissionDataPoint) => names.add(d.area_name));
+    return Array.from(names)
+      .map((n) => [n, n] as [string, string])
+      .sort((a, b) => a[1].localeCompare(b[1]));
   }, [allHistorical, trendsSector]);
 
   // Top emission sources bar chart for analytics tab
@@ -436,7 +460,7 @@ export default function Dashboard() {
       labels: sorted.map(s => s.name),
       datasets: [{
         label: `Total Emissions (thousands tons CO₂e)`,
-        data: sorted.map(s => Math.round(s.total / 1000)),
+        data: sorted.map(s => Math.round(s.total / 100) / 10),
         backgroundColor: "hsl(142, 60%, 50%)",
       }],
     };
@@ -456,8 +480,8 @@ export default function Dashboard() {
       ? ["Transport", "Industry", "Energy", "Waste", "Buildings"]
       : [sectorConfig[trendsSector as Sector]?.label || trendsSector];
     const data = trendsSector === 'all'
-      ? Object.values(totals).map(v => Math.round(v / 1000))
-      : [Math.round(totals[trendsSector as keyof typeof totals] / 1000)];
+      ? Object.values(totals).map(v => Math.round(v / 100) / 10)
+      : [Math.round(totals[trendsSector as keyof typeof totals] / 100) / 10];
     const colors = trendsSector === 'all'
       ? ["hsl(217, 91%, 60%)", "hsl(280, 67%, 55%)", "hsl(45, 93%, 47%)", "hsl(25, 95%, 53%)", "hsl(338, 78%, 56%)"]
       : [sectorConfig[trendsSector as Sector]?.historical || "hsl(142, 60%, 50%)"];
@@ -496,14 +520,14 @@ export default function Dashboard() {
       });
       const allValues = Array.from(monthMap.values()).map(v => v.sum / v.count);
       const maxValue = allValues.length > 0 ? Math.max(...allValues) : 0;
-      const shouldScale = maxValue > 1000;
+      const shouldScale = maxValue > 10000;
       return {
         label: sectorConfig[sector]?.label || sector,
         data: months.map(m => {
           const entry = monthMap.get(m);
           if (!entry) return 0;
           const avg = entry.sum / entry.count;
-          return shouldScale ? Math.round(avg / 1000) : Math.round(avg * 10) / 10;
+          return shouldScale ? Math.round(avg / 100) / 10 : Math.round(avg * 10) / 10;
         }),
         backgroundColor: sectorConfig[sector]?.historical || "hsl(142, 60%, 50%)",
       };
@@ -513,6 +537,9 @@ export default function Dashboard() {
   }, [trendsFiltered, trendsSector, trendsSeasonalYear]);
 
   // ── Emission Timeline (line chart, all months chronologically) ──
+  // The y-axis switches between t and kt based on the data's magnitude.
+  // Both branches keep one decimal place — single-UC sums sit in the
+  // hundreds of tons, so rounding to whole kt would collapse them to 0.
   const trendsTimelineData = useMemo(() => {
     const monthMap = new Map<string, number>();
     trendsFiltered.forEach((d: EmissionDataPoint) => {
@@ -520,15 +547,18 @@ export default function Dashboard() {
       if (val > 0) monthMap.set(d.date, (monthMap.get(d.date) || 0) + val);
     });
     const sorted = Array.from(monthMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-    const shouldScale = sorted.length > 0 && Math.max(...sorted.map(([_, v]) => v)) > 1000;
+    const maxVal = sorted.length > 0 ? Math.max(...sorted.map(([_, v]) => v)) : 0;
+    const useKt = maxVal >= 10000; // 10 kt threshold — below this, plot in tons.
     return {
       labels: sorted.map(([d]) => {
         const dt = new Date(d);
         return dt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
       }),
       datasets: [{
-        label: shouldScale ? 'Emissions (kt CO₂e)' : 'Emissions (t CO₂e)',
-        data: sorted.map(([_, v]) => shouldScale ? Math.round(v / 1000) : Math.round(v * 10) / 10),
+        label: useKt ? 'Emissions (kt CO₂e)' : 'Emissions (t CO₂e)',
+        data: sorted.map(([_, v]) =>
+          useKt ? Math.round(v / 100) / 10 : Math.round(v * 10) / 10,
+        ),
         backgroundColor: "rgba(16, 185, 129, 0.2)",
         borderColor: "hsl(160, 84%, 39%)",
         borderWidth: 2,
@@ -545,12 +575,12 @@ export default function Dashboard() {
       if (val > 0) yearMap.set(year, (yearMap.get(year) || 0) + val);
     });
     const sorted = Array.from(yearMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-    const shouldScale = sorted.length > 0 && Math.max(...sorted.map(([_, v]) => v)) > 1000;
+    const shouldScale = sorted.length > 0 && Math.max(...sorted.map(([_, v]) => v)) > 10000;
     return {
       labels: sorted.map(([y]) => y),
       datasets: [{
         label: shouldScale ? 'Annual emissions (kt CO₂e)' : 'Annual emissions (t CO₂e)',
-        data: sorted.map(([_, v]) => shouldScale ? Math.round(v / 1000) : Math.round(v * 10) / 10),
+        data: sorted.map(([_, v]) => shouldScale ? Math.round(v / 100) / 10 : Math.round(v * 10) / 10),
         backgroundColor: "hsl(217, 91%, 60%)",
       }],
     };
@@ -615,7 +645,7 @@ export default function Dashboard() {
   }, [trendsFiltered, trendsSector]);
 
   // ── Forecast tab: fetch ALL forecast data, gated on tab visibility ──
-  const { data: allForecast = [] } = useEmissions(
+  const { data: allForecast = [], isLoading: forecastLoading } = useEmissions(
     { data_type: 'forecast' },
     activeTab === 'forecast',
   );
@@ -669,27 +699,37 @@ export default function Dashboard() {
     return `${diffYears}y ago`;
   };
 
-  // Filter forecast data — only from Jan 2026 onwards
+  // Filter forecast data (from Jan 2026 onwards). Same area-collapse rule as
+  // the analytics tab: dropdown stores `area_id` when a sector is selected,
+  // `area_name` when sector is "all" so duplicates merge.
   const forecastFiltered = useMemo(() => {
     let data = allForecast.filter((d: EmissionDataPoint) => d.date >= '2026-02-01');
     if (forecastSector !== 'all') {
       data = data.filter((d: EmissionDataPoint) => (d as any)[forecastSector] > 0);
-    }
-    if (forecastArea !== 'all') {
-      data = data.filter((d: EmissionDataPoint) => d.area_id === forecastArea);
+      if (forecastArea !== 'all') {
+        data = data.filter((d: EmissionDataPoint) => d.area_id === forecastArea);
+      }
+    } else if (forecastArea !== 'all') {
+      data = data.filter((d: EmissionDataPoint) => d.area_name === forecastArea);
     }
     return data;
   }, [allForecast, forecastSector, forecastArea]);
 
-  // Available areas for forecast filter — only from Jan 2026 onwards
+  // Areas dropdown — dedup by `area_id` per sector, or by `area_name` when
+  // no sector is chosen (one entry per physical UC).
   const forecastAreaOptions = useMemo(() => {
     let data = allForecast.filter((d: EmissionDataPoint) => d.date >= '2026-02-01');
     if (forecastSector !== 'all') {
       data = data.filter((d: EmissionDataPoint) => (d as any)[forecastSector] > 0);
+      const unique = new Map<string, string>();
+      data.forEach((d: EmissionDataPoint) => unique.set(d.area_id, d.area_name));
+      return Array.from(unique.entries()).sort((a, b) => a[1].localeCompare(b[1]));
     }
-    const unique = new Map<string, string>();
-    data.forEach((d: EmissionDataPoint) => unique.set(d.area_id, d.area_name));
-    return Array.from(unique.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+    const names = new Set<string>();
+    data.forEach((d: EmissionDataPoint) => names.add(d.area_name));
+    return Array.from(names)
+      .map((n) => [n, n] as [string, string])
+      .sort((a, b) => a[1].localeCompare(b[1]));
   }, [allForecast, forecastSector]);
 
   // Table rows: pivot forecast by (area × period)
@@ -737,14 +777,14 @@ export default function Dashboard() {
     forecastTable.areas.forEach(a => {
       a.periods.forEach((v, p) => periodTotals.set(p, (periodTotals.get(p) || 0) + v));
     });
-    const shouldScale = Math.max(...Array.from(periodTotals.values()), 0) > 1000;
+    const shouldScale = Math.max(...Array.from(periodTotals.values()), 0) > 10000;
     return {
       labels: forecastTable.periods,
       datasets: [{
         label: shouldScale ? 'Forecast (kt CO₂e)' : 'Forecast (t CO₂e)',
         data: forecastTable.periods.map(p => {
           const v = periodTotals.get(p) || 0;
-          return shouldScale ? Math.round(v / 1000) : Math.round(v * 10) / 10;
+          return shouldScale ? Math.round(v / 100) / 10 : Math.round(v * 10) / 10;
         }),
         backgroundColor: "hsl(280, 67%, 55%)",
         borderColor: "hsl(280, 67%, 55%)",
@@ -1733,8 +1773,20 @@ export default function Dashboard() {
                 </motion.div>
               </div>
 
-              {/* Empty state */}
-              {trendsFiltered.length === 0 ? (
+              {/* Loading / empty state — distinguishing "still fetching" from
+                  "fetched but no rows match" matters because the cold fetch
+                  can take 5–15s on first hit. */}
+              {historicalLoading ? (
+                <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-lg">
+                  <CardContent className="py-16 text-center flex flex-col items-center">
+                    <Loader2 className="h-12 w-12 text-emerald-600 dark:text-emerald-400 mb-4 animate-spin" />
+                    <h3 className="text-lg font-semibold mb-1">Loading historical data…</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      First load can take a few seconds while we pull every emission point. Subsequent loads are cached and instant.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : trendsFiltered.length === 0 ? (
                 <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-lg">
                   <CardContent className="py-16 text-center flex flex-col items-center">
                     <motion.div
@@ -2068,8 +2120,18 @@ export default function Dashboard() {
                 </motion.div>
               </div>
 
-              {/* Empty state */}
-              {forecastTable.areas.length === 0 ? (
+              {/* Loading / empty state — same pattern as the Trends tab. */}
+              {forecastLoading ? (
+                <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-lg">
+                  <CardContent className="py-16 text-center flex flex-col items-center">
+                    <Loader2 className="h-12 w-12 text-purple-600 dark:text-purple-400 mb-4 animate-spin" />
+                    <h3 className="text-lg font-semibold mb-1">Loading forecast data…</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      First load can take a few seconds while we pull the full forecast set. Subsequent loads are cached and instant.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : forecastTable.areas.length === 0 ? (
                 <Card className="bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl shadow-lg">
                   <CardContent className="py-16 text-center flex flex-col items-center">
                     <motion.div
