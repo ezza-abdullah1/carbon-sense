@@ -10,6 +10,7 @@ import {
   Download,
   Layers,
   Leaf,
+  Loader2,
   MapPin,
   Sparkles,
   TrendingUp,
@@ -86,7 +87,7 @@ const FEATURE_CARDS = [
 
 function OverviewContent() {
   const [, setLocation] = useLocation();
-  const { areas, stats, leaderboard } = useDashboard();
+  const { areas, areasLoading, stats, leaderboard, leaderboardLoading } = useDashboard();
 
   // Aggregate stats served by /api/stats/ (one tiny call on layout mount).
   const overviewStats = useMemo(() => {
@@ -173,6 +174,32 @@ function OverviewContent() {
       ],
     };
   }, [leaderboard]);
+
+  // Hold the page on a full-screen loader until the critical APIs resolve.
+  // Placed after all hooks to keep call order stable across renders.
+  const initialLoading = areasLoading || !stats || leaderboardLoading;
+  if (initialLoading) {
+    return (
+      <div className="h-full mt-0 overflow-auto">
+        <div className="min-h-full bg-[#fafafa] dark:bg-[#030303] text-slate-900 dark:text-slate-50 relative overflow-hidden flex items-center justify-center">
+          <div className="absolute inset-0 pointer-events-none z-0">
+            <motion.div
+              animate={{ x: [0, 100, -50, 0], y: [0, -100, 50, 0], scale: [1, 1.2, 0.9, 1] }}
+              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              className="absolute top-[20%] left-[20%] w-[40vw] h-[40vw] bg-emerald-400/10 dark:bg-emerald-600/10 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-100"
+            />
+          </div>
+          <div className="relative z-10 flex flex-col items-center gap-4 px-6 text-center">
+            <Loader2 className="h-12 w-12 text-emerald-600 dark:text-emerald-400 animate-spin" />
+            <h2 className="text-lg font-semibold">Loading dashboard…</h2>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Pulling the latest emission records and stats. First load can take a few seconds; subsequent loads are cached and instant.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full mt-0 overflow-auto">
