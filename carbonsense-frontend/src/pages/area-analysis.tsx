@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLocation, useParams } from "wouter";
-import { EmissionChart } from "@/components/emission-chart";
+import { EmissionChart } from "@/features/emissions/emission-chart";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

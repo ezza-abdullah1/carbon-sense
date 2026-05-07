@@ -34,7 +34,7 @@ import {
   Calendar,
   Factory,
 } from "lucide-react";
-import { EmissionChart } from "@/components/emission-chart";
+import { EmissionChart } from "@/features/emissions/emission-chart";
 import { useAreas, useEmissions } from "@/hooks/use-emissions";
 import type { EmissionDataPoint, AreaInfo } from "@/lib/api";
 

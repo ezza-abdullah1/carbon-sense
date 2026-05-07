@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X, Sparkles, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { RecommendationsModal } from "@/components/recommendations-modal";
+import { RecommendationsModal } from "@/features/recommendations/recommendations-modal";
 import type { UCSummary, Sector } from "@/lib/api";
 import { formatTonnes, getUCEmission } from "@/lib/map-utils";
 
