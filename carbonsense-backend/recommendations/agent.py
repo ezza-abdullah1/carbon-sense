@@ -117,6 +117,49 @@ def _load_uc_data(area_name, sector, coordinates):
     return uc_data
 
 
+def _uc_to_emissions_analysis(uc_data):
+    """Map the UC-data shape used by the LLM prompt into the
+    `emissions_analysis` dict that ResponseFormatter.build_from_template
+    consumes for the template fallback.
+    """
+    t = uc_data.get('transport') or {}
+    b = uc_data.get('buildings') or {}
+    w = uc_data.get('waste') or {}
+
+    sector_totals = {
+        'transport': t.get('forecast_annual_t', 0) or 0,
+        'buildings': b.get('forecast_total_t', 0) or 0,
+        'waste': w.get('forecast_annual_t', 0) or 0,
+        'industry': 0,
+        'energy': 0,
+    }
+    total = sum(sector_totals.values())
+
+    hist_total = t.get('historical_total_t', 0) or 0
+    fc_total = t.get('forecast_annual_t', 0) or 0
+    if hist_total and fc_total:
+        trend_pct = (fc_total - hist_total) / hist_total * 100
+        if trend_pct > 5:
+            trend = 'increasing'
+        elif trend_pct < -5:
+            trend = 'decreasing'
+        else:
+            trend = 'stable'
+    else:
+        trend = 'stable'
+        trend_pct = 0.0
+
+    return {
+        'total_emissions': total,
+        'sector_totals': sector_totals,
+        'trend_direction': trend,
+        'trend_percentage': trend_pct,
+        'historical_count': 12 if hist_total else 0,
+        'forecast_direction': 'increasing' if trend == 'increasing' else 'stable',
+        'forecast_count': 1 if fc_total else 0,
+    }
+
+
 def _build_gemini_prompt(uc_data, sector):
     """Build a structured prompt for Gemini with real emission data."""
     area = uc_data.get('area_name', 'Unknown')
@@ -324,7 +367,6 @@ class RecommendationAgent:
         # ── Step 3: Build final response ────────────────────────────────
         with tracer.step(3, "Formatting final response") as t:
             if gemini_result:
-                # Use Gemini's response
                 recommendations = {
                     'summary': gemini_result.get('summary', ''),
                     'immediate_actions': gemini_result.get('immediate_actions', []),
@@ -333,10 +375,22 @@ class RecommendationAgent:
                     'monitoring_metrics': gemini_result.get('monitoring_metrics', []),
                     'risk_factors': gemini_result.get('risk_factors', []),
                 }
-                t.add_data({'source': 'gemini'})
+                source = 'gemini'
+                t.add_data({'source': source})
             else:
-                # No fallback — raise error so we know Gemini failed
-                raise RuntimeError("Gemini generation failed — no fallback enabled for testing")
+                # Fallback to template-based generation so the API still
+                # returns a usable response when the LLM is unavailable.
+                fallback = self.formatter.build_from_template(
+                    area_name=area_name,
+                    area_id=area_id,
+                    sector=sector,
+                    coordinates=coordinates,
+                    policy_results=[],
+                    emissions_analysis=_uc_to_emissions_analysis(uc_data),
+                )
+                recommendations = fallback['recommendations']
+                source = 'template_fallback'
+                t.add_data({'source': source})
 
         # ── Assemble response ───────────────────────────────────────────
         result = {
@@ -358,7 +412,8 @@ class RecommendationAgent:
                 ])),
                 'geographic_relevance': 0.95,
             },
-            'raw_response': json.dumps(gemini_result) if gemini_result else '',
+            'source': source,
+            'raw_response': json.dumps(gemini_result) if gemini_result else 'template_fallback',
             'generated_at': datetime.now().isoformat(),
         }
 
