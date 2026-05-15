@@ -17,11 +17,15 @@ django-cors-headers>=4.3,<4.4
 python-dotenv>=1.0,<1.1
 
 # RAG / AI
-# chromadb 0.5+ is required for NumPy 2 compatibility (older versions
-# import the removed `np.float_` alias and crash at import time).
+# chromadb + sentence-transformers + groq are legacy — retained during cutover
+# to n8n + Supabase. Remove once RECOMMENDATIONS_BACKEND=n8n is the only path.
 chromadb>=0.5,<1.0
 sentence-transformers>=2.2,<3.0
 groq>=0.12,<1.0
+
+# n8n + Supabase backend
+supabase>=2.0,<3.0
+openai>=1.40,<2.0
 
 # Document processing
 PyPDF2>=3.0,<4.0

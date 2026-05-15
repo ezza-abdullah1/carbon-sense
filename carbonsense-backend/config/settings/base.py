@@ -132,8 +132,27 @@ CSRF_COOKIE_SAMESITE = "Lax"
 
 # Recommendations / RAG
 
+# Legacy (kept until n8n cutover is complete; remove after rollout)
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 CHROMA_PERSIST_DIR = str(BASE_DIR / "chroma_data")
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-RECOMMENDATION_CACHE_TTL_HOURS = int(os.environ.get("RECOMMENDATION_CACHE_TTL_HOURS", "24"))
 POLICY_DOCUMENTS_DIR = str(BASE_DIR / "policy_documents")
+
+RECOMMENDATION_CACHE_TTL_HOURS = int(os.environ.get("RECOMMENDATION_CACHE_TTL_HOURS", "24"))
+
+# n8n integration
+N8N_WEBHOOK_BASE = os.environ.get("N8N_WEBHOOK_BASE", "")  # e.g. https://your-n8n.app.n8n.cloud/webhook
+N8N_SHARED_SECRET = os.environ.get("N8N_SHARED_SECRET", "")
+N8N_TIMEOUT_SECONDS = int(os.environ.get("N8N_TIMEOUT_SECONDS", "60"))
+
+# Supabase (used by seed_data_chunks management command + optional direct queries)
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+
+# OpenAI (used only by seed_data_chunks for embedding the local JSON corpus;
+# n8n owns the runtime embedding path)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_EMBEDDING_MODEL = os.environ.get("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+
+# Backend selector: 'n8n' once cutover is done, 'template' for fallback-only mode.
+RECOMMENDATIONS_BACKEND = os.environ.get("RECOMMENDATIONS_BACKEND", "n8n")

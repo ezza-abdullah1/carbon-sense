@@ -1,0 +1,286 @@
+{
+  "name": "CarbonSense — Generate Recommendations",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-recs",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook /generate-recs",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "carbonsense-generate-recs"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Auth + payload validation.\nconst token = $input.first().headers['x-carbonsense-token'];\nif (!token || token !== $env.CARBONSENSE_SHARED_SECRET) {\n  throw new Error('Unauthorized');\n}\n\nconst b = $input.first().json.body || $input.first().json;\nconst required = ['area_id', 'area_name', 'sector', 'coordinates', 'emissions_summary'];\nfor (const k of required) {\n  if (b[k] === undefined || b[k] === null) {\n    throw new Error(`Missing field: ${k}`);\n  }
+}\n\n// Build the retrieval query text. Embedding lat/lng is meaningless; the\n// semantic signal comes from the area name + sector + risk flags + dominant\n// source pulled out of emissions_summary.\nconst uc = b.emissions_summary?.uc_data || {};\nconst tflags = (uc.transport?.risk_flags || []).join(', ');\nconst bflags = (uc.buildings?.risk_flags || []).join(', ');\nconst sectorBlock = uc[b.sector] || {};\nconst dominant = sectorBlock.dominant_source || sectorBlock.risk_level || '';\n\nconst query = (\n  `${b.sector} emission reduction strategies for ${b.area_name} Union Council, ` +\n  `Lahore District, Punjab, Pakistan. ` +\n  `Sector intensity ${sectorBlock.intensity_t_per_km2 || sectorBlock.intensity_t_km2 || 'n/a'} t/km². ` +\n  `Risk flags: ${tflags || bflags || 'none'}. ` +\n  `Dominant driver: ${dominant || 'unspecified'}. ` +\n  `Looking for proven interventions, policy levers, and monitoring metrics.`\n);\n\nreturn [{ json: { ...b, retrieval_query: query } }];"
+      },
+      "id": "validate-1",
+      "name": "Validate + build query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/cache_lookup",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_area_id\": \"{{ $json.area_id }}\",\n  \"p_sector\": \"{{ $json.sector }}\"\n}",
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "cache-lookup",
+      "name": "Cache lookup (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "notes": "Optional RPC `cache_lookup(p_area_id, p_sector)`. If not created, this returns empty array and the workflow proceeds to fresh generation."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2 },
+          "conditions": [
+            {
+              "leftValue": "={{ Array.isArray($json) && $json.length > 0 && $json[0].response }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "cache-hit-if",
+      "name": "Cache hit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json[0];\nreturn [{ json: { ...row.response, from_cache: true, run_id: row.id, source: 'supabase-cache' } }];"
+      },
+      "id": "cache-return",
+      "name": "Return cached",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.OPENAI_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($('Validate + build query').first().json.retrieval_query) }}\n}",
+        "options": {}
+      },
+      "id": "embed-query",
+      "name": "Embed query (OpenAI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/match_chunks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"query_embedding\": {{ JSON.stringify($json.data[0].embedding) }},\n  \"policy_count\": 8,\n  \"data_count\": 4,\n  \"geo_filter\": \"pakistan\",\n  \"sector_filter\": \"{{ $('Validate + build query').first().json.sector }}\"\n}",
+        "options": {}
+      },
+      "id": "match-chunks",
+      "name": "match_chunks (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Re-rank: dedupe policy chunks by url, boost geo=lahore/punjab, always\n// keep the user's UC's own data chunk, cap at 5 policy + 3 data.\nconst rows = $input.first().json || [];\nconst payload = $('Validate + build query').first().json;\nconst targetUc = (payload.area_name || '').toLowerCase().trim();\n\nconst policy = [];\nconst data = [];\nconst seenUrls = new Set();\n\nconst boost = (row) => {\n  let s = row.similarity;\n  const geo = row.meta?.geo;\n  if (geo === 'lahore' || geo === 'punjab') s += 0.15;\n  return s;\n};\n\nfor (const r of rows) {\n  if (r.source === 'policy') {\n    const url = r.meta?.url;\n    if (url && seenUrls.has(url)) continue;\n    if (url) seenUrls.add(url);\n    if (r.similarity < 0.35) continue;\n    policy.push({ ...r, _boosted: boost(r) });\n  } else if (r.source === 'data') {\n    data.push(r);\n  }\n}\n\npolicy.sort((a, b) => b._boosted - a._boosted);\n\n// Make sure the UC's own row is present even if low-similarity\nconst hasOwn = data.some(r => (r.meta?.uc || '').toLowerCase().trim() === targetUc);\nif (!hasOwn) {\n  // fall through — the data block will list peer UCs instead\n}\n\nconst topPolicy = policy.slice(0, 5);\nconst topData = data.slice(0, 3);\n\n// Truncate long chunks to ~250 tokens (~1000 chars) at sentence boundary\nconst trim = (txt, max = 1000) => {\n  if (!txt || txt.length <= max) return txt;\n  const cut = txt.lastIndexOf('. ', max);\n  return (cut > 200 ? txt.slice(0, cut + 1) : txt.slice(0, max)) + ' […]';\n};\n\nconst dataBlock = topData.map((r, i) => \n  `[D${i + 1}] ${r.meta?.uc || 'aggregate'} — ${r.meta?.type}:\\n${trim(r.chunk_text, 1200)}`\n).join('\\n\\n');\n\nconst policyBlock = topPolicy.map((r, i) =>\n  `[P${i + 1}] ${r.meta?.title || 'untitled'} — ${r.meta?.org || 'unknown source'} (similarity ${r.similarity.toFixed(2)})\\n\"\"\"\\n${trim(r.chunk_text)}\\n\"\"\"`\n).join('\\n\\n');\n\nconst retrievedIds = {\n  policy: topPolicy.map(r => r.id),\n  data: topData.map(r => r.id),\n};\n\nreturn [{ json: { ...payload, dataBlock, policyBlock, retrievedIds } }];"
+      },
+      "id": "rerank",
+      "name": "Re-rank + build evidence blocks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compose the prompt. Static blocks (system, frameworks) carry\n// `cache_control: ephemeral` so Anthropic prompt caching kicks in.\n\nconst p = $input.first().json;\nconst summary = p.emissions_summary || {};\nconst uc = summary.uc_data || {};\nconst t = uc.transport || {};\nconst b = uc.buildings || {};\nconst w = uc.waste || {};\n\nconst num = (v, d = '—') => (typeof v === 'number' && isFinite(v)) ? v.toLocaleString('en-US', { maximumFractionDigits: 0 }) : d;\n\nconst baseline = [\n  `Union Council: ${p.area_name} (Lahore District, Punjab, Pakistan)`,\n  `Coordinates: ${p.coordinates?.lat}, ${p.coordinates?.lng}`,\n  `Primary sector for analysis: ${p.sector}`,\n  ``,\n  t.forecast_annual_t ? `Transport: ${num(t.forecast_annual_t)} t CO2e/yr (road ${t.road_pct || 0}%, intensity ${num(t.intensity_t_per_km2)} t/km², rank #${t.rank_in_division || '?'}/151, flags: ${(t.risk_flags || []).join(', ') || 'none'})` : null,\n  b.forecast_total_t ? `Buildings: ${num(b.forecast_total_t)} t CO2e/yr (residential ${num(b.residential_t)} t, non-residential ${num(b.non_residential_t)} t, intensity ${num(b.intensity_t_km2)} t/km², rank #${b.rank_in_district || '?'}/151)` : null,\n  w.forecast_annual_t ? `Waste: ${num(w.forecast_annual_t)} t CO2e/yr (point sources ${w.point_pct || 0}%, risk level ${w.risk_level || 'unknown'})` : null,\n  ``,\n  `Trend: ${summary.trend_direction || 'unknown'} (${(summary.trend_percentage || 0).toFixed(1)}% vs historical baseline)`,\n].filter(Boolean).join('\\n');\n\nconst SYSTEM = `You are a senior climate policy advisor to the Government of Punjab, specializing in Pakistan urban emission reduction. You produce site-specific action plans grounded in retrieved evidence (policy documents + local emission data). You cite [P#] for policy claims and [D#] for data claims. You never invent statute sections or numbers — only quote what appears in the retrieved evidence.`;\n\nconst FRAMEWORKS = `═══ INTERNATIONAL FRAMEWORKS TO ANCHOR IN ═══\n- Paris Agreement Art. 4 (NDC alignment)\n- IPCC AR6 WG3 Ch.10 (transport) / Ch.9 (buildings) / Ch.11 (waste)\n- C40 Climate Action Planning Framework\n- SBTi targets for sub-national entities\n- UN-Habitat Global Urban Monitoring Framework\n- WHO Air Quality Guidelines (PM2.5)\n\nGenerate the response as STRICT JSON with these six keys: summary, immediate_actions (5 items), long_term_strategies (3-4 items), policy_recommendations (3-4 items, each citing a [P#] source), monitoring_metrics (3-4 items, UC-level measurable), risk_factors (3-4 items). Each strategy must cite at least one [P#] and one framework above. Quantify against the baseline numbers. Return ONLY the JSON object — no markdown fences, no preface.`;\n\nconst body = {\n  model: 'anthropic/claude-sonnet-4-6',\n  provider: { order: ['Anthropic'], allow_fallbacks: false },\n  max_tokens: 1800,\n  temperature: 0.4,\n  response_format: { type: 'json_object' },\n  messages: [\n    {\n      role: 'system',\n      content: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }]\n    },\n    {\n      role: 'user',\n      content: [\n        { type: 'text', text: FRAMEWORKS, cache_control: { type: 'ephemeral' } },\n        { type: 'text', text: `═══ LOCAL DATA (from CarbonSense datasets) ═══\\n${p.dataBlock || '(no data chunks retrieved)'}\\n\\n═══ POLICY EVIDENCE (retrieved) ═══\\n${p.policyBlock || '(no policy chunks retrieved — generation will rely on frameworks above)'}` },\n        { type: 'text', text: `═══ BASELINE FOR ${p.area_name.toUpperCase()} ═══\\n${baseline}\\n\\nReturn ONLY the six-key JSON object now.` }\n      ]\n    }\n  ]\n};\n\nreturn [{ json: { ...p, openrouter_body: body } }];"
+      },
+      "id": "compose-prompt",
+      "name": "Compose Claude prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.OPENROUTER_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "HTTP-Referer", "value": "https://carbonsense.app" },
+            { "name": "X-Title", "value": "CarbonSense" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.openrouter_body) }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "openrouter-call",
+      "name": "Claude Sonnet 4.6 (OpenRouter)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse, validate schema, assemble final response.\nconst llm = $input.first().json;\nconst raw = llm.choices?.[0]?.message?.content || '';\n\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch (e) {\n  // Strip code fences if model added them\n  const cleaned = raw.replace(/^```(json)?/, '').replace(/```$/, '').trim();\n  parsed = JSON.parse(cleaned);\n}\n\nconst required = ['summary', 'immediate_actions', 'long_term_strategies', 'policy_recommendations', 'monitoring_metrics', 'risk_factors'];\nfor (const k of required) {\n  if (parsed[k] === undefined) throw new Error(`Missing key in LLM output: ${k}`);\n  if (k !== 'summary' && !Array.isArray(parsed[k])) parsed[k] = [];\n}\n\nconst ctx = $('Re-rank + build evidence blocks').first().json;\nconst usage = llm.usage || {};\n\nreturn [{\n  json: {\n    success: true,\n    query: {\n      area_id: ctx.area_id,\n      area_name: ctx.area_name,\n      sector: ctx.sector,\n      coordinates: ctx.coordinates,\n    },\n    recommendations: parsed,\n    confidence: {\n      overall: 0.85,\n      evidence_strength: Math.min(0.95, (ctx.retrievedIds?.policy?.length || 0) / 5),\n      data_completeness: Math.min(1.0, (ctx.retrievedIds?.data?.length || 0) / 3),\n      geographic_relevance: 0.9,\n    },\n    source: 'n8n-rag',\n    llm_model: 'anthropic/claude-sonnet-4-6',\n    retrieved_chunk_ids: ctx.retrievedIds?.policy || [],\n    retrieved_data_chunk_ids: ctx.retrievedIds?.data || [],\n    usage: { input_tokens: usage.prompt_tokens, output_tokens: usage.completion_tokens },\n    generated_at: new Date().toISOString(),\n  }\n}];"
+      },
+      "id": "parse-llm",
+      "name": "Parse + validate JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/recommendation_runs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"area_id\": \"{{ $json.query.area_id }}\",\n  \"area_name\": \"{{ $json.query.area_name }}\",\n  \"sector\": \"{{ $json.query.sector }}\",\n  \"coordinates\": {{ JSON.stringify($json.query.coordinates) }},\n  \"emissions_summary\": {{ JSON.stringify($('Validate + build query').first().json.emissions_summary) }},\n  \"retrieved_chunk_ids\": {{ JSON.stringify($json.retrieved_chunk_ids) }},\n  \"retrieved_data_chunk_ids\": {{ JSON.stringify($json.retrieved_data_chunk_ids) }},\n  \"response\": {{ JSON.stringify($json) }},\n  \"llm_model\": \"anthropic/claude-sonnet-4-6\",\n  \"source\": \"n8n-rag\",\n  \"expires_at\": \"{{ new Date(Date.now() + 30 * 86400 * 1000).toISOString() }}\"\n}",
+        "options": {}
+      },
+      "id": "cache-write",
+      "name": "Cache write (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2440, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stamp run_id from Supabase insert response and return final payload.\nconst inserted = Array.isArray($input.first().json) ? $input.first().json[0] : $input.first().json;\nconst run = $('Parse + validate JSON').first().json;\nreturn [{ json: { ...run, run_id: inserted.id, from_cache: false } }];"
+      },
+      "id": "stamp-runid",
+      "name": "Stamp run_id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2660, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "respond-fresh",
+      "name": "Respond (fresh)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2880, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "respond-cached",
+      "name": "Respond (cached)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1340, 180]
+    }
+  ],
+  "connections": {
+    "Webhook /generate-recs": {
+      "main": [[{ "node": "Validate + build query", "type": "main", "index": 0 }]]
+    },
+    "Validate + build query": {
+      "main": [[{ "node": "Cache lookup (Supabase)", "type": "main", "index": 0 }]]
+    },
+    "Cache lookup (Supabase)": {
+      "main": [[{ "node": "Cache hit?", "type": "main", "index": 0 }]]
+    },
+    "Cache hit?": {
+      "main": [
+        [{ "node": "Return cached", "type": "main", "index": 0 }],
+        [{ "node": "Embed query (OpenAI)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Return cached": {
+      "main": [[{ "node": "Respond (cached)", "type": "main", "index": 0 }]]
+    },
+    "Embed query (OpenAI)": {
+      "main": [[{ "node": "match_chunks (Supabase)", "type": "main", "index": 0 }]]
+    },
+    "match_chunks (Supabase)": {
+      "main": [[{ "node": "Re-rank + build evidence blocks", "type": "main", "index": 0 }]]
+    },
+    "Re-rank + build evidence blocks": {
+      "main": [[{ "node": "Compose Claude prompt", "type": "main", "index": 0 }]]
+    },
+    "Compose Claude prompt": {
+      "main": [[{ "node": "Claude Sonnet 4.6 (OpenRouter)", "type": "main", "index": 0 }]]
+    },
+    "Claude Sonnet 4.6 (OpenRouter)": {
+      "main": [[{ "node": "Parse + validate JSON", "type": "main", "index": 0 }]]
+    },
+    "Parse + validate JSON": {
+      "main": [[{ "node": "Cache write (Supabase)", "type": "main", "index": 0 }]]
+    },
+    "Cache write (Supabase)": {
+      "main": [[{ "node": "Stamp run_id", "type": "main", "index": 0 }]]
+    },
+    "Stamp run_id": {
+      "main": [[{ "node": "Respond (fresh)", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

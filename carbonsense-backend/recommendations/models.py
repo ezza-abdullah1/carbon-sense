@@ -79,6 +79,38 @@ class RecommendationCache(models.Model):
         return f"Cache: {self.area_id} - {self.sector}"
 
 
+class RecommendationFeedback(models.Model):
+    """Local buffer for user feedback on recommendations.
+
+    Source of truth lives in Supabase (`recommendation_feedback`), populated
+    by the n8n feedback workflow. This table only stores entries that failed
+    to reach n8n so a background job can replay them later.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    run_id = models.UUIDField(null=True, blank=True)
+    area_id = models.CharField(max_length=255, default='')
+    sector = models.CharField(max_length=50, default='')
+    rating = models.IntegerField()
+    feedback_text = models.TextField(blank=True, default='')
+    helpful_action_indices = models.JSONField(default=list)
+    unhelpful_action_indices = models.JSONField(default=list)
+    anon_id = models.CharField(max_length=64)
+    forwarded_to_n8n = models.BooleanField(default=False)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    forwarded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'recommendation_feedback'
+        indexes = [
+            models.Index(fields=['forwarded_to_n8n', 'submitted_at']),
+            models.Index(fields=['run_id']),
+        ]
+
+    def __str__(self):
+        return f"Feedback {self.rating}★ for {self.area_id}/{self.sector}"
+
+
 class ScrapedArticle(models.Model):
     """Tracks articles scraped from climate policy news sources."""
 

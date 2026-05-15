@@ -1,0 +1,190 @@
+{
+  "name": "CarbonSense — Weekly Policy Scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 2 * * 0" }
+          ]
+        }
+      },
+      "id": "cron-1",
+      "name": "Weekly cron (Sun 02:00 UTC)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Source list — port this verbatim from recommendations/policy_registry.py.\n// Each item: { url, org, geo_scope, sector_tags, framework_tags }\nreturn [\n  { json: { url: 'https://www.epd.punjab.gov.pk/system/files/Punjab%20Environmental%20Protection%20Act%201997.pdf', org: 'EPA Punjab', geo_scope: 'punjab', sector_tags: ['transport','industry','waste'], framework_tags: [] } },\n  { json: { url: 'https://mocc.gov.pk/SiteImage/Misc/files/Pakistan%20Climate%20Change%20Act%202017.pdf', org: 'Ministry of Climate Change Pakistan', geo_scope: 'pakistan', sector_tags: ['transport','buildings','waste','industry','energy'], framework_tags: ['paris'] } },\n  { json: { url: 'https://www.c40knowledgehub.org/s/article/Mayors-Guide-to-EV-Adoption', org: 'C40 Cities', geo_scope: 'global', sector_tags: ['transport'], framework_tags: ['c40'] } },\n  { json: { url: 'https://www.iea.org/reports/transport', org: 'IEA', geo_scope: 'global', sector_tags: ['transport'], framework_tags: ['iea'] } },\n  { json: { url: 'https://www.ipcc.ch/report/ar6/wg3/chapter/chapter-10/', org: 'IPCC AR6 WG3 Ch.10', geo_scope: 'global', sector_tags: ['transport'], framework_tags: ['ipcc-ar6'] } },\n  { json: { url: 'https://www.ipcc.ch/report/ar6/wg3/chapter/chapter-9/', org: 'IPCC AR6 WG3 Ch.9', geo_scope: 'global', sector_tags: ['buildings'], framework_tags: ['ipcc-ar6'] } },\n  { json: { url: 'https://www.ipcc.ch/report/ar6/wg3/chapter/chapter-11/', org: 'IPCC AR6 WG3 Ch.11', geo_scope: 'global', sector_tags: ['waste','industry'], framework_tags: ['ipcc-ar6'] } }\n  // Add more sources as needed.\n];"
+      },
+      "id": "sources",
+      "name": "Source list",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-batches",
+      "name": "Iterate sources",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "redirect": { "redirect": { "followRedirects": true } },
+          "timeout": 30000,
+          "response": { "response": { "responseFormat": "text", "neverError": true } }
+        }
+      },
+      "id": "fetch-url",
+      "name": "Fetch URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Detect PDF vs HTML by content-type or magic bytes, extract text, chunk.\nconst meta = $('Iterate sources').first().json;\nconst raw = $input.first().json.data || $input.first().json.body || '';\nconst headers = $input.first().json.headers || {};\nconst ct = (headers['content-type'] || '').toLowerCase();\n\nlet text = '';\nif (ct.includes('pdf') || raw.startsWith('%PDF')) {\n  // For PDFs you typically want the built-in Extract from File node. For\n  // simplicity here we stub it — replace this branch with a real PDF extractor.\n  text = '[PDF content — replace this branch with the Extract-from-File node feeding into this code node]';\n} else {\n  // Naive HTML→text: strip tags, collapse whitespace.\n  text = raw\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, ' ')\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, ' ')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nif (!text || text.length < 200) return [];\n\n// Recursive char chunker — ~800 tokens (~3200 chars) with 400 overlap.\nconst chunkSize = 3200;\nconst overlap = 400;\nconst chunks = [];\nfor (let i = 0; i < text.length; i += chunkSize - overlap) {\n  const slice = text.slice(i, i + chunkSize).trim();\n  if (slice.length < 200) continue;\n  chunks.push(slice);\n}\n\nconst crypto = require('crypto');\nconst title = (text.match(/^.{0,150}/) || ['untitled'])[0].slice(0, 150);\n\nreturn chunks.map((chunk, idx) => ({ json: {\n  source_url: meta.url,\n  source_title: title,\n  source_org: meta.org,\n  geo_scope: meta.geo_scope,\n  sector_tags: meta.sector_tags,\n  framework_tags: meta.framework_tags,\n  chunk_index: idx,\n  chunk_text: chunk,\n  content_hash: crypto.createHash('sha256').update(chunk).digest('hex'),\n}}));"
+      },
+      "id": "parse-chunk",
+      "name": "Parse + chunk",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/policy_chunks",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "select", "value": "id" },
+            { "name": "content_hash", "value": "=eq.{{ $json.content_hash }}" },
+            { "name": "limit", "value": "1" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dedupe-check",
+      "name": "Dedupe by content_hash",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2 },
+          "conditions": [
+            {
+              "leftValue": "={{ Array.isArray($json) && $json.length === 0 }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ]
+        }
+      },
+      "id": "is-new",
+      "name": "Hash not seen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.OPENAI_API_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"text-embedding-3-small\",\n  \"input\": {{ JSON.stringify($('Parse + chunk').first().json.chunk_text) }}\n}",
+        "options": {}
+      },
+      "id": "embed-chunk",
+      "name": "Embed chunk (OpenAI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/policy_chunks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "resolution=merge-duplicates" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source_url\": \"{{ $('Parse + chunk').first().json.source_url }}\",\n  \"source_title\": {{ JSON.stringify($('Parse + chunk').first().json.source_title) }},\n  \"source_org\": \"{{ $('Parse + chunk').first().json.source_org }}\",\n  \"geo_scope\": \"{{ $('Parse + chunk').first().json.geo_scope }}\",\n  \"sector_tags\": {{ JSON.stringify($('Parse + chunk').first().json.sector_tags) }},\n  \"framework_tags\": {{ JSON.stringify($('Parse + chunk').first().json.framework_tags) }},\n  \"chunk_index\": {{ $('Parse + chunk').first().json.chunk_index }},\n  \"chunk_text\": {{ JSON.stringify($('Parse + chunk').first().json.chunk_text) }},\n  \"content_hash\": \"{{ $('Parse + chunk').first().json.content_hash }}\",\n  \"embedding\": {{ JSON.stringify($json.data[0].embedding) }}\n}",
+        "options": {}
+      },
+      "id": "upsert-chunk",
+      "name": "Upsert into policy_chunks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 220]
+    }
+  ],
+  "connections": {
+    "Weekly cron (Sun 02:00 UTC)": {
+      "main": [[{ "node": "Source list", "type": "main", "index": 0 }]]
+    },
+    "Source list": {
+      "main": [[{ "node": "Iterate sources", "type": "main", "index": 0 }]]
+    },
+    "Iterate sources": {
+      "main": [[{ "node": "Fetch URL", "type": "main", "index": 0 }]]
+    },
+    "Fetch URL": {
+      "main": [[{ "node": "Parse + chunk", "type": "main", "index": 0 }]]
+    },
+    "Parse + chunk": {
+      "main": [[{ "node": "Dedupe by content_hash", "type": "main", "index": 0 }]]
+    },
+    "Dedupe by content_hash": {
+      "main": [[{ "node": "Hash not seen?", "type": "main", "index": 0 }]]
+    },
+    "Hash not seen?": {
+      "main": [
+        [{ "node": "Embed chunk (OpenAI)", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Embed chunk (OpenAI)": {
+      "main": [[{ "node": "Upsert into policy_chunks", "type": "main", "index": 0 }]]
+    },
+    "Upsert into policy_chunks": {
+      "main": [[{ "node": "Iterate sources", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}

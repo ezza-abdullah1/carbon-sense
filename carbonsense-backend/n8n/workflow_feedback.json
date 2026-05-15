@@ -1,0 +1,124 @@
+{
+  "name": "CarbonSense — Feedback Receiver",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "feedback",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-fb",
+      "name": "Webhook /feedback",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "carbonsense-feedback"
+    },
+    {
+      "parameters": {
+        "jsCode": "const token = $input.first().headers['x-carbonsense-token'];\nif (!token || token !== $env.CARBONSENSE_SHARED_SECRET) {\n  throw new Error('Unauthorized');\n}\n\nconst b = $input.first().json.body || $input.first().json;\nif (typeof b.rating !== 'number' || b.rating < 1 || b.rating > 5) {\n  throw new Error('rating must be an integer 1..5');\n}\nif (!b.anon_id) {\n  // Belt-and-braces: derive anon_id here if Django didn't send one. Django\n  // already computes it, but if a client calls this webhook directly we\n  // still want consistent anonymity.\n  const crypto = require('crypto');\n  const today = new Date().toISOString().slice(0, 10);\n  const salt = ($env.FEEDBACK_DAILY_SALT_PREFIX || 'cs-anon') + today;\n  const ip = ($input.first().headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';\n  const ua = $input.first().headers['user-agent'] || 'unknown';\n  b.anon_id = crypto.createHash('sha256').update(`${ip}|${ua}|${salt}`).digest('hex').slice(0, 32);\n}\n\nreturn [{ json: {\n  run_id: b.run_id || null,\n  rating: b.rating,\n  feedback_text: b.feedback_text || '',\n  helpful_action_indices: Array.isArray(b.helpful_action_indices) ? b.helpful_action_indices : [],\n  unhelpful_action_indices: Array.isArray(b.unhelpful_action_indices) ? b.unhelpful_action_indices : [],\n  anon_id: b.anon_id,\n  area_id: b.area_id || null,\n  sector: b.sector || null,\n}}];"
+      },
+      "id": "validate-fb",
+      "name": "Validate + derive anon_id",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/recommendation_feedback",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "resolution=merge-duplicates,return=representation" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"run_id\": {{ $json.run_id ? '\"' + $json.run_id + '\"' : 'null' }},\n  \"rating\": {{ $json.rating }},\n  \"feedback_text\": {{ JSON.stringify($json.feedback_text) }},\n  \"helpful_action_indices\": {{ JSON.stringify($json.helpful_action_indices) }},\n  \"unhelpful_action_indices\": {{ JSON.stringify($json.unhelpful_action_indices) }},\n  \"anon_id\": \"{{ $json.anon_id }}\"\n}",
+        "options": {}
+      },
+      "id": "upsert-fb",
+      "name": "Upsert feedback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "version": 2 },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Validate + derive anon_id').first().json.rating }}",
+              "rightValue": 2,
+              "operator": { "type": "number", "operation": "lte" }
+            }
+          ]
+        }
+      },
+      "id": "low-rating-if",
+      "name": "Low rating?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL || 'about:blank' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Content-Type", "value": "application/json" }]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"⚠️ Low rating ({{ $('Validate + derive anon_id').first().json.rating }}★) for area_id={{ $('Validate + derive anon_id').first().json.area_id }} sector={{ $('Validate + derive anon_id').first().json.sector }} run_id={{ $('Validate + derive anon_id').first().json.run_id }}\\nText: {{ $('Validate + derive anon_id').first().json.feedback_text }}\"\n}",
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "slack-alert",
+      "name": "Slack alert (optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }",
+        "options": {}
+      },
+      "id": "respond-fb",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Webhook /feedback": {
+      "main": [[{ "node": "Validate + derive anon_id", "type": "main", "index": 0 }]]
+    },
+    "Validate + derive anon_id": {
+      "main": [[{ "node": "Upsert feedback", "type": "main", "index": 0 }]]
+    },
+    "Upsert feedback": {
+      "main": [[{ "node": "Low rating?", "type": "main", "index": 0 }]]
+    },
+    "Low rating?": {
+      "main": [
+        [{ "node": "Slack alert (optional)", "type": "main", "index": 0 }],
+        [{ "node": "Respond OK", "type": "main", "index": 0 }]
+      ]
+    },
+    "Slack alert (optional)": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}
