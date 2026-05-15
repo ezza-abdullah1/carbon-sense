@@ -18,12 +18,13 @@ import {
   useCombinedTimeSeriesData,
   useLatestEmissions,
   useLeaderboard,
+  usePowerPlants,
   useStats,
   useUCBoundaries,
   useUCSummaries,
 } from "@/hooks/use-emissions";
 import type { LeaderboardEntry, Sector, DataType } from "@shared/schema";
-import type { AreaInfo, Stats, TimeInterval, UCSummary } from "@/lib/api";
+import type { AreaInfo, PowerPlant, Stats, TimeInterval, UCSummary } from "@/lib/api";
 import { getUCEmission } from "@/lib/map-utils";
 
 type ViewMode = "monthly" | "yearly";
@@ -69,6 +70,9 @@ interface DashboardContextValue {
   legendMax: number;
   availableMonths: string[];
   combinedData: { historical: any[]; forecast: any[] } | undefined;
+  powerPlants: PowerPlant[];
+  selectedPlantName: string | null;
+  setSelectedPlantName: (name: string | null) => void;
 
   // Cross-page actions
   handleToggleSector: (s: Sector) => void;
@@ -116,6 +120,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [dataType, setDataType] = useState<DataType>("historical");
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [selectedUCCode, setSelectedUCCode] = useState<string | null>(null);
+  const [selectedPlantName, setSelectedPlantName] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("yearly");
   const [selectedMonth, setSelectedMonth] = useState<string>("2025-12");
 
@@ -135,6 +140,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     viewMode,
     viewMode === "monthly" ? selectedMonth : undefined,
   );
+  const { data: powerPlants = [] } = usePowerPlants(dataType);
 
   const availableMonths = useMemo(() => {
     if (!ucSummaries || ucSummaries.length === 0) return [];
@@ -222,6 +228,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     legendMax,
     availableMonths,
     combinedData,
+    powerPlants,
+    selectedPlantName,
+    setSelectedPlantName,
     handleToggleSector,
     handleSelectAllSectors,
     handleClearAllSectors,

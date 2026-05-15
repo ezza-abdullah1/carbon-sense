@@ -280,6 +280,42 @@ export async function fetchEmissionsTimeline(
   return response.json();
 }
 
+// ---- Power-plant point sources (energy sector) ----
+//
+// Energy doesn't have per-UC allocation — power plants are physical
+// facilities at fixed coordinates. The map renders them as point markers
+// rather than colouring UC polygons.
+
+export interface PowerPlantSummary {
+  last_historical_date: string;
+  last_historical_emissions: number;
+  forecast_12m_total: number;
+  forecast_12m_average: number;
+  total_historical_tonnes: number;
+  change_pct: number;
+  trend: 'increasing' | 'declining' | 'stable';
+}
+
+export interface PowerPlant {
+  source: string;
+  type: string;
+  lat: number;
+  lng: number;
+  emissions: number;
+  summary: PowerPlantSummary | null;
+}
+
+export async function fetchPowerPlants(
+  dataType: 'historical' | 'forecast' = 'historical',
+): Promise<PowerPlant[]> {
+  const params = new URLSearchParams({ data_type: dataType });
+  const response = await fetch(`${API_BASE_URL}/power-plants/?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch power plants');
+  }
+  return response.json();
+}
+
 // ---- UC Boundaries (static GeoJSON) ----
 
 export async function fetchUCBoundaries(): Promise<GeoJSON.FeatureCollection> {

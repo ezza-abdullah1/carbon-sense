@@ -4,6 +4,7 @@ import {
   fetchEmissions,
   fetchEmissionsTimeline,
   fetchLatestEmissionsByArea,
+  fetchPowerPlants,
   fetchTimeSeriesData,
   fetchLeaderboard,
   fetchStats,
@@ -91,6 +92,18 @@ export function useLeaderboard(
     queryKey: ['leaderboard', dataType, sectors, interval],
     queryFn: () => fetchLeaderboard(dataType, sectors, interval),
     staleTime: 1 * 60 * 1000,
+  });
+}
+
+// Hook to fetch power-plant point sources for the energy sector.
+// Energy isn't a UC-level thing, so the map renders these as markers.
+export function usePowerPlants(
+  dataType: 'historical' | 'forecast' = 'historical',
+) {
+  return useQuery({
+    queryKey: ['power-plants', dataType],
+    queryFn: () => fetchPowerPlants(dataType),
+    staleTime: 5 * 60 * 1000,
   });
 }
 

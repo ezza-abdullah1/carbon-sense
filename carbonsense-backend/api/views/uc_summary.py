@@ -14,7 +14,6 @@ from rest_framework.response import Response
 
 from api.services.data_files import (
     build_buildings_by_uc,
-    build_energy_total,
     build_industry_by_uc,
     build_transport_by_uc,
     build_waste_by_uc,
@@ -31,7 +30,13 @@ def _build_summary(data_type, view_mode, target_month):
     buildings_by_uc = build_buildings_by_uc(data_type)
     waste_by_uc = build_waste_by_uc(data_type)
     industry_by_uc = build_industry_by_uc(data_type)
-    energy_total = build_energy_total(data_type)
+    # Energy is *not* allocated to UCs: power plants are point sources with
+    # fixed coordinates, not entities that belong to a Union Council. They
+    # are exposed separately via /api/power-plants/ so the frontend can
+    # render them as map markers. We deliberately set the per-UC energy
+    # share to 0 here so the choropleth and totals don't include a
+    # misleading uniform value.
+    energy_total = 0.0
 
     sector_dates = get_monthly_dates(data_type)
 
