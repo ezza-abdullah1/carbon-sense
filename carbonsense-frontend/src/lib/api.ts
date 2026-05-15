@@ -280,13 +280,14 @@ export async function fetchEmissionsTimeline(
   return response.json();
 }
 
-// ---- Power-plant point sources (energy sector) ----
+// ---- Facility-level point sources (energy, industry, waste) ----
 //
-// Energy doesn't have per-UC allocation — power plants are physical
-// facilities at fixed coordinates. The map renders them as point markers
-// rather than colouring UC polygons.
+// Some sectors have data at individual-facility level — power plants,
+// fertilizer factories, dumpsites, wastewater plants. The map renders
+// them as point markers rather than colouring UC polygons. Sectors
+// without facility-level data (transport, buildings) return [].
 
-export interface PowerPlantSummary {
+export interface PointSourceSummary {
   last_historical_date: string;
   last_historical_emissions: number;
   forecast_12m_total: number;
@@ -296,22 +297,24 @@ export interface PowerPlantSummary {
   trend: 'increasing' | 'declining' | 'stable';
 }
 
-export interface PowerPlant {
+export interface PointSource {
   source: string;
   type: string;
   lat: number;
   lng: number;
   emissions: number;
-  summary: PowerPlantSummary | null;
+  sector: Sector;
+  summary: PointSourceSummary | null;
 }
 
-export async function fetchPowerPlants(
+export async function fetchPointSources(
+  sector: Sector,
   dataType: 'historical' | 'forecast' = 'historical',
-): Promise<PowerPlant[]> {
-  const params = new URLSearchParams({ data_type: dataType });
-  const response = await fetch(`${API_BASE_URL}/power-plants/?${params.toString()}`);
+): Promise<PointSource[]> {
+  const params = new URLSearchParams({ sector, data_type: dataType });
+  const response = await fetch(`${API_BASE_URL}/point-sources/?${params.toString()}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch power plants');
+    throw new Error(`Failed to fetch point sources for sector "${sector}"`);
   }
   return response.json();
 }

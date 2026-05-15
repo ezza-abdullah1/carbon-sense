@@ -1,6 +1,6 @@
 import { useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
-import type { PowerPlant, UCSummary, Sector } from "@/lib/api";
+import type { PointSource, UCSummary, Sector } from "@/lib/api";
 import {
   computeQuantileBreaks,
   getYlOrRdColor,
@@ -12,13 +12,23 @@ import {
 } from "@/lib/map-utils";
 import "leaflet/dist/leaflet.css";
 
+// Pin fill / stroke per sector. Picked so each sector reads at a glance even
+// when several types of point source are on the map at once.
+const SECTOR_PIN_THEME: Record<Sector, { fill: string; stroke: string }> = {
+  energy: { fill: "#facc15", stroke: "#7c2d12" },   // amber / brown
+  industry: { fill: "#a78bfa", stroke: "#4c1d95" }, // violet / deep purple
+  waste: { fill: "#f472b6", stroke: "#831843" },    // pink / magenta
+  transport: { fill: "#60a5fa", stroke: "#1e3a8a" },// blue
+  buildings: { fill: "#34d399", stroke: "#064e3b" },// emerald
+};
+
 interface EmissionMapProps {
   ucBoundaries?: GeoJSON.FeatureCollection;
   ucSummaries?: UCSummary[];
   selectedUCCode: string | null;
   onUCSelect: (ucCode: string) => void;
   selectedSectors: Sector[];
-  powerPlants?: PowerPlant[];
+  pointSourcesBySector?: Partial<Record<Sector, PointSource[]>>;
   selectedPlantName?: string | null;
   onPlantSelect?: (name: string | null) => void;
 }
@@ -29,7 +39,7 @@ export function EmissionMap({
   selectedUCCode,
   onUCSelect,
   selectedSectors,
-  powerPlants,
+  pointSourcesBySector,
   selectedPlantName,
   onPlantSelect,
 }: EmissionMapProps) {
@@ -37,7 +47,7 @@ export function EmissionMap({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null);
   const overlaysRef = useRef<L.LayerGroup | null>(null);
-  const powerLayerRef = useRef<L.LayerGroup | null>(null);
+  const pointLayerRef = useRef<L.LayerGroup | null>(null);
   const onUCSelectRef = useRef(onUCSelect);
   const onPlantSelectRef = useRef(onPlantSelect);
   useEffect(() => {
@@ -220,25 +230,41 @@ export function EmissionMap({
     }
   }, [selectedUCCode, ucLookup, ucSummaries]);
 
-  // Render/remove power-plant point markers.
-  // Energy is a point-source sector — pins (sized by emissions) appear
-  // whenever the user has "energy" toggled on, regardless of which other
-  // sectors are active. The pin's anchor is its bottom tip so it points
-  // exactly at the plant's coordinates.
+  // Render/remove facility-level point markers, per sector.
+  //
+  // For each sector the user has toggled on, we render its point sources as
+  // teardrop pins (sized by emissions). The pin's anchor is its bottom tip
+  // so it points exactly at the facility's coordinates. Each sector uses a
+  // different fill/stroke (see SECTOR_PIN_THEME) so a mixed-toggle view
+  // (e.g. energy + industry) is readable at a glance.
   useEffect(() => {
     if (!mapRef.current) return;
 
-    if (powerLayerRef.current) {
-      powerLayerRef.current.remove();
-      powerLayerRef.current = null;
+    if (pointLayerRef.current) {
+      pointLayerRef.current.remove();
+      pointLayerRef.current = null;
     }
 
-    if (!selectedSectors.includes("energy") || !powerPlants || powerPlants.length === 0) {
-      return;
-    }
+    if (!pointSourcesBySector) return;
 
-    const group = L.layerGroup();
-    const maxEmissions = Math.max(...powerPlants.map((p) => p.emissions), 1);
+    // Flatten the sectors the user wants, preserving the per-sector theme.
+    const visibleByTheme: Array<{
+      points: PointSource[];
+      fill: string;
+      stroke: string;
+    }> = [];
+    for (const sector of selectedSectors) {
+      const points = pointSourcesBySector[sector];
+      if (!points || points.length === 0) continue;
+      const theme = SECTOR_PIN_THEME[sector];
+      visibleByTheme.push({ points, ...theme });
+    }
+    if (visibleByTheme.length === 0) return;
+
+    // One emissions scale across *all* visible pins so a 12M-tonne industrial
+    // site reads visibly bigger than a 14k-tonne waste plant.
+    const allVisible = visibleByTheme.flatMap((v) => v.points);
+    const maxEmissions = Math.max(...allVisible.map((p) => p.emissions), 1);
 
     const buildPinHtml = (width: number, fill: string, stroke: string, strokeWidth: number) => {
       const height = Math.round(width * 1.35);
@@ -252,50 +278,52 @@ export function EmissionMap({
 </svg>`;
     };
 
-    for (const plant of powerPlants) {
-      const ratio = Math.sqrt(plant.emissions / maxEmissions);
-      const width = Math.round(18 + ratio * 16); // 18 → 34 px
-      const height = Math.round(width * 1.35);
-      const isSelected = plant.source === selectedPlantName;
-      const fill = isSelected ? "#f59e0b" : "#facc15";
-      const stroke = isSelected ? "#000" : "#7c2d12";
-      const strokeWidth = isSelected ? 2 : 1.25;
+    const group = L.layerGroup();
 
-      const marker = L.marker([plant.lat, plant.lng], {
-        icon: L.divIcon({
-          html: buildPinHtml(width, fill, stroke, strokeWidth),
-          className: "power-plant-pin",
-          iconSize: [width, height],
-          iconAnchor: [Math.round(width / 2), height], // bottom tip
-          tooltipAnchor: [0, -height],
-        }),
-        // Selected pin on top so it isn't visually buried by neighbours.
-        zIndexOffset: isSelected ? 1000 : 0,
-      });
-      marker.bindTooltip(
-        `<div style="font-family:Arial,sans-serif;font-size:12px;line-height:1.4">
-          <b>${plant.source}</b><br/>
-          ${plant.type ? `<span style="color:#666">${plant.type}</span><br/>` : ""}
-          ${formatTonnes(plant.emissions)} CO₂e
-        </div>`,
-        { sticky: true },
-      );
-      marker.on("click", () => {
-        onPlantSelectRef.current?.(plant.source);
-      });
-      marker.addTo(group);
+    for (const { points, fill, stroke } of visibleByTheme) {
+      for (const plant of points) {
+        const ratio = Math.sqrt(plant.emissions / maxEmissions);
+        const width = Math.round(18 + ratio * 16); // 18 → 34 px
+        const height = Math.round(width * 1.35);
+        const isSelected = plant.source === selectedPlantName;
+        const strokeWidth = isSelected ? 2 : 1.25;
+        const effectiveStroke = isSelected ? "#000" : stroke;
+
+        const marker = L.marker([plant.lat, plant.lng], {
+          icon: L.divIcon({
+            html: buildPinHtml(width, fill, effectiveStroke, strokeWidth),
+            className: "point-source-pin",
+            iconSize: [width, height],
+            iconAnchor: [Math.round(width / 2), height], // bottom tip
+            tooltipAnchor: [0, -height],
+          }),
+          zIndexOffset: isSelected ? 1000 : 0,
+        });
+        marker.bindTooltip(
+          `<div style="font-family:Arial,sans-serif;font-size:12px;line-height:1.4">
+            <b>${plant.source}</b><br/>
+            ${plant.type ? `<span style="color:#666">${plant.type}</span><br/>` : ""}
+            ${formatTonnes(plant.emissions)} CO₂e
+          </div>`,
+          { sticky: true },
+        );
+        marker.on("click", () => {
+          onPlantSelectRef.current?.(plant.source);
+        });
+        marker.addTo(group);
+      }
     }
 
     group.addTo(mapRef.current);
-    powerLayerRef.current = group;
+    pointLayerRef.current = group;
 
     return () => {
-      if (powerLayerRef.current) {
-        powerLayerRef.current.remove();
-        powerLayerRef.current = null;
+      if (pointLayerRef.current) {
+        pointLayerRef.current.remove();
+        pointLayerRef.current = null;
       }
     };
-  }, [powerPlants, selectedSectors, selectedPlantName]);
+  }, [pointSourcesBySector, selectedSectors, selectedPlantName]);
 
   return (
     <div

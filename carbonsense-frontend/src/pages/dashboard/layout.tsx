@@ -18,13 +18,13 @@ import {
   useCombinedTimeSeriesData,
   useLatestEmissions,
   useLeaderboard,
-  usePowerPlants,
+  usePointSources,
   useStats,
   useUCBoundaries,
   useUCSummaries,
 } from "@/hooks/use-emissions";
 import type { LeaderboardEntry, Sector, DataType } from "@shared/schema";
-import type { AreaInfo, PowerPlant, Stats, TimeInterval, UCSummary } from "@/lib/api";
+import type { AreaInfo, PointSource, Stats, TimeInterval, UCSummary } from "@/lib/api";
 import { getUCEmission } from "@/lib/map-utils";
 
 type ViewMode = "monthly" | "yearly";
@@ -70,7 +70,8 @@ interface DashboardContextValue {
   legendMax: number;
   availableMonths: string[];
   combinedData: { historical: any[]; forecast: any[] } | undefined;
-  powerPlants: PowerPlant[];
+  pointSourcesBySector: Partial<Record<Sector, PointSource[]>>;
+  allPointSources: PointSource[];
   selectedPlantName: string | null;
   setSelectedPlantName: (name: string | null) => void;
 
@@ -140,7 +141,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     viewMode,
     viewMode === "monthly" ? selectedMonth : undefined,
   );
-  const { data: powerPlants = [] } = usePowerPlants(dataType);
+  // Facility-level point sources, one query per sector. Sectors with only
+  // UC-level data (buildings) return []. React Query caches each sector
+  // independently so this is cheap after the first hit.
+  const { data: energyPoints = [] } = usePointSources("energy", dataType);
+  const { data: industryPoints = [] } = usePointSources("industry", dataType);
+  const { data: transportPoints = [] } = usePointSources("transport", dataType);
+  const { data: wastePoints = [] } = usePointSources("waste", dataType);
+
+  const pointSourcesBySector = useMemo<Partial<Record<Sector, PointSource[]>>>(
+    () => ({
+      energy: energyPoints,
+      industry: industryPoints,
+      transport: transportPoints,
+      waste: wastePoints,
+    }),
+    [energyPoints, industryPoints, transportPoints, wastePoints],
+  );
+  const allPointSources = useMemo(
+    () => [...energyPoints, ...industryPoints, ...transportPoints, ...wastePoints],
+    [energyPoints, industryPoints, transportPoints, wastePoints],
+  );
 
   const availableMonths = useMemo(() => {
     if (!ucSummaries || ucSummaries.length === 0) return [];
@@ -228,7 +249,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     legendMax,
     availableMonths,
     combinedData,
-    powerPlants,
+    pointSourcesBySector,
+    allPointSources,
     selectedPlantName,
     setSelectedPlantName,
     handleToggleSector,

@@ -8,7 +8,7 @@ import { MapLegend } from "@/features/emissions/map-legend";
 import { Leaderboard } from "@/features/emissions/leaderboard";
 import { SectorFilter } from "@/features/emissions/sector-filter";
 import { AreaDetailPanel } from "@/features/area/area-detail-panel";
-import { PowerPlantDetailPanel } from "@/features/emissions/power-plant-detail-panel";
+import { PointSourceDetailPanel } from "@/features/emissions/point-source-detail-panel";
 import { DashboardLayout, useDashboard } from "./layout";
 
 const MONTH_NAMES = [
@@ -39,14 +39,15 @@ function MapContent() {
     legendMin,
     legendMax,
     stats,
-    powerPlants,
+    pointSourcesBySector,
+    allPointSources,
     selectedPlantName,
     setSelectedPlantName,
   } = useDashboard();
 
   const selectedPlant = useMemo(
-    () => powerPlants.find((p) => p.source === selectedPlantName) ?? null,
-    [powerPlants, selectedPlantName],
+    () => allPointSources.find((p) => p.source === selectedPlantName) ?? null,
+    [allPointSources, selectedPlantName],
   );
 
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -76,7 +77,7 @@ function MapContent() {
             setSelectedUCCode(code);
           }}
           selectedSectors={selectedSectors}
-          powerPlants={powerPlants}
+          pointSourcesBySector={pointSourcesBySector}
           selectedPlantName={selectedPlantName}
           onPlantSelect={(name) => {
             // Selecting a plant clears any selected UC
@@ -222,7 +223,7 @@ function MapContent() {
         {/* Right Side: Area Details or Leaderboard */}
         <div className="absolute top-4 right-4 h-[calc(100%-2.5rem)] w-[380px] pointer-events-auto shadow-2xl rounded-2xl flex flex-col z-[1000]">
           {selectedPlant ? (
-            <PowerPlantDetailPanel
+            <PointSourceDetailPanel
               plant={selectedPlant}
               onClose={() => setSelectedPlantName(null)}
             />

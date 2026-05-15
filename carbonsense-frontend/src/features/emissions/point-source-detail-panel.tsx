@@ -3,10 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { X } from "lucide-react";
-import type { PowerPlant } from "@/lib/api";
+import type { PointSource } from "@/lib/api";
+import type { Sector } from "@shared/schema";
 import { formatTonnes } from "@/lib/map-utils";
 
-// Fuel-type badge colours — same visual treatment as risk flags on the UC panel.
+// Same visual treatment as risk flags on the UC panel.
 const FUEL_COLORS: Record<string, string> = {
   gas: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   other_fossil:
@@ -19,12 +20,48 @@ const FUEL_COLORS: Record<string, string> = {
   wind: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
 };
 
-interface PowerPlantDetailPanelProps {
-  plant: PowerPlant;
+// Header gradient + accent colours per sector — keeps the panel visually
+// tied to whichever marker the user clicked on.
+const SECTOR_THEME: Record<Sector, { title: string; accent: string; bar: string; label: string }> = {
+  energy: {
+    title: "from-amber-600 to-orange-500 dark:from-amber-400 dark:to-orange-300",
+    accent: "via-amber-500/5",
+    bar: "hsl(45, 93%, 47%)",
+    label: "Energy facility",
+  },
+  industry: {
+    title: "from-violet-600 to-purple-500 dark:from-violet-400 dark:to-purple-300",
+    accent: "via-violet-500/5",
+    bar: "hsl(280, 67%, 55%)",
+    label: "Industrial facility",
+  },
+  waste: {
+    title: "from-pink-600 to-rose-500 dark:from-pink-400 dark:to-rose-300",
+    accent: "via-pink-500/5",
+    bar: "hsl(338, 78%, 56%)",
+    label: "Waste facility",
+  },
+  transport: {
+    title: "from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-300",
+    accent: "via-blue-500/5",
+    bar: "hsl(217, 91%, 60%)",
+    label: "Transport facility",
+  },
+  buildings: {
+    title: "from-emerald-600 to-teal-500 dark:from-emerald-400 dark:to-teal-300",
+    accent: "via-emerald-500/5",
+    bar: "hsl(160, 84%, 39%)",
+    label: "Buildings facility",
+  },
+};
+
+interface PointSourceDetailPanelProps {
+  plant: PointSource;
   onClose: () => void;
 }
 
-export function PowerPlantDetailPanel({ plant, onClose }: PowerPlantDetailPanelProps) {
+export function PointSourceDetailPanel({ plant, onClose }: PointSourceDetailPanelProps) {
+  const theme = SECTOR_THEME[plant.sector] ?? SECTOR_THEME.energy;
   const summary = plant.summary;
   const trend = summary?.trend ?? "stable";
   const trendColor =
@@ -34,28 +71,27 @@ export function PowerPlantDetailPanel({ plant, onClose }: PowerPlantDetailPanelP
         ? "text-emerald-600 dark:text-emerald-400"
         : "text-slate-500";
 
-  // Fuel type may come as a comma-separated string (e.g. "gas, other_fossil")
-  // — render each as its own flag chip.
-  const fuelTags = plant.type
+  // Facility/fuel type may come as a comma- or pipe-separated string. Some
+  // industry "type" fields are very long; cap to keep the panel tidy.
+  const tags = plant.type
     ? plant.type
-        .split(",")
+        .split(/[,|]/)
         .map((s) => s.trim())
         .filter(Boolean)
+        .slice(0, 4)
     : [];
 
-  // Historical vs Forecast bar comparison — single "sector breakdown"
-  // analogue that makes sense for a point source.
   const generationBars = summary
     ? [
         {
           label: "Historical total",
           value: summary.total_historical_tonnes,
-          color: "hsl(45, 93%, 47%)",
+          color: theme.bar,
         },
         {
           label: "12-month forecast",
           value: summary.forecast_12m_total,
-          color: "hsl(280, 67%, 55%)",
+          color: "hsl(217, 91%, 60%)",
         },
       ].filter((s) => s.value > 0)
     : [];
@@ -63,18 +99,18 @@ export function PowerPlantDetailPanel({ plant, onClose }: PowerPlantDetailPanelP
 
   return (
     <Card className="w-full h-full min-h-0 flex flex-col bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-amber-500/5 to-transparent pointer-events-none" />
+      <div className={`absolute inset-0 bg-gradient-to-tr from-transparent ${theme.accent} to-transparent pointer-events-none`} />
 
       <CardHeader className="flex-row items-start justify-between space-y-0 px-5 pt-5 pb-3 relative z-10 border-b border-white/10 shrink-0">
         <div className="space-y-0.5 min-w-0">
           <CardTitle
-            className="text-lg bg-clip-text text-transparent bg-gradient-to-r from-amber-600 to-orange-500 dark:from-amber-400 dark:to-orange-300 truncate"
+            className={`text-lg bg-clip-text text-transparent bg-gradient-to-r ${theme.title} truncate`}
             title={plant.source}
           >
             {plant.source}
           </CardTitle>
           <p className="text-xs text-muted-foreground font-mono">
-            {plant.lat.toFixed(4)}, {plant.lng.toFixed(4)}
+            {plant.lat.toFixed(4)}, {plant.lng.toFixed(4)} · {theme.label}
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -83,7 +119,6 @@ export function PowerPlantDetailPanel({ plant, onClose }: PowerPlantDetailPanelP
       </CardHeader>
 
       <CardContent className="flex-1 min-h-0 space-y-5 pt-4 px-5 overflow-y-auto overscroll-contain pb-5">
-        {/* ---- Stats Table (same Folium-style as UC panel) ---- */}
         <div className="rounded-lg border border-border/50 overflow-hidden">
           <table className="w-full text-sm">
             <tbody className="divide-y divide-border/30">
@@ -98,10 +133,7 @@ export function PowerPlantDetailPanel({ plant, onClose }: PowerPlantDetailPanelP
                 />
               )}
               {summary && summary.last_historical_date && (
-                <StatsRow
-                  label="As of"
-                  value={summary.last_historical_date}
-                />
+                <StatsRow label="As of" value={summary.last_historical_date} />
               )}
               {summary && summary.total_historical_tonnes > 0 && (
                 <StatsRow
@@ -130,18 +162,17 @@ export function PowerPlantDetailPanel({ plant, onClose }: PowerPlantDetailPanelP
           </table>
         </div>
 
-        {/* ---- Flags: fuel-type tags ---- */}
-        {fuelTags.length > 0 && (
+        {(tags.length > 0 || summary) && (
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Flags
             </h3>
             <div className="flex flex-wrap gap-1.5">
-              {fuelTags.map((tag) => (
+              {tags.map((tag) => (
                 <Badge
                   key={tag}
                   variant="secondary"
-                  className={`text-[10px] font-medium px-2 py-0.5 ${FUEL_COLORS[tag] ?? ""}`}
+                  className={`text-[10px] font-medium px-2 py-0.5 ${FUEL_COLORS[tag.toLowerCase()] ?? ""}`}
                 >
                   {tag.replace(/_/g, " ")}
                 </Badge>
@@ -164,7 +195,6 @@ export function PowerPlantDetailPanel({ plant, onClose }: PowerPlantDetailPanelP
           </div>
         )}
 
-        {/* ---- Generation Profile — historical vs forecast bars ---- */}
         {generationBars.length > 0 && (
           <div className="space-y-3">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -191,15 +221,13 @@ export function PowerPlantDetailPanel({ plant, onClose }: PowerPlantDetailPanelP
         )}
 
         <p className="text-[10px] text-muted-foreground italic px-1 pt-1">
-          Point-source emissions from a specific generation facility. Not
-          allocated to any Union Council — power demand is district-wide.
+          Point-source emissions from a specific facility. Not allocated to any Union Council.
         </p>
       </CardContent>
     </Card>
   );
 }
 
-// ---- Helper: Stats table row (mirrors AreaDetailPanel) ----
 function StatsRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <tr>

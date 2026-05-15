@@ -10,7 +10,7 @@ from .auth import current_user_view, login_view, logout_view, signup_view
 from .emissions import EmissionDataViewSet
 from .emissions_aggregates import emissions_timeline, latest_emissions_by_area
 from .leaderboard import LeaderboardViewSet
-from .power_plants import power_plants_view
+from .point_sources import point_sources_view
 from .stats import stats_view
 from .uc_summary import UCSummaryViewSet
 
@@ -24,7 +24,7 @@ __all__ = [
     "latest_emissions_by_area",
     "login_view",
     "logout_view",
-    "power_plants_view",
+    "point_sources_view",
     "signup_view",
     "stats_view",
 ]

@@ -12,7 +12,7 @@ from .views import (
     stats_view,
     latest_emissions_by_area,
     emissions_timeline,
-    power_plants_view,
+    point_sources_view,
 )
 
 # Create a router for ViewSets
@@ -36,8 +36,9 @@ urlpatterns = [
     path('emissions/latest-by-area/', latest_emissions_by_area, name='latest-by-area'),
     path('emissions/timeline/', emissions_timeline, name='emissions-timeline'),
 
-    # Energy point sources (power plants). Not a UC sector — has lat/lng coords.
-    path('power-plants/', power_plants_view, name='power-plants'),
+    # Per-sector facility-level point sources (energy plants, industrial sites).
+    # ?sector=energy|industry|... — sectors with only UC-level data return [].
+    path('point-sources/', point_sources_view, name='point-sources'),
 
     # Include router URLs
     path('', include(router.urls)),
