@@ -36,9 +36,10 @@ const SECTOR_THEME: Record<Sector, { title: string; accent: string; bar: string;
     label: "Industrial facility",
   },
   waste: {
-    title: "from-pink-600 to-rose-500 dark:from-pink-400 dark:to-rose-300",
-    accent: "via-pink-500/5",
-    bar: "hsl(338, 78%, 56%)",
+    // Teal — matches the new waste pin and sector-filter colour.
+    title: "from-teal-600 to-cyan-500 dark:from-teal-400 dark:to-cyan-300",
+    accent: "via-teal-500/5",
+    bar: "hsl(180, 65%, 45%)",
     label: "Waste facility",
   },
   transport: {

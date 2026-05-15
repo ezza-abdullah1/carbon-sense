@@ -12,14 +12,16 @@ import {
 } from "@/lib/map-utils";
 import "leaflet/dist/leaflet.css";
 
-// Pin fill / stroke per sector. Picked so each sector reads at a glance even
-// when several types of point source are on the map at once.
+// Pin fill / stroke per sector. Picked so (a) each sector reads at a glance
+// when several types of point source are on the map at once, and (b) the
+// fill matches the corresponding sector-filter button. None of these
+// overlap with the YlOrRd choropleth palette (yellow→orange→red→maroon).
 const SECTOR_PIN_THEME: Record<Sector, { fill: string; stroke: string }> = {
-  energy: { fill: "#facc15", stroke: "#7c2d12" },   // amber / brown
-  industry: { fill: "#a78bfa", stroke: "#4c1d95" }, // violet / deep purple
-  waste: { fill: "#f472b6", stroke: "#831843" },    // pink / magenta
-  transport: { fill: "#60a5fa", stroke: "#1e3a8a" },// blue
-  buildings: { fill: "#34d399", stroke: "#064e3b" },// emerald
+  transport: { fill: "#60a5fa", stroke: "#1e3a8a" }, // blue
+  industry:  { fill: "#a78bfa", stroke: "#4c1d95" }, // violet
+  energy:    { fill: "#facc15", stroke: "#7c2d12" }, // amber
+  waste:     { fill: "#14b8a6", stroke: "#134e4a" }, // teal
+  buildings: { fill: "#34d399", stroke: "#064e3b" }, // emerald
 };
 
 interface EmissionMapProps {

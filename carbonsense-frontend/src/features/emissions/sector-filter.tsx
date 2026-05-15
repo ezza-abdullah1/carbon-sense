@@ -33,12 +33,16 @@ const sectorConfig: Record<Sector, { label: string; color: string; description: 
   },
   waste: {
     label: "Waste",
-    color: "hsl(25, 95%, 53%)",
+    // Teal — chosen so it doesn't compete with the YlOrRd choropleth palette
+    // (which spans yellow through orange to red). Matches the map pin colour.
+    color: "hsl(180, 65%, 45%)",
     description: "Landfills, waste treatment, and incineration"
   },
   buildings: {
     label: "Buildings",
-    color: "hsl(338, 78%, 56%)",
+    // Emerald — same reason: keeps the filter button visually distinct from
+    // the choropleth and matches the map pin.
+    color: "hsl(160, 84%, 39%)",
     description: "Residential and commercial heating, cooling, and appliances"
   },
 };
